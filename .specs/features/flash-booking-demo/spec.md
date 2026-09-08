@@ -1,17 +1,17 @@
-# Especificação da demo Flash Booking
+# Flash Booking Demo Specification
 
-## Problema
+## Problem Statement
 
 Construir o núcleo funcional de uma reserva de ingressos para flash sale. A solução deve impedir oversell, suportar múltiplas instâncias, expirar reservas e ser simples de operar por uma pessoa.
 
-## Objetivos
+## Goals
 
 - [ ] Entregar os cinco endpoints do case com comportamento verificável.
 - [ ] Garantir consistência dos comandos sob concorrência.
 - [ ] Executar localmente por Docker Compose.
 - [ ] Provisionar todo o runtime AWS por Terraform.
 
-## Fora do escopo
+## Out of Scope
 
 | Item | Motivo |
 | --- | --- |
@@ -22,7 +22,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Alta disponibilidade | Pertence ao plano de alta carga. |
 | EKS | Exige carga operacional incompatível com a demo individual. |
 
-## Premissas e decisões
+## Assumptions & Open Questions
 
 | Tema | Decisão | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
@@ -39,22 +39,22 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Região | `sa-east-1` | Proximidade com o contexto brasileiro da vaga. | yes |
 | Build | Maven | Convenção simples para Spring Boot. | yes |
 
-**Questões abertas:** nenhuma. O envelope de carga é medido na tarefa de benchmark e não é pré-requisito para implementar a demo; os limites de recuperação remota pertencem à arquitetura-alvo de alta carga.
+**Open questions:** none. The capacity envelope is measured in the benchmark task and is not a prerequisite for implementing the demo; remote-recovery limits belong to the target high-load architecture.
 
-## Histórias de usuário
+## User Stories
 
 ### P1: Gerenciar eventos
 
 **História:** Como operador, quero criar um evento e consultar sua disponibilidade para controlar a venda.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO `POST /events` receber nome e capacidade positiva, ENTÃO o sistema DEVE criar o evento e retornar `201`.
-2. SE a criação receber dados inválidos, ENTÃO o sistema DEVE retornar `400` em `application/problem+json`.
-3. QUANDO `GET /events/{id}` encontrar o evento, ENTÃO o sistema DEVE retornar capacidade total e disponível.
-4. SE o evento não existir, ENTÃO o sistema DEVE retornar `404`.
-5. QUANDO `GET /events/{id}` encontrar uma entrada válida no cache, ENTÃO o sistema DEVE retornar a disponibilidade exibida sem consultar PostgreSQL; em falta de cache, DEVE consultar PostgreSQL e preencher o cache por no máximo um segundo.
-6. SE `POST /events/{id}/reservations` referenciar um evento inexistente, ENTÃO o sistema DEVE retornar `404` sem persistir cliente, reserva ou evento de outbox, e DEVE registrar essa resposta final no contrato de idempotência.
+1. WHEN `POST /events` receives a name and positive capacity THEN the system SHALL create the event and return `201`.
+2. IF creation receives invalid data THEN the system SHALL return `400` as `application/problem+json`.
+3. WHEN `GET /events/{id}` finds the event THEN the system SHALL return total and available capacity.
+4. IF the event does not exist THEN the system SHALL return `404`.
+5. WHEN `GET /events/{id}` finds a valid cache entry THEN the system SHALL return the displayed availability without querying PostgreSQL; on a cache miss, the system SHALL query PostgreSQL and populate the cache for at most one second.
+6. IF `POST /events/{id}/reservations` references a nonexistent event THEN the system SHALL return `404` without persisting a customer, reservation, or outbox event, and SHALL record that final response in the idempotency contract.
 
 **Teste independente:** Criar um evento e consultá-lo pelo identificador retornado.
 
@@ -62,14 +62,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como cliente, quero reservar ingressos sem que a capacidade seja ultrapassada e manter a reserva ligada aos meus dados.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO houver capacidade suficiente e cliente válido, ENTÃO o sistema DEVE criar ou reutilizar o cliente, decrementar a disponibilidade e criar uma reserva `PENDING` ligada ao cliente e ao evento na mesma transação.
-2. SE não houver capacidade suficiente, ENTÃO o sistema DEVE retornar `409` sem alterar inventário, cliente ou reserva.
-3. ENQUANTO múltiplas instâncias concorrerem pelo mesmo evento, o sistema DEVE manter a disponibilidade entre zero e a capacidade total.
-4. QUANDO `GET /reservations/{id}` encontrar a reserva, ENTÃO o sistema DEVE retornar estado, quantidade, expiração, evento, cliente e motivo de encerramento.
-5. QUANDO `GET /reservations/{id}` encontrar uma entrada válida no cache, ENTÃO o sistema DEVE retornar a reserva sem consultar PostgreSQL; em falta de cache, DEVE consultar PostgreSQL e preencher o cache por no máximo um segundo.
-6. SE nome ou e-mail do cliente forem inválidos, ENTÃO o sistema DEVE retornar `400` sem bloquear capacidade.
+1. WHEN capacity is sufficient and the customer is valid THEN the system SHALL create or reuse the customer, decrement availability, and create a `PENDING` reservation linked to that customer and event in one transaction.
+2. IF capacity is insufficient THEN the system SHALL return `409` without changing inventory, customer, or reservation.
+3. WHILE multiple instances contend for the same event, the system SHALL keep availability between zero and total capacity.
+4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, quantity, expiry, event, customer, and closure reason.
+5. WHEN `GET /reservations/{id}` finds a valid cache entry THEN the system SHALL return the reservation without querying PostgreSQL; on a cache miss, the system SHALL query PostgreSQL and populate the cache for at most one second.
+6. IF the customer's name or email is invalid THEN the system SHALL return `400` without reserving capacity.
 
 **Teste independente:** Disparar reservas concorrentes acima da capacidade por ao menos dois processos de comandos e comprovar que a soma aceita não ultrapassa a capacidade.
 
@@ -77,16 +77,16 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como cliente, quero cancelar uma reserva e ter reservas abandonadas expiradas automaticamente.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO uma reserva `PENDING` for cancelada, ENTÃO o sistema DEVE transicioná-la para `CANCELLED` e devolver capacidade uma vez.
-2. QUANDO uma reserva `PENDING` atingir `expiresAt`, com banco e processamento de expiração saudáveis, ENTÃO o sistema DEVE concluir sua transição para `EXPIRED` e devolver capacidade uma vez até `expiresAt + 5 segundos`.
-3. SE uma mensagem de expiração for processada novamente, ENTÃO o sistema DEVE manter inventário e estado inalterados.
-4. SE o processamento assíncrono falhar, ENTÃO o sistema DEVE aplicar tentativas limitadas e encaminhar a falha esgotada para DLQ.
-5. QUANDO uma reserva transicionar para `CANCELLED` ou `EXPIRED`, ENTÃO o sistema DEVE persistir código e descrição do motivo de encerramento na mesma transação do estado e da devolução de capacidade.
-6. ENQUANTO o instante atual for anterior a `expiresAt`, o sistema DEVE impedir expiração antecipada da reserva.
-7. QUANDO cancelamento ou expiração confirmar a transação, ENTÃO o sistema DEVE invalidar as entradas de cache da reserva e do evento afetado.
-8. QUANDO `GET /reservations/{id}` retornar uma reserva terminal, ENTÃO o sistema DEVE retornar o objeto `closureReason` com `code` e `description`; para `PENDING`, esse objeto DEVE ser nulo.
+1. WHEN a `PENDING` reservation is cancelled THEN the system SHALL transition it to `CANCELLED` and return capacity exactly once.
+2. WHEN a `PENDING` reservation reaches `expiresAt`, with healthy database and expiration processing, THEN the system SHALL complete its transition to `EXPIRED` and return capacity exactly once by `expiresAt + 5 seconds`.
+3. IF an expiration message is processed again THEN the system SHALL leave inventory and status unchanged.
+4. IF asynchronous processing fails THEN the system SHALL apply bounded retries and route an exhausted failure to a DLQ.
+5. WHEN a reservation transitions to `CANCELLED` or `EXPIRED` THEN the system SHALL persist the closure-reason code and description in the same transaction as the status and capacity return.
+6. WHILE the current instant is earlier than `expiresAt`, the system SHALL prevent early reservation expiry.
+7. WHEN cancellation or expiry commits its transaction THEN the system SHALL invalidate the cache entries for the reservation and affected event.
+8. WHEN `GET /reservations/{id}` returns a terminal reservation THEN the system SHALL return a `closureReason` object with `code` and `description`; for `PENDING`, that object SHALL be null.
 
 **Teste independente:** Cancelar e expirar reservas com duplicidade de mensagens e conferir o inventário final.
 
@@ -94,14 +94,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como integrador, quero repetir requisições com segurança e receber erros explícitos.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO uma operação mutável repetir a mesma `Idempotency-Key` e o mesmo payload, ENTÃO o sistema DEVE retornar o resultado original sem novo efeito.
-2. SE uma `Idempotency-Key` for reutilizada com outro payload, ENTÃO o sistema DEVE retornar `409`.
-3. QUANDO uma resposta for produzida, ENTÃO o sistema DEVE incluir um identificador de correlação.
-4. SE ocorrer erro inesperado, ENTÃO o sistema DEVE retornar `500` sem expor detalhes internos.
-5. QUANDO um comando aceitar uma `Idempotency-Key`, ENTÃO o sistema DEVE persistir chave, operação, alvo normalizado, hash do payload e resposta final por 24 horas; repetição idêntica DEVE retornar a mesma resposta e reutilização incompatível DEVE retornar `409`.
-6. SE um endpoint mutável não receber `Idempotency-Key`, ENTÃO o sistema DEVE retornar `400` em `application/problem+json` sem executar o comando.
+1. WHEN a mutable operation repeats the same `Idempotency-Key` and payload THEN the system SHALL return the original result without a new effect.
+2. IF an `Idempotency-Key` is reused with a different payload THEN the system SHALL return `409`.
+3. WHEN a response is produced THEN the system SHALL include a correlation identifier.
+4. IF an unexpected error occurs THEN the system SHALL return `500` without exposing internal details.
+5. WHEN a command accepts an `Idempotency-Key` THEN the system SHALL persist the key, operation, normalized target, payload hash, and final response for 24 hours; an identical repeat SHALL return the same response and an incompatible reuse SHALL return `409`.
+6. IF a mutable endpoint does not receive an `Idempotency-Key` THEN the system SHALL return `400` as `application/problem+json` without executing the command.
 
 **Teste independente:** Repetir requisições iguais e conflitantes, inclusive em paralelo.
 
@@ -109,13 +109,13 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como cliente, quero receber por e-mail os dados da reserva para conseguir consultá-la antes da expiração.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO uma reserva for confirmada como `PENDING`, ENTÃO o sistema DEVE gravar `ReservationCreated` no outbox na mesma transação.
-2. QUANDO o worker processar `ReservationCreated`, ENTÃO o sistema DEVE enviar ao e-mail do cliente o identificador da reserva, evento, quantidade e `expiresAt`.
-3. O e-mail DEVE declarar que se trata de reserva temporária e que não confirma compra ou pagamento.
-4. SE o SES estiver indisponível, ENTÃO o sistema DEVE preservar a reserva, tentar novamente de forma limitada e encaminhar a mensagem esgotada para a DLQ de notificação.
-5. QUANDO banco, fila, worker e SES estiverem saudáveis, ENTÃO o envio DEVE ser solicitado ao SES até 30 segundos após o commit da reserva.
+1. WHEN a reservation is confirmed as `PENDING` THEN the system SHALL write `ReservationCreated` to the outbox in the same transaction.
+2. WHEN the worker processes `ReservationCreated` THEN the system SHALL send the reservation identifier, event, quantity, and `expiresAt` to the customer's email.
+3. The email SHALL state that it is a temporary reservation and does not confirm a purchase or payment.
+4. IF SES is unavailable THEN the system SHALL preserve the reservation, retry within a bound, and route an exhausted message to the notification DLQ.
+5. WHEN the database, queue, worker, and SES are healthy THEN the system SHALL request SES delivery within 30 seconds after the reservation commits.
 
 **Teste independente:** Criar uma reserva no Docker Compose, localizar o e-mail no Mailpit e conferir dados e aviso de reserva temporária.
 
@@ -123,14 +123,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como operador, quero que apenas identidades autorizadas usem a API e que rajadas sejam bloqueadas antes dos containers.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO uma requisição AWS não possuir assinatura SigV4 válida e permissão `execute-api:Invoke`, ENTÃO o API Gateway DEVE retornar `403` sem alcançar o VPC Link.
-2. QUANDO a origem estiver fora dos CIDRs permitidos, ENTÃO a resource policy ou o WAF DEVE bloquear a chamada antes do ALB.
-3. QUANDO uma rota GET ultrapassar 20 requisições por segundo ou burst 40 na demo, ENTÃO o API Gateway DEVE iniciar throttling e retornar `429`.
-4. QUANDO uma rota POST ou DELETE ultrapassar 5 requisições por segundo ou burst 10 na demo, ENTÃO o API Gateway DEVE iniciar throttling e retornar `429`.
-5. O API Gateway REST DEVE ser o único recurso público; ALB, ECS, PostgreSQL, Valkey e SQS DEVEM permanecer privados.
-6. QUANDO o gasto atingir 50%, 80% ou 100% do orçamento de US$100, ENTÃO o AWS Budget DEVE emitir alerta; o documento operacional DEVE informar que o alerta não garante bloqueio imediato de cobrança.
+1. WHEN an AWS request lacks a valid SigV4 signature and `execute-api:Invoke` permission THEN API Gateway SHALL return `403` without reaching VPC Link.
+2. WHEN an origin is outside the allowed CIDRs THEN the resource policy or WAF SHALL block the call before the ALB.
+3. WHEN a GET route exceeds 20 requests per second or a burst of 40 in the demo THEN API Gateway SHALL start throttling and return `429`.
+4. WHEN a POST or DELETE route exceeds 5 requests per second or a burst of 10 in the demo THEN API Gateway SHALL start throttling and return `429`.
+5. API Gateway REST SHALL be the only public resource; ALB, ECS, PostgreSQL, Valkey, and SQS SHALL remain private.
+6. WHEN spending reaches 50%, 80%, or 100% of the US$100 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
 
 **Teste independente:** Assinar uma chamada com role permitida, repetir sem assinatura e fora do CIDR, e validar por Terraform que nenhum backend possui entrada pública.
 
@@ -138,18 +138,18 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **História:** Como avaliador, quero reproduzir a solução localmente e revisar sua arquitetura AWS.
 
-**Critérios de aceite:**
+**Acceptance Criteria:**
 
-1. QUANDO `docker compose up` concluir, ENTÃO o sistema DEVE disponibilizar `query-api`, `command-api`, worker, PostgreSQL, Valkey, mensageria e Mailpit locais.
-2. QUANDO o perfil local de concorrência iniciar, ENTÃO ele DEVE executar ao menos dois processos de `command-api` contra o mesmo PostgreSQL.
-3. QUANDO `terraform validate` executar, ENTÃO a infraestrutura DEVE ser válida.
-4. QUANDO o plano Terraform da demo for aplicado com credenciais autorizadas, ENTÃO o sistema DEVE criar todos os recursos de runtime na AWS.
-5. O sistema DEVE exigir zero criação manual de recursos pelo console AWS.
-6. QUANDO a demonstração completar 1h30, ENTÃO o runbook DEVE orientar `terraform destroy` e a verificação dos recursos remanescentes.
+1. WHEN `docker compose up` completes THEN the system SHALL make local `query-api`, `command-api`, worker, PostgreSQL, Valkey, messaging, and Mailpit available.
+2. WHEN the local concurrency profile starts THEN it SHALL run at least two `command-api` processes against the same PostgreSQL instance.
+3. WHEN `terraform validate` runs THEN the infrastructure SHALL be valid.
+4. WHEN the demo Terraform plan is applied with authorized credentials THEN the system SHALL create all AWS runtime resources.
+5. The system SHALL require zero manual resource creation through the AWS console.
+6. WHEN the demonstration reaches 1h30 THEN the runbook SHALL direct `terraform destroy` and verification of remaining resources.
 
 **Teste independente:** Executar os gates locais, o cenário multiprocesso e gerar um `terraform plan` completo.
 
-## Casos-limite
+## Edge Cases
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
 - SE uma reserva referenciar evento inexistente, ENTÃO o sistema DEVE retornar `404` sem efeito parcial.
@@ -161,7 +161,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - SE o envio de e-mail for duplicado após resposta ambígua do provedor, ENTÃO a reserva DEVE permanecer inalterada e a ocorrência DEVE ser observável.
 - SE cancelamento ou expiração vencer a corrida, ENTÃO a operação concorrente DEVE afetar zero linhas e não incrementar capacidade novamente.
 
-## Rastreabilidade de requisitos
+## Requirement Traceability
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
@@ -175,7 +175,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Cobertura:** 7 requisitos, 7 mapeados ao design, nenhum sem mapeamento.
 
-## Critérios de sucesso
+## Success Criteria
 
 - [ ] Os cinco endpoints passam nos testes de contrato.
 - [ ] Nenhum teste concorrente produz oversell.
