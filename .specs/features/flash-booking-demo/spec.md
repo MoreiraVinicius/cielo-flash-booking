@@ -169,7 +169,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-02 | Reservar sem oversell | Design | Em design |
 | DEMO-03 | Cancelar e expirar | Design | Em design |
 | DEMO-04 | Idempotência e erros | Design | Em design |
-| DEMO-05 | Executar e provisionar | Design | Em design |
+| DEMO-05 | Executar e provisionar | Execute | Implementing |
 | DEMO-06 | Notificar a reserva | Design | Em design |
 | DEMO-07 | Proteger a API e limitar abuso | Design | Em design |
 

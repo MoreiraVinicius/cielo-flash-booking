@@ -81,6 +81,7 @@ T28 -> T29
 
 ### T01: Criar o projeto Maven
 
+**Status:** Complete
 **What:** Configurar Java 21, Spring Boot, Maven Wrapper, dependências para PostgreSQL, Valkey e mensageria, além dos gates de build.
 **Where:** `pom.xml`
 **Depends on:** None
