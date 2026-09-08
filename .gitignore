@@ -1,0 +1,28 @@
+# IDE and local workspace
+.idea/
+.vscode/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.tfvars
+!*.tfvars.example
+
+# Terraform-generated files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Java build output
+target/
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db

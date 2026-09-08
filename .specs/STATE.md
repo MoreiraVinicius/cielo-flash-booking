@@ -1,0 +1,135 @@
+# Project State
+
+## Decisions
+
+### AD-001 - AWS como único provedor de runtime
+
+- **Status:** active
+- **Decision:** Todos os recursos do ambiente publicado serão serviços AWS provisionados por Terraform.
+- **Rationale:** AWS e Terraform são escolhas explícitas do usuário; não são exigências textuais do enunciado `Case BackEnd 1.md`. Docker Compose permanece para desenvolvimento e avaliação locais.
+
+### AD-002 - Java e Spring Boot
+
+- **Status:** active
+- **Decision:** A aplicação usará Java 21, Spring Boot 3, Maven e arquitetura hexagonal em um monólito modular.
+- **Rationale:** A escolha prioriza a stack da vaga e mantém a operação viável para uma pessoa.
+
+### AD-003 - Duas arquiteturas executáveis
+
+- **Status:** superseded by AD-006
+- **Decision:** A solução terá um plano demo e um plano de alta carga separados. Alta carga evolui a demo sem reescrever o domínio.
+- **Rationale:** Consultas e reservas têm gargalos diferentes. A evolução deve ser orientada por métricas, não por antecipação.
+
+### AD-004 - ECS antes de EKS
+
+- **Status:** active
+- **Decision:** ECS Fargate será usado nas duas arquiteturas. EKS será apenas uma alternativa organizacional futura.
+- **Rationale:** EKS aumenta a carga operacional e não resolve sozinho os hot spots do inventário.
+
+### AD-005 - PostgreSQL como fonte de verdade inicial
+
+- **Status:** active
+- **Decision:** O inventário e as reservas usarão PostgreSQL com atualização condicional atômica.
+- **Rationale:** A estratégia garante ausência de oversell com um modelo simples e auditável.
+
+### AD-006 - Demo publicada e alta carga entregue sem provisionamento remoto
+
+- **Status:** active
+- **Decision:** Demonstrar a demo na AWS e entregar também o código da alta carga, sem aplicar o Terraform nem testar remotamente a alta carga.
+- **Reason:** Há poucas horas disponíveis, US$100 em créditos AWS e a demo ficará ligada por no máximo 1h30, conforme a restrição operacional informada.
+- **Trade-off:** Não haverá evidência de funcionamento da infraestrutura, desempenho ou failover da alta carga na AWS.
+- **Scope:** Entrega, publicação e critérios de validação das duas features.
+- **ADR:** `docs/adr/0001-demo-publicada-alta-carga-sem-provisionamento.md`
+
+### AD-007 - Reserva temporária e encerramento auditável
+
+- **Status:** active
+- **Decision:** Manter PENDING, CANCELLED e EXPIRED, sem confirmação definitiva de compra; persistir código e descrição do motivo nos estados terminais.
+- **Reason:** Preservar o escopo de reserva temporária e explicar seus encerramentos.
+- **Scope:** Domínio compartilhado pelas duas arquiteturas.
+- **ADR:** [ADR 0002](../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md).
+
+### AD-008 - Liberação até cinco segundos após vencimento
+
+- **Status:** active
+- **Decision:** Concluir devolução de capacidade até expiresAt + 5 segundos com banco e processamento de expiração saudáveis, sem estender a validade.
+- **Reason:** Limitar estoque temporariamente bloqueado e definir um prazo verificável para o fluxo assíncrono.
+- **Trade-off:** Pode haver indisponibilidade temporária de ingressos vencidos dentro dessa janela; falhas exigem contrato de recuperação separado.
+- **Scope:** Expiração por consumidor e reconciliador, em ambas as arquiteturas.
+- **ADR:** [ADR 0003](../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md).
+
+### AD-009 - PostgreSQL autoritativo com evolução Aurora
+
+- **Status:** active
+- **Decision:** Usar PostgreSQL para inventário, reservas, idempotência e outbox; RDS na demo e Aurora Serverless na arquitetura alta, sem mudar driver, schema, migrations ou binário Java.
+- **Reason:** Transação, invariantes e auditoria reduzem risco para este domínio e prazo; DynamoDB é alternativa somente para hot row comprovado.
+- **Trade-off:** Escritas concorrentes por evento podem gerar lock waits e exigem medição.
+- **Scope:** Persistência das duas arquiteturas.
+- **ADR:** [ADR 0004](../docs/adr/0004-postgresql-como-fonte-autoritativa.md).
+
+### AD-010 - Cache Valkey compartilhado desde a demo
+
+- **Status:** active
+- **Decision:** Cachear os dois GETs em ElastiCache for Valkey com o mesmo binário Java; alterar topologia e capacidade apenas por Terraform.
+- **Reason:** Reduz picos de leitura, mantém comportamento entre ambientes e permite escalar sem alterar código.
+- **Trade-off:** Leituras podem estar defasadas por até um segundo; cache indisponível pressiona o PostgreSQL até o limite de fallback.
+- **Scope:** Consultas, ECS e infraestrutura das duas arquiteturas.
+- **ADR:** [ADR 0005](../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
+
+### AD-011 - Catálogo fechado de motivos de encerramento
+
+- **Status:** active
+- **Decision:** O servidor grava `CANCELLED_BY_REQUEST` ou `RESERVATION_DEADLINE_REACHED`, com descrição fixa, e expõe `closureReason` somente em reservas terminais.
+- **Reason:** O encerramento precisa ser auditável e ter contrato HTTP estável.
+- **Scope:** Domínio e API compartilhados pelas duas arquiteturas.
+- **ADR:** [ADR 0006](../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
+
+### AD-012 - Idempotência durável e relógio transacional
+
+- **Status:** active
+- **Decision:** PostgreSQL mantém o resultado de comandos por 24 horas e decide a elegibilidade de expiração pelo próprio relógio UTC.
+- **Reason:** Múltiplas tasks não podem depender de memória, cache ou relógios locais para preservar um único efeito e impedir expiração antecipada.
+- **Scope:** Domínio e persistência compartilhados pelas duas arquiteturas.
+- **ADR:** [ADR 0007](../docs/adr/0007-idempotencia-persistente-de-comandos.md) e [ADR 0008](../docs/adr/0008-relogio-do-banco-para-expiracao.md).
+
+### AD-013 - Exposição HTTP temporária limitada por CIDR
+
+- **Status:** superseded by AD-014
+- **Decision:** A API REST publicada da demo aceita apenas os CIDRs fornecidos a Terraform em `allowed_cidrs`, sem valor default permissivo.
+- **Reason:** Credenciais AWS não são controle de acesso HTTP; a demonstração individual precisa limitar a exposição sem introduzir autenticação de produto.
+- **Scope:** Borda da demo e documentação operacional.
+- **ADR:** [ADR 0009](../docs/adr/0009-restringir-demo-por-cidr-no-api-gateway.md).
+
+### AD-014 - Autenticação IAM e proteção de custos na borda
+
+- **Status:** active
+- **Decision:** Um API Gateway REST regional é o único ponto público; exige IAM/SigV4 e aplica resource policy, WAF e throttling antes do VPC Link.
+- **Reason:** CIDR isolado não autentica pessoas, API key não é autorização e rejeitar tráfego na borda protege containers, banco e orçamento.
+- **Trade-off:** Entrevistadores precisam assinar chamadas com credenciais temporárias; limites e Budgets não garantem teto financeiro absoluto.
+- **Scope:** Borda, autenticação operacional e controles de custo das duas arquiteturas.
+- **ADR:** [ADR 0012](../docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md).
+
+### AD-015 - Cliente persistido e notificação de reserva
+
+- **Status:** active
+- **Decision:** Toda reserva pertence a um Customer persistido e gera e-mail assíncrono de reserva temporária por outbox, SQS e SES.
+- **Reason:** A reserva precisa ser utilizável pela pessoa associada sem criar cadastro completo nem acoplar SES à transação de inventário.
+- **Trade-off:** Nome e e-mail viram dados pessoais; entrega de e-mail é pelo menos uma vez e não confirma compra.
+- **Scope:** Domínio, persistência, contrato HTTP e mensageria das duas arquiteturas.
+- **ADR:** [ADR 0010](../docs/adr/0010-cliente-como-entidade-da-reserva.md) e [ADR 0011](../docs/adr/0011-notificacao-assincrona-de-reserva-por-email.md).
+
+### AD-016 - Serviços de consulta e comando separados com um artefato
+
+- **Status:** active
+- **Decision:** Query API, Command API e worker são serviços ECS separados, mas iniciam a mesma imagem Java e compartilham integralmente domínio, schema e contratos.
+- **Reason:** Consultas e reservas escalam em momentos diferentes; deployments separados fornecem sinais e escala próprios sem duplicar regras.
+- **Trade-off:** API Gateway, ALB, task definitions e observabilidade têm mais componentes que um serviço HTTP único.
+- **Scope:** Empacotamento, controllers e infraestrutura das duas arquiteturas.
+- **ADR:** [ADR 0013](../docs/adr/0013-separar-servicos-de-consulta-e-comando.md).
+
+## Handoff
+
+- **Current feature:** Revisão documental consolidada das arquiteturas demo e alta carga, incluindo dados, cache, autenticação, e-mail, escala independente e defesa contra oversell.
+- **Next step:** Implementação não foi iniciada e não está autorizada. Antes de executar tasks, revalidar gates e obter autorização explícita.
+- **Validation note:** As tasks passam no validador estrutural. As specs usam cabeçalhos e EARS em português por decisão do responsável; o validador original espera termos ingleses, portanto os critérios devem ser auditados também por sua obrigação `DEVE` e pela matriz de rastreabilidade.
+- **High-load dependency:** A demo é a prioridade de demonstração. Nesta entrega, alta carga permanece documentação, validação estática/mockada e plano de infraestrutura, sem provisionamento ou teste remoto.
