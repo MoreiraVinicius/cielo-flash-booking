@@ -351,6 +351,7 @@ T28 -> T29
 
 ### T23: Criar dados, cache, e-mail e mensageria AWS
 
+**Status:** Complete
 **What:** Provisionar RDS, ElastiCache for Valkey econômico, Secrets Manager, filas/DLQs separadas de expiração e notificação, identidade SES e políticas de redrive.
 **Where:** `infra/modules/data-plane/`
 **Depends on:** T22
