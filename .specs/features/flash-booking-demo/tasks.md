@@ -203,6 +203,7 @@ T28 -> T29
 
 ### T11: Implementar consulta de reserva
 
+**Status:** Complete
 **What:** Implementar `GET /reservations/{id}` com o mesmo contrato cache-aside Valkey.
 **Where:** `src/main/java/com/cielo/flashbooking/reservation/controller/`
 **Depends on:** T10
