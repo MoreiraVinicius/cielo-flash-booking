@@ -289,6 +289,7 @@ T28 -> T29
 
 ### T18: Implementar notificação de reserva por e-mail
 
+**Status:** Complete
 **What:** Consumir `ReservationCreated`, controlar tentativas conhecidas e enviar pelo SES a confirmação de reserva temporária.
 **Where:** `src/main/java/com/cielo/flashbooking/notification/email/`
 **Depends on:** T15

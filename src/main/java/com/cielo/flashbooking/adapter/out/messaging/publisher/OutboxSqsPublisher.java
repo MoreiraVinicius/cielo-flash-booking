@@ -52,10 +52,15 @@ public class OutboxSqsPublisher {
             sqsClient.sendMessage(SendMessageRequest.builder()
                     .queueUrl(queueUrlFor(event))
                     .messageBody(event.payload())
-                    .messageAttributes(Map.of("eventType", MessageAttributeValue.builder()
-                            .dataType("String")
-                            .stringValue(event.eventType())
-                            .build()))
+                    .messageAttributes(Map.of(
+                            "eventType", MessageAttributeValue.builder()
+                                    .dataType("String")
+                                    .stringValue(event.eventType())
+                                    .build(),
+                            "outboxEventId", MessageAttributeValue.builder()
+                                    .dataType("String")
+                                    .stringValue(event.id().toString())
+                                    .build()))
                     .delaySeconds(delaySecondsFor(event))
                     .build());
             outboxEventStore.markPublished(event.id(), clock.instant());

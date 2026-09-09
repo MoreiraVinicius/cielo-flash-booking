@@ -83,6 +83,10 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
         var expirationMessage = expirationMessages.getFirst();
         assertThat(notificationMessage.messageAttributes().get("eventType").stringValue()).isEqualTo("ReservationCreated");
         assertThat(expirationMessage.messageAttributes().get("eventType").stringValue()).isEqualTo("ReservationExpirationScheduled");
+        assertThat(notificationMessage.messageAttributes().get("outboxEventId").stringValue())
+                .isEqualTo(notificationEvent.toString());
+        assertThat(expirationMessage.messageAttributes().get("outboxEventId").stringValue())
+                .isEqualTo(expirationEvent.toString());
         assertThat(objectMapper.readTree(notificationMessage.body()))
                 .isEqualTo(objectMapper.readTree(payloadOf(notificationEvent)));
         assertThat(objectMapper.readTree(expirationMessage.body()))

@@ -24,6 +24,6 @@ public abstract class LocalIntegrationInfrastructure {
 
     @Container
     protected static final GenericContainer<?> MAILPIT = new GenericContainer<>(DockerImageName.parse("axllent/mailpit:v1.21.8"))
-            .withExposedPorts(8025)
-            .waitingFor(Wait.forHttp("/api/v1/messages").forStatusCode(200));
+            .withExposedPorts(8025, 1025)
+            .waitingFor(Wait.forHttp("/api/v1/messages").forPort(8025).forStatusCode(200));
 }

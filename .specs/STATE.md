@@ -130,10 +130,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 3 / T18 - reservation notification email
-- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (this commit)
+- **Phase / Task**: Phase 4 / T19 - production container image
+- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (this commit)
 - **In-progress** (file:line): none
-- **Next step**: Implement T18 after this commit.
+- **Next step**: Implement T19 after this commit.
 - **Blockers**: none. Docker Desktop 4.90.0 is installed; its stale runtime socket directories were moved to recoverable backups under `C:\Users\vinic\AppData\Local` and the engine is healthy. `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
 - **Uncommitted files**: pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`, `AGENTS.md`, and research documents under `docs/`.
 - **Branch**: `main`
