@@ -19,12 +19,17 @@ public final class Event {
         this.name = normalizeName(name);
         validateCapacity(capacity);
         this.capacity = capacity;
+        validateAvailable(available, capacity);
         this.available = available;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
     }
 
     public static Event create(UUID id, String name, int capacity, Instant createdAt) {
         return new Event(id, name, capacity, capacity, createdAt);
+    }
+
+    public static Event restore(UUID id, String name, int capacity, int available, Instant createdAt) {
+        return new Event(id, name, capacity, available, createdAt);
     }
 
     public UUID id() {
@@ -58,6 +63,12 @@ public final class Event {
     private static void validateCapacity(int capacity) {
         if (capacity <= 0) {
             throw new IllegalArgumentException("capacity must be positive");
+        }
+    }
+
+    private static void validateAvailable(int available, int capacity) {
+        if (available < 0 || available > capacity) {
+            throw new IllegalArgumentException("available must be between zero and capacity");
         }
     }
 }

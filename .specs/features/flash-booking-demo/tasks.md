@@ -167,6 +167,7 @@ T28 -> T29
 
 ### T08: Implementar consulta de evento
 
+**Status:** Complete
 **What:** Implementar `GET /events/{id}` com cache-aside Valkey, TTL máximo de um segundo e fallback protegido ao PostgreSQL.
 **Where:** `src/main/java/com/cielo/flashbooking/event/controller/`
 **Depends on:** T07

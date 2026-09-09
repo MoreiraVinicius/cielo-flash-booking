@@ -1,3 +1,7 @@
 spring:
+  data:
+    redis:
+      connect-timeout: 100ms
+      timeout: 100ms
   jpa:
     open-in-view: false

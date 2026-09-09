@@ -50,6 +50,18 @@ public final class ApiExceptionHandler {
                 request);
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleServiceUnavailable(
+            ServiceUnavailableException exception,
+            HttpServletRequest request) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Service unavailable",
+                "The service is temporarily unavailable.",
+                "service-unavailable",
+                request);
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception exception, HttpServletRequest request) {
         LOGGER.error("Unexpected request failure correlationId={}", correlationId(request), exception);
