@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ConditionalOnProperty(prefix = "notification.consumer", name = "enabled", havingValue = "true")
 class SqsReservationCreatedConsumerConfiguration {
 
-    @Bean(name = "notificationTaskScheduler", destroyMethod = "close")
+    @Bean(name = "notificationTaskScheduler")
     ThreadPoolTaskScheduler notificationTaskScheduler(NotificationConsumerProperties properties) {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(properties.poolSize());

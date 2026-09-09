@@ -315,6 +315,7 @@ T28 -> T29
 
 ### T20: Criar ambiente Docker Compose
 
+**Status:** Complete
 **What:** Orquestrar query-api, command-api, worker, PostgreSQL, Valkey, mensageria e Mailpit locais.
 **Where:** `compose.yaml`
 **Depends on:** T19
