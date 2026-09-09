@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,8 +90,15 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation WHERE id = ?", Integer.class, reservationId))
                 .isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event WHERE aggregate_id = ?", Integer.class, reservationId))
-                .isEqualTo(1);
+        List<Map<String, Object>> outboxEvents = jdbcTemplate.queryForList(
+                "SELECT event_type, payload FROM outbox_event WHERE aggregate_id = ? ORDER BY event_type", reservationId);
+        assertThat(outboxEvents).hasSize(2);
+        assertThat(outboxEvents)
+                .extracting(event -> event.get("event_type"))
+                .containsExactly("ReservationCreated", "ReservationExpirationScheduled");
+        assertThat(outboxEvents)
+                .allSatisfy(event -> assertThat(event.get("payload").toString())
+                        .contains(reservationId.toString(), eventId.toString(), "expiresAt"));
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
     }
 

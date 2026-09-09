@@ -16,6 +16,8 @@ public interface ReservationWriter {
 
     void addReservationCreatedOutboxEvent(Reservation reservation);
 
+    void addReservationExpirationScheduledOutboxEvent(Reservation reservation);
+
     Optional<CapacityRelease> cancelPending(UUID reservationId, Instant changedAt);
 
     record CapacityRelease(UUID eventId, int quantity) {

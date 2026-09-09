@@ -62,6 +62,7 @@ public class CreateReservationService {
                 createdAt);
         reservationWriter.save(reservation);
         reservationWriter.addReservationCreatedOutboxEvent(reservation);
+        reservationWriter.addReservationExpirationScheduledOutboxEvent(reservation);
         eventPublisher.publishEvent(new EventAvailabilityChanged(eventId));
         return new CreatedReservation(reservation, customer);
     }

@@ -241,6 +241,7 @@ T28 -> T29
 
 ### T14: Implementar transactional outbox
 
+**Status:** Complete
 **What:** Gravar `ReservationCreated` e agendamento de expiração na mesma transação da reserva.
 **Where:** `src/main/java/com/cielo/flashbooking/application/outbox/`
 **Depends on:** T10, T13

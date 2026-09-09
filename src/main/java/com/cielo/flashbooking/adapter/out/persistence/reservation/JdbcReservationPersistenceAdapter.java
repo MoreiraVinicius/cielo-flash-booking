@@ -83,13 +83,23 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public void addReservationCreatedOutboxEvent(Reservation reservation) {
+        addOutboxEvent(reservation, "ReservationCreated");
+    }
+
+    @Override
+    public void addReservationExpirationScheduledOutboxEvent(Reservation reservation) {
+        addOutboxEvent(reservation, "ReservationExpirationScheduled");
+    }
+
+    private void addOutboxEvent(Reservation reservation, String eventType) {
         jdbcTemplate.update("""
                 INSERT INTO outbox_event (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
-                VALUES (?, ?, ?, 'ReservationCreated', ?::jsonb, ?)
+                VALUES (?, ?, ?, ?, ?::jsonb, ?)
                 """,
                 UUID.randomUUID(),
                 "Reservation",
                 reservation.id(),
+                eventType,
                 reservationPayload(reservation),
                 Timestamp.from(reservation.createdAt()));
     }
