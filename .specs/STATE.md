@@ -130,10 +130,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 4 / T24 - AWS compute
-- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (this commit)
+- **Phase / Task**: Phase 4 / T25 - AWS edge and observability
+- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (this commit)
 - **In-progress** (file:line): none
-- **Next step**: Implement T24 after this commit; validate Terraform locally only until AWS credentials and an explicit deployment authorization are supplied.
+- **Next step**: Implement T25 after this commit; validate Terraform locally only until AWS credentials and an explicit deployment authorization are supplied.
 - **Blockers**: No AWS credentials are available locally, so no Terraform plan/apply against AWS may run. Docker Desktop 4.90.0 is installed; its stale runtime socket directories were moved to recoverable backups under `C:\Users\vinic\AppData\Local` and the engine is healthy. `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
 - **Uncommitted files**: pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`, `AGENTS.md`, and research documents under `docs/`.
 - **Branch**: `main`

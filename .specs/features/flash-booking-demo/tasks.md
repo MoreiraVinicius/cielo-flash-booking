@@ -363,6 +363,7 @@ T28 -> T29
 
 ### T24: Criar compute AWS
 
+**Status:** Complete
 **What:** Provisionar ECR e serviços ECS separados de query-api, command-api e worker apontando para a mesma imagem, com task definitions e IAM mínimo.
 **Where:** `infra/modules/compute/`
 **Depends on:** T22, T23
