@@ -1,11 +1,13 @@
 package com.cielo.flashbooking.reservation.application;
 
-import com.cielo.flashbooking.controller.error.ResourceNotFoundException;
-import com.cielo.flashbooking.controller.error.ServiceUnavailableException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
+import com.cielo.flashbooking.application.error.ServiceUnavailableException;
 import java.time.Clock;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 public class GetReservationService {
 
     private static final int MAX_CONCURRENT_FALLBACKS = 5;
+    private static final Logger LOGGER = LoggerFactory.getLogger(GetReservationService.class);
 
     private final ReservationReader reservationReader;
     private final ReservationCache cache;
@@ -52,6 +55,7 @@ public class GetReservationService {
             circuit.recordSuccess();
             return new CacheLookup(cached, true);
         } catch (RuntimeException cacheFailure) {
+            LOGGER.warn("Reservation cache lookup failed reservationId={}", id, cacheFailure);
             circuit.recordFailure();
             return CacheLookup.unavailable();
         }
@@ -80,6 +84,7 @@ public class GetReservationService {
         try {
             cache.put(reservation);
         } catch (RuntimeException cacheFailure) {
+            LOGGER.warn("Reservation cache write failed reservationId={}", reservation.id(), cacheFailure);
             circuit.recordFailure();
         }
     }

@@ -1,5 +1,8 @@
 package com.cielo.flashbooking.controller.error;
 
+import com.cielo.flashbooking.application.error.ResourceConflictException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
+import com.cielo.flashbooking.application.error.ServiceUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import org.slf4j.Logger;
@@ -20,7 +23,7 @@ public final class ApiExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class})
+            MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
     ResponseEntity<ProblemDetail> handleBadRequest(Exception exception, HttpServletRequest request) {
         return response(
                 HttpStatus.BAD_REQUEST,

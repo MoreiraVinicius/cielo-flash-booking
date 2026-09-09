@@ -1,5 +1,7 @@
 package com.cielo.flashbooking.controller.error;
 
+import com.cielo.flashbooking.application.error.ResourceConflictException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;

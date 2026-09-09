@@ -7,7 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.cielo.flashbooking.controller.error.ResourceNotFoundException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
 import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;

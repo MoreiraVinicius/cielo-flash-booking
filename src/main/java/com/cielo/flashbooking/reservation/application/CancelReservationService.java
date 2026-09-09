@@ -1,6 +1,6 @@
 package com.cielo.flashbooking.reservation.application;
 
-import com.cielo.flashbooking.controller.error.ResourceNotFoundException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;
 import java.time.Clock;

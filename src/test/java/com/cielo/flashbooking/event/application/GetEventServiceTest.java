@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.cielo.flashbooking.controller.error.ServiceUnavailableException;
+import com.cielo.flashbooking.application.error.ServiceUnavailableException;
 import com.cielo.flashbooking.domain.event.Event;
 import java.time.Clock;
 import java.time.Instant;

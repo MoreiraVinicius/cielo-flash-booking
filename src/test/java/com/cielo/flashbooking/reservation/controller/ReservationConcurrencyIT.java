@@ -2,7 +2,7 @@ package com.cielo.flashbooking.reservation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.cielo.flashbooking.controller.error.ResourceConflictException;
+import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.reservation.application.CreateReservationService;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;

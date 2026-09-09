@@ -1,7 +1,7 @@
 package com.cielo.flashbooking.reservation.application;
 
-import com.cielo.flashbooking.controller.error.ResourceConflictException;
-import com.cielo.flashbooking.controller.error.ResourceNotFoundException;
+import com.cielo.flashbooking.application.error.ResourceConflictException;
+import com.cielo.flashbooking.application.error.ResourceNotFoundException;
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;

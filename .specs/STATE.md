@@ -131,7 +131,7 @@
 
 - **Feature**: `flash-booking-demo`
 - **Phase / Task**: Phase 3 / T13 - persistent command idempotency
-- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (this commit)
+- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (this commit)
 - **In-progress** (file:line): none
 - **Next step**: Implement T13 after this commit.
 - **Blockers**: none. Docker Desktop 4.90.0 is installed; its stale runtime socket directories were moved to recoverable backups under `C:\Users\vinic\AppData\Local` and the engine is healthy. `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.

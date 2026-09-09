@@ -112,6 +112,22 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
+    void create_whenCustomerEmailHasOuterWhitespace_normalizesBeforeValidationAndPersistence() throws Exception {
+        UUID eventId = insertEvent(10, 10);
+
+        mockMvc.perform(post("/events/{eventId}/reservations", eventId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"quantity": 1, "customer": {"name": " Ana ", "email": " ANA@EXAMPLE.COM "}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customer.name").value("Ana"))
+                .andExpect(jsonPath("$.customer.email").value("ana@example.com"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT email FROM customer", String.class)).isEqualTo("ana@example.com");
+    }
+
+    @Test
     void create_whenEventIsAbsent_returnsNotFoundWithoutAnyEffect() throws Exception {
         mockMvc.perform(post("/events/{eventId}/reservations", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
