@@ -94,6 +94,22 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 Timestamp.from(reservation.createdAt()));
     }
 
+    @Override
+    public Optional<CapacityRelease> cancelPending(UUID reservationId, java.time.Instant changedAt) {
+        return jdbcTemplate.query("""
+                UPDATE reservation
+                SET status = 'CANCELLED',
+                    closure_reason_code = 'CANCELLED_BY_REQUEST',
+                    closure_reason_description = 'Reserva cancelada por solicitação',
+                    updated_at = ?
+                WHERE id = ? AND status = 'PENDING'
+                RETURNING event_id, quantity
+                """, resultSet -> resultSet.next()
+                ? Optional.of(new CapacityRelease(
+                        resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                : Optional.empty(), Timestamp.from(changedAt), reservationId);
+    }
+
     private String reservationPayload(Reservation reservation) {
         try {
             return objectMapper.writeValueAsString(Map.of(

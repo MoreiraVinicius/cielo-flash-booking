@@ -215,6 +215,7 @@ T28 -> T29
 
 ### T12: Implementar cancelamento
 
+**Status:** Complete
 **What:** Implementar `DELETE /reservations/{id}` com devolução condicional.
 **Where:** `src/main/java/com/cielo/flashbooking/reservation/controller/`
 **Depends on:** T10

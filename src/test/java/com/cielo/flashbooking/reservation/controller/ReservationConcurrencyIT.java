@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cielo.flashbooking.controller.error.ResourceConflictException;
 import com.cielo.flashbooking.reservation.application.CreateReservationService;
+import com.cielo.flashbooking.reservation.application.CancelReservationService;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +37,9 @@ class ReservationConcurrencyIT extends LocalIntegrationInfrastructure {
 
     @Autowired
     private CreateReservationService createReservationService;
+
+    @Autowired
+    private CancelReservationService cancelReservationService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -82,6 +86,29 @@ class ReservationConcurrencyIT extends LocalIntegrationInfrastructure {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isEqualTo(10);
     }
 
+    @Test
+    void cancel_whenConcurrentRequestsTargetTheSameReservation_returnsCapacityOnlyOnce() throws Exception {
+        UUID eventId = insertEvent(10);
+        UUID reservationId = insertPendingReservation(eventId, 3);
+        List<Callable<Boolean>> requests = new ArrayList<>();
+        for (int index = 0; index < 20; index++) {
+            requests.add(() -> {
+                cancelReservationService.cancel(reservationId);
+                return true;
+            });
+        }
+
+        List<Future<Boolean>> results = executor.invokeAll(requests);
+        for (Future<Boolean> result : results) {
+            assertThat(result.get()).isTrue();
+        }
+
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+                .isEqualTo("CANCELLED");
+    }
+
     private boolean reserve(UUID eventId, int requestNumber) {
         try {
             createReservationService.create(eventId, 1, "Customer " + requestNumber, "customer" + requestNumber + "@example.com");
@@ -101,5 +128,29 @@ class ReservationConcurrencyIT extends LocalIntegrationInfrastructure {
                 capacity,
                 java.sql.Timestamp.from(Instant.parse("2026-09-09T12:00:00Z")));
         return id;
+    }
+
+    private UUID insertPendingReservation(UUID eventId, int quantity) {
+        UUID customerId = UUID.randomUUID();
+        UUID reservationId = UUID.randomUUID();
+        Instant createdAt = Instant.parse("2026-09-09T12:00:00Z");
+        jdbcTemplate.update(
+                "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                customerId,
+                "Cancel customer",
+                "cancel@example.com",
+                java.sql.Timestamp.from(createdAt),
+                java.sql.Timestamp.from(createdAt));
+        jdbcTemplate.update(
+                "INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?)",
+                reservationId,
+                eventId,
+                customerId,
+                quantity,
+                java.sql.Timestamp.from(createdAt.plusSeconds(600)),
+                java.sql.Timestamp.from(createdAt),
+                java.sql.Timestamp.from(createdAt));
+        jdbcTemplate.update("UPDATE event SET available = available - ? WHERE id = ?", quantity, eventId);
+        return reservationId;
     }
 }

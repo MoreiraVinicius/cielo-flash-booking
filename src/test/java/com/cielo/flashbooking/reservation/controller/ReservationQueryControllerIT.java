@@ -2,6 +2,7 @@ package com.cielo.flashbooking.reservation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -116,6 +117,43 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         }
 
         assertThat(Duration.ofNanos(System.nanoTime() - startedAt)).isLessThan(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void cancel_whenReservationIsPending_returnsAuditableTerminalStateAndInvalidatesCaches() throws Exception {
+        UUID reservationId = insertReservation("PENDING");
+        UUID eventId = jdbcTemplate.queryForObject(
+                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        redisTemplate.opsForValue().set("reservation:" + reservationId, "stale");
+        redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
+
+        mockMvc.perform(delete("/reservations/{id}", reservationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.closureReason.code").value("CANCELLED_BY_REQUEST"))
+                .andExpect(jsonPath("$.closureReason.description").value("Reserva cancelada por solicitação"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
+                .isEqualTo("CANCELLED_BY_REQUEST");
+        assertThat(redisTemplate.hasKey("reservation:" + reservationId)).isFalse();
+        assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
+    }
+
+    @Test
+    void cancel_whenRepeated_preservesTerminalStateAndReturnsCapacityOnlyOnce() throws Exception {
+        UUID reservationId = insertReservation("PENDING");
+        UUID eventId = jdbcTemplate.queryForObject(
+                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+
+        mockMvc.perform(delete("/reservations/{id}", reservationId)).andExpect(status().isOk());
+        mockMvc.perform(delete("/reservations/{id}", reservationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
     }
 
     private UUID insertReservation(String status) {
