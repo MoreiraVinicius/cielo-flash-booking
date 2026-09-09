@@ -179,6 +179,7 @@ T28 -> T29
 
 ### T09: Implementar inventário atômico
 
+**Status:** Complete
 **What:** Criar operações condicionais de decremento e incremento de capacidade.
 **Where:** `src/main/java/com/cielo/flashbooking/adapter/out/persistence/inventory/`
 **Depends on:** T04, T05
