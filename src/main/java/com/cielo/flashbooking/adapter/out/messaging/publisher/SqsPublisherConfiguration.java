@@ -6,6 +6,7 @@ import java.time.Clock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -16,6 +17,7 @@ import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
+@Profile({"worker", "all"})
 @ConditionalOnProperty(prefix = "outbox.publisher", name = "enabled", havingValue = "true")
 class SqsPublisherConfiguration {
 

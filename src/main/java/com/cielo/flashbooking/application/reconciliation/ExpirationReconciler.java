@@ -2,10 +2,12 @@ package com.cielo.flashbooking.application.reconciliation;
 
 import com.cielo.flashbooking.feature.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile({"worker", "all"})
 public class ExpirationReconciler {
 
     private static final int BATCH_SIZE = 100;

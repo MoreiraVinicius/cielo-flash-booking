@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    default: all
   data:
     redis:
       connect-timeout: 100ms

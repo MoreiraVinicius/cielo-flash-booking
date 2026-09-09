@@ -1,0 +1,6 @@
+.git
+.mvn/wrapper/apache-maven-*
+target
+README.md
+docs
+.specs

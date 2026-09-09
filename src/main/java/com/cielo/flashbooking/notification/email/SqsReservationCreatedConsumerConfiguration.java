@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
@@ -18,6 +19,7 @@ import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
+@Profile({"worker", "all"})
 @ConditionalOnProperty(prefix = "notification.consumer", name = "enabled", havingValue = "true")
 class SqsReservationCreatedConsumerConfiguration {
 

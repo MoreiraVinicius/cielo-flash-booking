@@ -303,6 +303,7 @@ T28 -> T29
 
 ### T19: Criar imagem da aplicação
 
+**Status:** Complete
 **What:** Criar Dockerfile multi-stage com usuário sem privilégios e health check.
 **Where:** `Dockerfile`
 **Depends on:** T17, T18
