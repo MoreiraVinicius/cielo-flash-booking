@@ -422,6 +422,8 @@ T28 -> T29
 **Gate:** Build
 **Commit:** `docs: document demo execution and decisions`
 
+**Status:** Complete
+
 ### T29: Verificar a demo contra a especificação e o case
 
 **What:** Executar todos os gates, revisar cada AC e realizar discrimination sensor.
