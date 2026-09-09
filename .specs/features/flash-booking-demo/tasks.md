@@ -265,6 +265,7 @@ T28 -> T29
 
 ### T16: Implementar consumidor de expiração
 
+**Status:** Complete
 **What:** Consumir SQS e executar `PENDING -> EXPIRED` com devolução única.
 **Where:** `src/main/java/com/cielo/flashbooking/feature/reservation/expire/`
 **Depends on:** T12, T15

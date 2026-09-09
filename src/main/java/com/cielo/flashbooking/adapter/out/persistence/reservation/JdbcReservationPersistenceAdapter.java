@@ -120,6 +120,24 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 : Optional.empty(), Timestamp.from(changedAt), reservationId);
     }
 
+    @Override
+    public Optional<CapacityRelease> expirePending(UUID reservationId) {
+        return jdbcTemplate.query("""
+                UPDATE reservation
+                SET status = 'EXPIRED',
+                    closure_reason_code = 'RESERVATION_DEADLINE_REACHED',
+                    closure_reason_description = 'Prazo da reserva encerrado',
+                    updated_at = clock_timestamp()
+                WHERE id = ?
+                  AND status = 'PENDING'
+                  AND expires_at <= clock_timestamp()
+                RETURNING event_id, quantity
+                """, resultSet -> resultSet.next()
+                ? Optional.of(new CapacityRelease(
+                        resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                : Optional.empty(), reservationId);
+    }
+
     private String reservationPayload(Reservation reservation) {
         try {
             return objectMapper.writeValueAsString(Map.of(
