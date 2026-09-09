@@ -327,6 +327,7 @@ T28 -> T29
 
 ### T21: Criar bootstrap Terraform
 
+**Status:** Complete
 **What:** Provisionar bucket S3 criptografado, versionado e bloqueado para state remoto.
 **Where:** `infra/bootstrap/`
 **Depends on:** None
