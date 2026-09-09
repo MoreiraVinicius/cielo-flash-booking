@@ -9,7 +9,7 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 
 @Testcontainers
-abstract class LocalIntegrationInfrastructure {
+public abstract class LocalIntegrationInfrastructure {
 
     @Container
     protected static final PostgreSQLContainer<?> POSTGRESQL = new PostgreSQLContainer<>("postgres:16-alpine");

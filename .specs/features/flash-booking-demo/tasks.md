@@ -117,6 +117,7 @@ T28 -> T29
 
 ### T04: Criar o schema relacional
 
+**Status:** Complete
 **What:** Criar migrations de clientes, eventos, reservas, idempotência, outbox e entrega de notificação com índices e constraints de `docs/data-model.md`.
 **Where:** `src/main/resources/db/migration/`
 **Depends on:** T02, T03, T05

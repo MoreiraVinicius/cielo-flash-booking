@@ -129,7 +129,11 @@
 
 ## Handoff
 
-- **Current feature:** Revisão documental consolidada das arquiteturas demo e alta carga, incluindo dados, cache, autenticação, e-mail, escala independente e defesa contra oversell.
-- **Next step:** Implementação não foi iniciada e não está autorizada. Antes de executar tasks, revalidar gates e obter autorização explícita.
-- **Validation note:** As tasks passam no validador estrutural. As specs usam cabeçalhos e EARS em português por decisão do responsável; o validador original espera termos ingleses, portanto os critérios devem ser auditados também por sua obrigação `DEVE` e pela matriz de rastreabilidade.
-- **High-load dependency:** A demo é a prioridade de demonstração. Nesta entrega, alta carga permanece documentação, validação estática/mockada e plano de infraestrutura, sem provisionamento ou teste remoto.
+- **Feature**: `flash-booking-demo`
+- **Phase / Task**: Phase 2 / T06 - problem details and correlation ID
+- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T05 (`6a1fd2e`), T04 (this commit)
+- **In-progress** (file:line): none
+- **Next step**: Implement T06 after this commit.
+- **Blockers**: none. Docker Desktop 4.90.0 is installed; `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
+- **Uncommitted files**: T04 migration, tests, and tracking updates; pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`.
+- **Branch**: `main`
