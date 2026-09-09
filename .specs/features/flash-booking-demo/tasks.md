@@ -339,6 +339,7 @@ T28 -> T29
 
 ### T22: Criar rede AWS demo
 
+**Status:** Complete
 **What:** Provisionar VPC, duas AZs, sub-redes públicas/privadas/isoladas, rotas, NAT e security groups.
 **Where:** `infra/modules/network/`
 **Depends on:** T21
