@@ -401,6 +401,7 @@ T28 -> T29
 
 ### T27: Executar benchmark da demo
 
+**Status:** Complete
 **What:** Criar cenários separados de consultas, reservas e carga mista, incluindo ao menos dois processos de command-api e registrando TPS, p95, p99, hit rate, conexões e lock waits.
 **Where:** `performance/demo/`
 **Depends on:** T20, T26
