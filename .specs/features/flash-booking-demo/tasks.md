@@ -93,6 +93,7 @@ T28 -> T29
 
 ### T02: Modelar Event
 
+**Status:** Complete
 **What:** Criar o agregado de evento com invariantes de nome e capacidade.
 **Where:** `src/main/java/com/cielo/flashbooking/domain/event/`
 **Depends on:** T01
