@@ -229,6 +229,7 @@ T28 -> T29
 
 ### T13: Implementar idempotência
 
+**Status:** Complete
 **What:** Persistir chave, operação, alvo normalizado, hash do payload e resposta dos comandos mutáveis por 24 horas.
 **Where:** `src/main/java/com/cielo/flashbooking/application/idempotency/`
 **Depends on:** T07, T10, T12

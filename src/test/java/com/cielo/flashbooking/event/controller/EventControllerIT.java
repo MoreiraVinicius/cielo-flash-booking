@@ -64,6 +64,7 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
 
     @BeforeEach
     void clearEvents() {
+        jdbcTemplate.update("DELETE FROM idempotency_record");
         jdbcTemplate.update("DELETE FROM event");
         redisTemplate.delete(redisTemplate.keys("event-availability:*"));
     }
@@ -73,6 +74,7 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
     void createsAValidEventAndPersistsIt() throws Exception {
         String response = mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(objectMapper.writeValueAsString(Map.of("name", " Arena show ", "capacity", 120))))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/events/[0-9a-f-]{36}")))
@@ -101,6 +103,7 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
     void rejectsInvalidEventsWithoutPersistence(String name, int capacity) throws Exception {
         mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(objectMapper.writeValueAsString(Map.of("name", name, "capacity", capacity))))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().exists("X-Correlation-ID"))

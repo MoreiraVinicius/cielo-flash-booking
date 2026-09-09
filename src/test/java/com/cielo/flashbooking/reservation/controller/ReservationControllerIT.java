@@ -50,6 +50,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
     @BeforeEach
     void clearState() {
+        jdbcTemplate.update("DELETE FROM idempotency_record");
         jdbcTemplate.update("DELETE FROM notification_delivery");
         jdbcTemplate.update("DELETE FROM outbox_event");
         jdbcTemplate.update("DELETE FROM reservation");
@@ -65,6 +66,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         String response = mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "quantity", 3,
                                 "customer", Map.of("name", " Ana ", "email", "ANA@EXAMPLE.COM")))))
@@ -98,6 +100,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {"quantity": 1, "customer": {"name": "", "email": "not-an-email"}}
                                 """))
@@ -117,6 +120,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {"quantity": 1, "customer": {"name": " Ana ", "email": " ANA@EXAMPLE.COM "}}
                                 """))
@@ -131,6 +135,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
     void create_whenEventIsAbsent_returnsNotFoundWithoutAnyEffect() throws Exception {
         mockMvc.perform(post("/events/{eventId}/reservations", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(validRequest(1)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("resource-not-found"));
@@ -146,6 +151,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(validRequest(3)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("resource-conflict"));

@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(ErrorTestController.class)
-@Import({ApiExceptionHandler.class, CorrelationIdFilter.class, ErrorTestController.class})
+@Import({ApiExceptionHandler.class, ProblemResponseFactory.class, CorrelationIdFilter.class, ErrorTestController.class})
 class ApiExceptionHandlerIT {
 
     @Autowired

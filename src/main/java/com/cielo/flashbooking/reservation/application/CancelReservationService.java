@@ -31,7 +31,7 @@ public class CancelReservationService {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ResourceNotFoundException.class)
     public ReservationDetails cancel(UUID reservationId) {
         return reservationWriter.cancelPending(reservationId, clock.instant())
                 .map(release -> cancelAndReturn(reservationId, release))

@@ -4,7 +4,6 @@ import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.application.error.ResourceNotFoundException;
 import com.cielo.flashbooking.application.error.ServiceUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -21,6 +20,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public final class ApiExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    private final ProblemResponseFactory problemResponseFactory;
+
+    public ApiExceptionHandler(ProblemResponseFactory problemResponseFactory) {
+        this.problemResponseFactory = problemResponseFactory;
+    }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
@@ -67,7 +72,7 @@ public final class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception exception, HttpServletRequest request) {
-        LOGGER.error("Unexpected request failure correlationId={}", correlationId(request), exception);
+        LOGGER.error("Unexpected request failure correlationId={}", problemResponseFactory.correlationId(request), exception);
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error",
@@ -82,18 +87,10 @@ public final class ApiExceptionHandler {
             String detail,
             String code,
             HttpServletRequest request) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
-        problem.setTitle(title);
-        problem.setType(URI.create("urn:flash-booking:problem:" + code));
-        problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", code);
-        problem.setProperty("correlationId", correlationId(request));
+        ProblemDetail problem = problemResponseFactory.problem(status, title, detail, code, request);
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(problem);
     }
 
-    private String correlationId(HttpServletRequest request) {
-        return (String) request.getAttribute(CorrelationIdFilter.REQUEST_ATTRIBUTE);
-    }
 }

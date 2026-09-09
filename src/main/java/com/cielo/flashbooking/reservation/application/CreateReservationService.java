@@ -36,7 +36,10 @@ public class CreateReservationService {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {
+            ResourceNotFoundException.class,
+            ResourceConflictException.class,
+            IllegalArgumentException.class})
     public CreatedReservation create(UUID eventId, int quantity, String customerName, String customerEmail) {
         Objects.requireNonNull(eventId, "eventId must not be null");
         Instant createdAt = clock.instant();

@@ -49,6 +49,7 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
 
     @BeforeEach
     void clearState() {
+        jdbcTemplate.update("DELETE FROM idempotency_record");
         jdbcTemplate.update("DELETE FROM notification_delivery");
         jdbcTemplate.update("DELETE FROM outbox_event");
         jdbcTemplate.update("DELETE FROM reservation");
@@ -127,7 +128,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         redisTemplate.opsForValue().set("reservation:" + reservationId, "stale");
         redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
 
-        mockMvc.perform(delete("/reservations/{id}", reservationId))
+        mockMvc.perform(delete("/reservations/{id}", reservationId)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
                 .andExpect(jsonPath("$.closureReason.code").value("CANCELLED_BY_REQUEST"))
@@ -147,8 +149,12 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         UUID eventId = jdbcTemplate.queryForObject(
                 "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
 
-        mockMvc.perform(delete("/reservations/{id}", reservationId)).andExpect(status().isOk());
-        mockMvc.perform(delete("/reservations/{id}", reservationId))
+        String idempotencyKey = UUID.randomUUID().toString();
+        mockMvc.perform(delete("/reservations/{id}", reservationId)
+                        .header("Idempotency-Key", idempotencyKey))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/reservations/{id}", reservationId)
+                        .header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
