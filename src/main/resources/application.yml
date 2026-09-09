@@ -7,6 +7,33 @@ spring:
       timeout: 100ms
   jpa:
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 64KB
+      max-request-size: 64KB
+
+server:
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-http-form-post-size: 64KB
+    max-swallow-size: 64KB
+  error:
+    include-binding-errors: never
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+flash-booking:
+  security:
+    max-request-body-size: 64KB
 
 reservation:
   hold-duration: 10m

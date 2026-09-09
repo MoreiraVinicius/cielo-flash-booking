@@ -389,6 +389,7 @@ T28 -> T29
 
 ### T26: Aplicar hardening de segurança
 
+**Status:** Complete
 **What:** Restringir actuator, sanitizar erros, mascarar logs e revisar dependências.
 **Where:** `src/main/java/com/cielo/flashbooking/config/security/`
 **Depends on:** T17, T18, T25

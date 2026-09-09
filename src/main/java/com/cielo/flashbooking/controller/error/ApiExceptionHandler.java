@@ -72,7 +72,10 @@ public final class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception exception, HttpServletRequest request) {
-        LOGGER.error("Unexpected request failure correlationId={}", problemResponseFactory.correlationId(request), exception);
+        LOGGER.error(
+                "Unexpected request failure correlationId={} exceptionType={}",
+                problemResponseFactory.correlationId(request),
+                exception.getClass().getSimpleName());
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error",

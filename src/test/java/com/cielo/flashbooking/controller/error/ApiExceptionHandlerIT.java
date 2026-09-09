@@ -25,9 +25,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.cielo.flashbooking.config.security.RequestPayloadLimitFilter;
 
 @WebMvcTest(ErrorTestController.class)
-@Import({ApiExceptionHandler.class, ProblemResponseFactory.class, CorrelationIdFilter.class, ErrorTestController.class})
+@Import({ApiExceptionHandler.class, ProblemResponseFactory.class, CorrelationIdFilter.class, RequestPayloadLimitFilter.class, ErrorTestController.class})
 class ApiExceptionHandlerIT {
 
     @Autowired
@@ -74,6 +75,14 @@ class ApiExceptionHandlerIT {
                 .andExpect(jsonPath("$.correlationId", matchesPattern(
                         "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
                 .andExpect(content().string(not(containsString("database-password"))));
+    }
+
+    @Test
+    void rejectsOversizedRequestsBeforeTheyReachTheController() throws Exception {
+        mockMvc.perform(post("/__test/errors/validation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("x".repeat(65537)))
+                .andExpect(status().isPayloadTooLarge());
     }
 
     private void assertProblem(String path, int expectedStatus, String expectedTitle, String expectedCode)

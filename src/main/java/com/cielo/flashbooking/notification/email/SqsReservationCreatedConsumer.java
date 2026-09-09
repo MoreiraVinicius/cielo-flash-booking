@@ -51,11 +51,11 @@ public class SqsReservationCreatedConsumer {
             if (result.acknowledged()) {
                 sqsClient.deleteMessage(request -> request.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));
             } else {
-                LOGGER.warn("notification delivery remains available for retry: outboxEventId={}, recipient={}",
-                        outboxEventId, result.maskedRecipient());
+                LOGGER.warn("notification delivery remains available for retry: outboxEventId={}", outboxEventId);
             }
         } catch (Exception exception) {
-            LOGGER.warn("notification message remains available for retry", exception);
+            LOGGER.warn("notification message remains available for retry exceptionType={}",
+                    exception.getClass().getSimpleName());
         }
     }
 
