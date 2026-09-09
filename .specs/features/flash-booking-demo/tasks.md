@@ -105,6 +105,7 @@ T28 -> T29
 
 ### T03: Modelar Customer e Reservation
 
+**Status:** Complete
 **What:** Criar o agregado de reserva, a entidade Customer, o vínculo obrigatório entre ambos e as transições `PENDING`, `CANCELLED` e `EXPIRED`.
 **Where:** `src/main/java/com/cielo/flashbooking/domain/reservation/`
 **Depends on:** T01
