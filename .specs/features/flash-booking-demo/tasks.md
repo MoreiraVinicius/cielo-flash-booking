@@ -143,6 +143,7 @@ T28 -> T29
 
 ### T06: Padronizar erros e correlation ID
 
+**Status:** Complete
 **What:** Implementar `application/problem+json`, mapeamento de exceções e correlation ID.
 **Where:** `src/main/java/com/cielo/flashbooking/controller/error/`
 **Depends on:** T01
