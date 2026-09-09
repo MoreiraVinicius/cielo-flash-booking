@@ -69,8 +69,8 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   }
 
   assert {
-    condition     = one([for rule in aws_wafv2_web_acl.api.rule : rule if rule.name == "RateLimit"]).statement[0].rate_based_statement[0].limit == var.waf_rate_limit && length(aws_budgets_budget.demo.notification) == 3
-    error_message = "The edge must rate-limit requests and create all three budget notifications."
+    condition     = one([for rule in aws_wafv2_web_acl.api.rule : rule if rule.name == "RateLimit"]).statement[0].rate_based_statement[0].limit == var.waf_rate_limit && aws_budgets_budget.demo.limit_amount == "5" && length(aws_budgets_budget.demo.notification) == 3
+    error_message = "The edge must rate-limit requests and create all three notifications for the US$5 budget."
   }
 
   assert {

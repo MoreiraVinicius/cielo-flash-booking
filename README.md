@@ -26,6 +26,8 @@ O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 A relação entre cliente, reserva e evento está em [docs/data-model.md](docs/data-model.md). A cobertura do case, com limites de evidência, está em [docs/case-requirements-evaluation.md](docs/case-requirements-evaluation.md).
 
+As explicações sobre concorrência, oversell, consistência eventual, cache, autenticação e e-mail estão em [docs/perguntas-e-respostas.md](docs/perguntas-e-respostas.md).
+
 ## Ordem de entrega
 
 1. Executar as [29 tarefas da demo](.specs/features/flash-booking-demo/tasks.md).

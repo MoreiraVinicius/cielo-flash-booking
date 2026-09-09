@@ -454,7 +454,7 @@ resource "aws_wafv2_web_acl_association" "api" {
 resource "aws_budgets_budget" "demo" {
   name         = "${var.name}-monthly-cap"
   budget_type  = "COST"
-  limit_amount = "100"
+  limit_amount = "5"
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 

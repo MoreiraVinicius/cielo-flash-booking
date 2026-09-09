@@ -27,8 +27,8 @@ Este documento é um roteiro de estimativa, não uma promessa de preço. O valor
 
 1. Calcular cada recurso na AWS Pricing Calculator para `sa-east-1`, usando as classes e os volumes definidos nas variáveis Terraform.
 2. Registrar o total, as classes, a duração, o tráfego assumido e quais itens são cobertos por créditos da conta.
-3. Não executar `terraform apply` se a estimativa superar US$100 ou se algum recurso de custo relevante estiver sem estimativa.
-4. Configurar alertas de AWS Budgets em US$50, US$80 e US$100. Esses alertas são defesa adicional, não garantia de corte automático.
+3. Não executar `terraform apply` se a estimativa superar US$5 ou se algum recurso de custo relevante estiver sem estimativa.
+4. Configurar alertas de AWS Budgets em US$2,50, US$4,00 e US$5,00 (50%, 80% e 100%). Esses alertas são defesa adicional, não garantia de corte automático.
 5. Definir um temporizador operacional de 1h30 e o responsável pelo `terraform destroy` antes de criar recursos.
 
 ## Encerramento e conferência

@@ -127,13 +127,21 @@
 - **Scope:** Empacotamento, controllers e infraestrutura das duas arquiteturas.
 - **ADR:** [ADR 0013](../docs/adr/0013-separar-servicos-de-consulta-e-comando.md).
 
+### AD-017 - Teto de alerta de custo da demo em US$5
+
+- **Status:** active
+- **Decision:** O AWS Budget da demo usa limite mensal de US$5 e envia alertas reais em 50%, 80% e 100% para o e-mail configurado localmente em `budget_alert_email`.
+- **Reason:** O responsável reduziu o limite de gasto aceitável antes de qualquer provisionamento remoto.
+- **Trade-off:** AWS Budgets atualiza custos periodicamente e alerta; não impõe interrupção imediata nem garante teto financeiro absoluto.
+- **Scope:** Infraestrutura Terraform e documentação operacional da demo.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
 - **Phase / Task**: Phase 5 / T29 - validation gaps recorded
 - **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (`a6535dd`), T25 (`f43635d`), T26 (`53f696e`), T27 (this commit)
 - **In-progress** (file:line): none
-- **Next step**: Supply temporary AWS credentials and explicit deployment authorization, then run the remote Terraform plan/apply, signed/unsigned/CIDR/throttling probes, and destroy. T29 remains open because the independent validation report is FAIL with evidence gaps.
+- **Next step**: Supply temporary AWS credentials and explicit deployment authorization, then run the remote Terraform plan/apply, signed/unsigned/CIDR/throttling probes, and destroy. T29 remains open because the independent validation report is FAIL with evidence gaps. Revalidate Edge-6 after the US$5 budget decision is applied remotely.
 - **Blockers**: No AWS credentials are available locally, so no Terraform plan/apply against AWS may run. Terraform 1.9.6 is a 32-bit Windows binary, which cannot run AWS provider 6.x; the validated 5.100.0 configuration uses VPC Link V2's private connection and ALB URI, while the provider-6 `integration_target` form remains a remote-upgrade follow-up. Docker Desktop 4.90.0 is installed; its stale runtime socket directories were moved to recoverable backups under `C:\Users\vinic\AppData\Local` and the engine is healthy. `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
 - **Uncommitted files**: pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`, `AGENTS.md`, and research documents under `docs/`.
 - **Branch**: `main`

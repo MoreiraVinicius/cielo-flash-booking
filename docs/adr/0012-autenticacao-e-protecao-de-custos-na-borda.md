@@ -20,7 +20,7 @@ Defesa contra abuso e custo:
 - AWS WAF associado ao stage, com allowlist de CIDR e regra baseada em taxa parametrizada;
 - limites máximos de tasks ECS, conexões e fallback ao banco definidos em Terraform;
 - payload máximo e validação no controller; resposta `429` quando a borda rejeitar excesso;
-- AWS Budget de US$100 com alertas em 50%, 80% e 100%, além do procedimento obrigatório de `terraform destroy` ao final da janela de 1h30.
+- AWS Budget de US$5 com alertas em 50%, 80% e 100%, além do procedimento obrigatório de `terraform destroy` ao final da janela de 1h30.
 
 Throttling, WAF e Budgets não formam um teto financeiro matemático: API Gateway e WAF trabalham com limites aproximados e Budgets pode ter atraso. A proteção principal é negar identidades não autorizadas, não expor backends e manter tetos pequenos de capacidade na demo.
 

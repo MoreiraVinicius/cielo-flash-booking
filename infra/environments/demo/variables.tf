@@ -42,5 +42,5 @@ variable "allowed_cidrs" {
 
 variable "budget_alert_email" {
   type        = string
-  description = "Recipient of 50%, 80%, and 100% budget notifications."
+  description = "Recipient of the 50%, 80%, and 100% notifications for the US$5 demo budget."
 }

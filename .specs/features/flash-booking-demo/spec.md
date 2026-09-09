@@ -130,7 +130,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 3. WHEN a GET route exceeds 20 requests per second or a burst of 40 in the demo THEN API Gateway SHALL start throttling and return `429`.
 4. WHEN a POST or DELETE route exceeds 5 requests per second or a burst of 10 in the demo THEN API Gateway SHALL start throttling and return `429`.
 5. API Gateway REST SHALL be the only public resource; ALB, ECS, PostgreSQL, Valkey, and SQS SHALL remain private.
-6. WHEN spending reaches 50%, 80%, or 100% of the US$100 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
+6. WHEN spending reaches 50%, 80%, or 100% of the US$5 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
 
 **Teste independente:** Assinar uma chamada com role permitida, repetir sem assinatura e fora do CIDR, e validar por Terraform que nenhum backend possui entrada pública.
 

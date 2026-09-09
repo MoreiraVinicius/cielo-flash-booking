@@ -23,7 +23,7 @@ Status: revisão documental consolidada. Este registro não aprova implementaç�
 | R07 | Ordem dos testes | Infraestrutura local precede migrations e testes de integração nas dependências das tasks. | Nenhuma. |
 | R08 | Critérios e gates | Tasks ligam requisitos a testes unitários, integração, concorrência, contrato, infraestrutura e avaliação final do case. | O validador estrutural não substitui execução dos comandos. |
 | R09 | Origem de AWS e Terraform | Registrados como decisão desta solução e restrição operacional informada pelo responsável, não como obrigação textual do case. | Nenhuma. |
-| R10 | Orçamento e duração | Demo limitada a US$100 em créditos e 1h30; estimativa, alertas e destruição são portões explícitos. | AWS Budgets não é limite rígido de gasto. |
+| R10 | Orçamento e duração | Demo limitada a US$5 e 1h30; estimativa, alertas e destruição são portões explícitos. | AWS Budgets não é limite rígido de gasto. |
 | R11 | Banco e cache | PostgreSQL foi comparado com DynamoDB; Valkey foi comparado com Redis OSS, cache local e caches de borda. | Reavaliar apenas com evidência de hot row ou dependência exclusiva do Redis. |
 | R12 | Carga e SLO | Especificação define medições e cenários, mas não inventa capacidade comprovada sem benchmark. | Workload final, p95/p99 alcançados e custo por carga permanecem evidência futura. |
 | R13 | Coerência do cache | TTL máximo de um segundo, invalidação pós-commit, fallback protegido e proibição de autorizar reserva pelo cache valem nas duas topologias. | Medir pressão do fallback no banco. |
