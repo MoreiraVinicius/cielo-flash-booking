@@ -5,3 +5,6 @@ spring:
       timeout: 100ms
   jpa:
     open-in-view: false
+
+reservation:
+  hold-duration: 10m

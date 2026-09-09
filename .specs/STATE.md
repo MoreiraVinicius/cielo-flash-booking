@@ -130,10 +130,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 2 / T06 - problem details and correlation ID
-- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T05 (`6a1fd2e`), T04 (this commit)
+- **Phase / Task**: Phase 2 / T11 - reservation query endpoint
+- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (this commit)
 - **In-progress** (file:line): none
-- **Next step**: Implement T06 after this commit.
-- **Blockers**: none. Docker Desktop 4.90.0 is installed; `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
-- **Uncommitted files**: T04 migration, tests, and tracking updates; pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`.
+- **Next step**: Implement T11 after this commit.
+- **Blockers**: none. Docker Desktop 4.90.0 is installed; its stale runtime socket directories were moved to recoverable backups under `C:\Users\vinic\AppData\Local` and the engine is healthy. `C:\Users\vinic\.docker-java.properties` pins API version 1.44 for Testcontainers compatibility with Docker Engine 29.
+- **Uncommitted files**: pre-existing user changes: `README.md`, `docs/perguntas-e-respostas.md`, `AGENTS.md`, and research documents under `docs/`.
 - **Branch**: `main`

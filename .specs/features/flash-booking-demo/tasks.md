@@ -191,6 +191,7 @@ T28 -> T29
 
 ### T10: Implementar criação de reserva
 
+**Status:** Complete
 **What:** Implementar `POST /events/{id}/reservations` com cliente, inventário, reserva e outbox na mesma transação.
 **Where:** `src/main/java/com/cielo/flashbooking/reservation/controller/`
 **Depends on:** T03, T08, T09
