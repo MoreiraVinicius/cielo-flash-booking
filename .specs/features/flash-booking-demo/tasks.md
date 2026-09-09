@@ -253,6 +253,7 @@ T28 -> T29
 
 ### T15: Implementar publisher SQS
 
+**Status:** Complete
 **What:** Publicar eventos do outbox nas filas separadas de expiração e notificação, calculando delay quando aplicável.
 **Where:** `src/main/java/com/cielo/flashbooking/adapter/out/messaging/publisher/`
 **Depends on:** T14
