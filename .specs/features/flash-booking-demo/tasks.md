@@ -155,6 +155,7 @@ T28 -> T29
 
 ### T07: Implementar criação de evento
 
+**Status:** Complete
 **What:** Implementar `POST /events` com validação e persistência.
 **Where:** `src/main/java/com/cielo/flashbooking/event/controller/`
 **Depends on:** T04, T05, T06
