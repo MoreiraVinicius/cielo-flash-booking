@@ -1,0 +1,10 @@
+availability_zones = ["sa-east-1a", "sa-east-1c"]
+image_tag          = "replace-with-immutable-image-tag"
+ses_sender_email   = "verified-sender@example.com"
+
+# Principal permitted to assume the dedicated ApiInvokerRole, not the provisioning role.
+trusted_principal_arns = ["arn:aws:iam::123456789012:role/demo-operator"]
+
+# Current public IP of the demonstrator, deliberately with no broad default.
+allowed_cidrs      = ["203.0.113.10/32"]
+budget_alert_email = "alerts@example.com"

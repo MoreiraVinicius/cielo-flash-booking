@@ -375,6 +375,7 @@ T28 -> T29
 
 ### T25: Criar entrada, autenticação e observabilidade AWS
 
+**Status:** Complete
 **What:** Provisionar API Gateway REST com IAM/SigV4, `ApiInvokerRole`, principals confiáveis parametrizados, resource policy, WAF, throttling por método, VPC Link V2, ALB interno, target groups separados, logs, dashboard, Budget e alarmes essenciais.
 **Where:** `infra/modules/edge-observability/`
 **Depends on:** T24
