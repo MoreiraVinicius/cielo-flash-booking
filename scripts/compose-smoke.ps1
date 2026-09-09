@@ -15,6 +15,33 @@ function Invoke-JsonRequest {
     Invoke-RestMethod @parameters
 }
 
+function Wait-ForApiHealth {
+    param(
+        [string]$Name,
+        [string]$Uri
+    )
+
+    $deadline = (Get-Date).AddSeconds(90)
+    do {
+        try {
+            $health = Invoke-RestMethod -Uri $Uri
+        } catch {
+            $health = $null
+        }
+
+        if ($health.status -eq 'UP') {
+            return
+        }
+
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+
+    throw "$Name did not become healthy within 90 seconds"
+}
+
+Wait-ForApiHealth -Name 'command-api' -Uri 'http://localhost:8082/actuator/health'
+Wait-ForApiHealth -Name 'query-api' -Uri 'http://localhost:8081/actuator/health'
+
 $event = Invoke-JsonRequest -Method POST -Uri 'http://localhost:8082/events' -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ name = 'Compose smoke event'; capacity = 2 }
 $eventId = $event.id
 $queriedEvent = Invoke-JsonRequest -Method GET -Uri "http://localhost:8081/events/$eventId"
