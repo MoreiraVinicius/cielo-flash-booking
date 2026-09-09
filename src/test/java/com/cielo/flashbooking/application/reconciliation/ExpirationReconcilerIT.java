@@ -1,36 +1,29 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.application.reconciliation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.cielo.flashbooking.feature.reservation.expire.ExpireReservationService;
+import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
 
 @SpringBootTest
-class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
+class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
 
     @DynamicPropertySource
-    static void infrastructureProperties(DynamicPropertyRegistry registry) {
+    static void databaseProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRESQL::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRESQL::getUsername);
         registry.add("spring.datasource.password", POSTGRESQL::getPassword);
@@ -39,19 +32,16 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
     }
 
     @Autowired
+    private ExpirationReconciler expirationReconciler;
+
+    @Autowired
     private ExpireReservationService expireReservationService;
 
     @Autowired
+    private ReservationReader reservationReader;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private SqsClient sqsClient;
-    private String queueUrl;
 
     @BeforeEach
     void setUp() {
@@ -60,93 +50,56 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("DELETE FROM reservation");
         jdbcTemplate.update("DELETE FROM customer");
         jdbcTemplate.update("DELETE FROM event");
-        redisTemplate.delete(redisTemplate.keys("event-availability:*"));
-        redisTemplate.delete(redisTemplate.keys("reservation:*"));
-        sqsClient = SqsClient.builder()
-                .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.SQS))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
-                .region(Region.of(LOCALSTACK.getRegion()))
-                .build();
-        queueUrl = sqsClient.createQueue(request -> request.queueName("expiration-" + UUID.randomUUID())).queueUrl();
-    }
-
-    @AfterEach
-    void closeClient() {
-        sqsClient.close();
     }
 
     @Test
-    void poll_whenReservationIsDue_expiresItReturnsCapacityAndInvalidatesCachesBeforeTheDeadline() {
+    void reconcile_whenNoExpirationMessageExists_expiresTheDueReservationWithinFiveSeconds() {
         UUID eventId = insertEvent(10, 7);
         Instant expiresAt = databaseNow().minusMillis(10);
         UUID reservationId = insertPendingReservation(eventId, 3, expiresAt);
-        redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
-        redisTemplate.opsForValue().set("reservation:" + reservationId, "stale");
-        send(reservationId);
 
-        consumer().poll();
+        expirationReconciler.reconcile();
 
         assertThat(databaseNow()).isBefore(expiresAt.plusSeconds(5));
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("EXPIRED");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
-                .isEqualTo("RESERVATION_DEADLINE_REACHED");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_description FROM reservation WHERE id = ?", String.class, reservationId))
-                .isEqualTo("Prazo da reserva encerrado");
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
-        assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
-        assertThat(redisTemplate.hasKey("reservation:" + reservationId)).isFalse();
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(queueUrl)).messages()).isEmpty();
     }
 
     @Test
-    void poll_whenMessageIsEarly_leavesThePendingReservationAndItsCapacityUntouched() {
+    void reconcile_whenThePostgresqlClockIsBeforeExpiry_doesNotSelectOrExpireTheReservation() {
         UUID eventId = insertEvent(10, 7);
         UUID reservationId = insertPendingReservation(eventId, 3, databaseNow().plusSeconds(60));
-        send(reservationId);
 
-        consumer().poll();
+        expirationReconciler.reconcile();
 
+        assertThat(reservationReader.findExpiredPendingIds(100)).doesNotContain(reservationId);
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("PENDING");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
-                .isNull();
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(7);
     }
 
     @Test
-    void poll_whenExpirationMessageIsDuplicated_returnsCapacityOnlyOnce() {
+    void reconcile_whenTwoWorkersFindTheSameReservation_returnsCapacityOnlyOnce() throws Exception {
         UUID eventId = insertEvent(10, 7);
         UUID reservationId = insertPendingReservation(eventId, 3, databaseNow().minusMillis(10));
-        send(reservationId);
-        send(reservationId);
-
-        consumer().poll();
-
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
-                .isEqualTo("EXPIRED");
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
-    }
-
-    @Test
-    void expire_whenDuplicateMessagesAreHandledConcurrently_returnsCapacityOnlyOnce() throws Exception {
-        UUID eventId = insertEvent(10, 7);
-        UUID reservationId = insertPendingReservation(eventId, 3, databaseNow().minusMillis(10));
+        ExpirationReconciler secondWorker = new ExpirationReconciler(reservationReader, expireReservationService);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            List<Callable<Boolean>> requests = List.of(
-                    () -> expireReservationService.expire(reservationId),
-                    () -> expireReservationService.expire(reservationId));
+            List<Callable<Void>> workers = List.of(
+                    () -> {
+                        expirationReconciler.reconcile();
+                        return null;
+                    },
+                    () -> {
+                        secondWorker.reconcile();
+                        return null;
+                    });
 
-            var results = executor.invokeAll(requests);
-
-            long expired = 0;
-            for (var result : results) {
-                if (result.get()) {
-                    expired++;
-                }
+            for (var result : executor.invokeAll(workers)) {
+                result.get();
             }
-            assertThat(expired).isEqualTo(1);
+
             assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                     .isEqualTo("EXPIRED");
             assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
@@ -155,25 +108,12 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         }
     }
 
-    private SqsExpirationConsumer consumer() {
-        return new SqsExpirationConsumer(sqsClient, expireReservationService, queueUrl);
-    }
-
-    private void send(UUID reservationId) {
-        try {
-            String body = objectMapper.writeValueAsString(Map.of("reservationId", reservationId.toString()));
-            sqsClient.sendMessage(request -> request.queueUrl(queueUrl).messageBody(body));
-        } catch (Exception exception) {
-            throw new IllegalStateException(exception);
-        }
-    }
-
     private UUID insertEvent(int capacity, int available) {
         UUID eventId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO event (id, name, capacity, available, created_at) VALUES (?, ?, ?, ?, ?)",
                 eventId,
-                "Expiration event",
+                "Reconciliation event",
                 capacity,
                 available,
                 java.sql.Timestamp.from(Instant.now()));
@@ -191,7 +131,7 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update(
                 "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
                 customerId,
-                "Expiration customer",
+                "Reconciliation customer",
                 customerId + "@example.com",
                 java.sql.Timestamp.from(createdAt),
                 java.sql.Timestamp.from(createdAt));

@@ -48,6 +48,18 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     }
 
     @Override
+    public java.util.List<UUID> findExpiredPendingIds(int limit) {
+        return jdbcTemplate.query("""
+                SELECT id
+                FROM reservation
+                WHERE status = 'PENDING'
+                  AND expires_at <= clock_timestamp()
+                ORDER BY expires_at, id
+                LIMIT ?
+                """, (resultSet, rowNum) -> resultSet.getObject("id", UUID.class), limit);
+    }
+
+    @Override
     public Customer upsertCustomer(Customer customer) {
         UUID id = jdbcTemplate.queryForObject("""
                 INSERT INTO customer (id, name, email, created_at, updated_at)

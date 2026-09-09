@@ -277,6 +277,7 @@ T28 -> T29
 
 ### T17: Implementar reconciliador
 
+**Status:** Complete
 **What:** Buscar ao menos a cada um segundo reservas vencidas ainda pendentes e reaplicar expiração idempotente.
 **Where:** `src/main/java/com/cielo/flashbooking/application/reconciliation/`
 **Depends on:** T16
