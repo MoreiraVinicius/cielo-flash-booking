@@ -128,6 +128,7 @@ T28 -> T29
 
 ### T05: Criar infraestrutura de testes
 
+**Status:** Complete
 **What:** Configurar Testcontainers para PostgreSQL, Valkey, mensageria e Mailpit locais.
 **Where:** `src/test/java/com/cielo/flashbooking/support/`
 **Depends on:** T01
