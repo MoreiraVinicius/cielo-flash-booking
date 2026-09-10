@@ -20,6 +20,10 @@ A mesma imagem inicia em serviços separados de consultas, comandos e worker. Is
 Os planos são independentes e sequenciais:
 
 1. [Arquitetura demo](.specs/features/flash-booking-demo/design.md): econômica, completa e operável por uma pessoa.
+   
+ <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/77104484-66cb-4f8d-a203-2aae06da9a96" />
+
+
 2. [Arquitetura de alta carga](.specs/features/flash-booking-high-load/design.md): Multi-AZ, consultas e reservas escaladas separadamente.
 
 O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
