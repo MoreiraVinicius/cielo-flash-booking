@@ -10,7 +10,8 @@ locals {
     { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.database_host}:${var.database_port}/${var.database_name}?sslmode=require" },
     { name = "SPRING_DATA_REDIS_HOST", value = var.valkey_primary_endpoint },
     { name = "SPRING_DATA_REDIS_PORT", value = tostring(var.valkey_port) },
-    { name = "SPRING_DATA_REDIS_SSL_ENABLED", value = "true" }
+    { name = "SPRING_DATA_REDIS_SSL_ENABLED", value = "true" },
+    { name = "MANAGEMENT_HEALTH_REDIS_ENABLED", value = "false" }
   ]
 
   database_secrets = [
@@ -31,6 +32,7 @@ locals {
 resource "aws_ecr_repository" "application" {
   name                 = "${var.name}-application"
   image_tag_mutability = "IMMUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -303,11 +305,12 @@ resource "aws_ecs_task_definition" "worker" {
 }
 
 resource "aws_ecs_service" "query_api" {
-  name            = "query-api"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.query_api.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                              = "query-api"
+  cluster                           = aws_ecs_cluster.this.id
+  task_definition                   = aws_ecs_task_definition.query_api.arn
+  desired_count                     = 1
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 180
 
   deployment_circuit_breaker {
     enable   = true
@@ -330,11 +333,12 @@ resource "aws_ecs_service" "query_api" {
 }
 
 resource "aws_ecs_service" "command_api" {
-  name            = "command-api"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.command_api.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                              = "command-api"
+  cluster                           = aws_ecs_cluster.this.id
+  task_definition                   = aws_ecs_task_definition.command_api.arn
+  desired_count                     = 1
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 180
 
   deployment_circuit_breaker {
     enable   = true

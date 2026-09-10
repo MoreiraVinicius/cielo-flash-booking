@@ -170,12 +170,18 @@ resource "aws_api_gateway_rest_api" "this" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid       = "AllowOnlyDemoInvokerFromApprovedNetworks"
-      Effect    = "Allow"
-      Principal = { AWS = aws_iam_role.api_invoker.arn }
+      Sid    = "AllowOnlyDemoInvokerFromApprovedNetworks"
+      Effect = "Allow"
+      # API Gateway resource policies accept a wildcard principal here; restrict
+      # the caller to the dedicated role using its request-context ARN.  A role
+      # ARN directly in Principal is rejected by the REST API create endpoint.
+      Principal = "*"
       Action    = "execute-api:Invoke"
       Resource  = "execute-api:/*"
-      Condition = { IpAddress = { "aws:SourceIp" = var.allowed_cidrs } }
+      Condition = {
+        IpAddress = { "aws:SourceIp" = var.allowed_cidrs }
+        ArnEquals = { "aws:PrincipalArn" = aws_iam_role.api_invoker.arn }
+      }
     }]
   })
 
@@ -374,7 +380,7 @@ resource "aws_api_gateway_stage" "demo" {
 resource "aws_api_gateway_method_settings" "get_event" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   stage_name  = aws_api_gateway_stage.demo.stage_name
-  method_path = "GET/events/{id}"
+  method_path = "events/{id}/GET"
   settings {
     metrics_enabled        = true
     logging_level          = "INFO"
@@ -387,7 +393,7 @@ resource "aws_api_gateway_method_settings" "get_event" {
 resource "aws_api_gateway_method_settings" "get_reservation" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   stage_name  = aws_api_gateway_stage.demo.stage_name
-  method_path = "GET/reservations/{id}"
+  method_path = "reservations/{id}/GET"
   settings {
     metrics_enabled        = true
     logging_level          = "INFO"
@@ -398,7 +404,7 @@ resource "aws_api_gateway_method_settings" "get_reservation" {
 }
 
 resource "aws_api_gateway_method_settings" "commands" {
-  for_each = toset(["POST/events", "POST/events/{id}/reservations", "DELETE/reservations/{id}"])
+  for_each = toset(["events/POST", "events/{id}/reservations/POST", "reservations/{id}/DELETE"])
 
   rest_api_id = aws_api_gateway_rest_api.this.id
   stage_name  = aws_api_gateway_stage.demo.stage_name

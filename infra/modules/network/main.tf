@@ -122,8 +122,8 @@ resource "aws_security_group" "vpc_link" {
   vpc_id      = aws_vpc.this.id
 
   egress {
-    from_port   = var.application_port
-    to_port     = var.application_port
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
@@ -166,8 +166,8 @@ resource "aws_security_group" "valkey" {
 resource "aws_vpc_security_group_ingress_rule" "alb_from_vpc_link" {
   security_group_id            = aws_security_group.alb.id
   referenced_security_group_id = aws_security_group.vpc_link.id
-  from_port                    = var.application_port
-  to_port                      = var.application_port
+  from_port                    = 80
+  to_port                      = 80
   ip_protocol                  = "tcp"
 }
 
@@ -193,6 +193,22 @@ resource "aws_vpc_security_group_egress_rule" "ecs_https" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "ecs_to_rds" {
+  security_group_id            = aws_security_group.ecs_tasks.id
+  referenced_security_group_id = aws_security_group.rds.id
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "ecs_to_valkey" {
+  security_group_id            = aws_security_group.ecs_tasks.id
+  referenced_security_group_id = aws_security_group.valkey.id
+  from_port                    = 6379
+  to_port                      = 6379
+  ip_protocol                  = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs" {
