@@ -272,6 +272,7 @@ resource "aws_api_gateway_integration" "create_event" {
   type                    = "HTTP_PROXY"
   connection_type         = "VPC_LINK"
   connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/events"
 }
 
@@ -283,6 +284,7 @@ resource "aws_api_gateway_integration" "get_event" {
   type                    = "HTTP_PROXY"
   connection_type         = "VPC_LINK"
   connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/events/{id}"
   request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
 }
@@ -295,6 +297,7 @@ resource "aws_api_gateway_integration" "create_reservation" {
   type                    = "HTTP_PROXY"
   connection_type         = "VPC_LINK"
   connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/events/{id}/reservations"
   request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
 }
@@ -307,6 +310,7 @@ resource "aws_api_gateway_integration" "get_reservation" {
   type                    = "HTTP_PROXY"
   connection_type         = "VPC_LINK"
   connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/reservations/{id}"
   request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
 }
@@ -319,6 +323,7 @@ resource "aws_api_gateway_integration" "cancel_reservation" {
   type                    = "HTTP_PROXY"
   connection_type         = "VPC_LINK"
   connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/reservations/{id}"
   request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
 }
