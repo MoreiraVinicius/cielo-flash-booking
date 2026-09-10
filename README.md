@@ -21,7 +21,7 @@ Os planos são independentes e sequenciais:
 
 1. [Arquitetura demo](.specs/features/flash-booking-demo/design.md): econômica, completa e operável por uma pessoa.
    
- <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/77104484-66cb-4f8d-a203-2aae06da9a96" />
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/11a4876b-c114-4184-8090-03e04fa03de4" />
 
 
 2. [Arquitetura de alta carga](.specs/features/flash-booking-high-load/design.md): Multi-AZ, consultas e reservas escaladas separadamente.
