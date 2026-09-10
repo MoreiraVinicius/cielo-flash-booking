@@ -3,9 +3,13 @@ package com.cielo.flashbooking.notification.email;
 import com.cielo.flashbooking.reservation.application.ReservationDetails;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 public class ReservationEmailService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationEmailService.class);
 
     private final NotificationDeliveryStore notificationDeliveryStore;
     private final ReservationReader reservationReader;
@@ -47,6 +51,7 @@ public class ReservationEmailService {
                     reservation.expiresAt());
             String providerMessageId = reservationEmailSender.send(email);
             notificationDeliveryStore.markSent(outboxEventId, providerMessageId);
+            LOGGER.info("notification delivery accepted by provider outboxEventId={}", outboxEventId);
             return ProcessingResult.acknowledgedResult();
         } catch (Exception exception) {
             if (attempts >= properties.maximumAttempts()) {
