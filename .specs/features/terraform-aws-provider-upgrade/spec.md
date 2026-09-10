@@ -75,7 +75,7 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 | --- | --- | --- | --- |
 | TFUP-01 | P1: Toolchain atual | Execute | Verified |
 | TFUP-02 | P1: Provider AWS atual e compatível | Execute | Verified |
-| TFUP-03 | P1: Provider AWS atual e compatível | Execute | Implementing |
+| TFUP-03 | P1: Provider AWS atual e compatível | Execute | Verified |
 | TFUP-04 | P1: Provider AWS atual e compatível | Verify | Pending |
 
 **Coverage:** 4 total, 0 mapped to tasks, 4 unmapped.

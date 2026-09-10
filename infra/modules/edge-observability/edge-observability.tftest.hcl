@@ -59,7 +59,7 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   }
 
   assert {
-    condition     = aws_api_gateway_integration.get_event.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_reservation.connection_id == aws_apigatewayv2_vpc_link.private.id && contains(aws_apigatewayv2_vpc_link.private.security_group_ids, var.vpc_link_security_group_id)
+    condition     = aws_api_gateway_integration.get_event.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_reservation.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.create_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.cancel_reservation.integration_target == aws_lb.internal.arn && contains(aws_apigatewayv2_vpc_link.private.security_group_ids, var.vpc_link_security_group_id)
     error_message = "API Gateway must use VPC Link V2 to reach only the internal ALB."
   }
 
