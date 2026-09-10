@@ -138,10 +138,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 5 / T29 - remote validation supplemented; final verifier still pending
+- **Phase / Task**: Phase 5 / T29 - remote validation and teardown complete; final verifier still pending
 - **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (`a6535dd`), T25 (`f43635d`), T26 (`53f696e`), T27 (this commit)
-- **In-progress** (file:line): `.specs/features/flash-booking-demo/validation.md` records two observed edge-throttling failures and one outside-CIDR evidence gap.
-- **Next step**: destroy the short-lived AWS demo and verify the Terraform state is empty. Then diagnose edge admission so its configured throttles actually return `429`, perform the CIDR denial probe from a distinct network, and request an independent final validation.
+- **In-progress** (file:line): `.specs/features/flash-booking-demo/validation.md` records two observed edge-throttling failures and one outside-CIDR evidence gap; the demo has been destroyed.
+- **Next step**: diagnose edge admission so its configured throttles actually return `429`, perform the CIDR denial probe from a distinct network, reprovision only for those retests, and request an independent final validation.
 - **Blockers**: The temporary AWS roles are available. The remaining functional blockers are: controlled GET burst returned `503` rather than required `429`; controlled safe POST burst returned `400` rather than required `429`; a distinct non-allowed network is needed for the CIDR denial probe. Docker Engine is healthy and Terraform is `1.16.1` with AWS provider `6.64.0`.
-- **Uncommitted files**: validation and handoff updates in this task; local `demo.tfvars` remains ignored and contains no committed credentials.
+- **Uncommitted files**: teardown validation and handoff updates in this task; local `demo.tfvars` remains ignored and contains no committed credentials.
 - **Branch**: `main`

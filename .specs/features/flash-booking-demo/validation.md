@@ -11,7 +11,7 @@ The local implementation, tests, static infrastructure checks, and two behavior-
 
 ## Task completion
 
-T01--T28 are marked `Complete`; T29 remains open pending the two edge-admission corrections, the outside-CIDR probe, teardown, and an independent final verification. This supplement updates the report and `STATE.md`; the worker telemetry is committed separately as `6871399`.
+T01--T28 are marked `Complete`; T29 remains open pending the two edge-admission corrections, the outside-CIDR probe, and an independent final verification. The demo teardown completed with Terraform state count `0`; the worker telemetry is committed separately as `6871399`.
 
 ## Spec-anchored acceptance criteria
 
@@ -98,6 +98,7 @@ Scratch used a detached temporary worktree at `2869392`; no `git stash` was used
 | Terraform format/validate | PASS locally; `terraform validate` passed bootstrap, network, data-plane, compute, edge-observability, and demo environment. |
 | Terraform module tests | PASS: network 1/1, data-plane 1/1, compute 1/1, edge-observability 1/1. |
 | Remote Terraform plan/apply | PASS — temporary assumed roles, remote plan/apply and post-rollout ECS/target-health checks completed. |
+| Remote Terraform destroy | PASS — `terraform destroy` completed; `terraform state list` returned `0`, and ECS/RDS/Valkey/NAT no longer have active demo resources. |
 
 ## Case BackEnd 1 report
 
@@ -112,4 +113,4 @@ All five required routes have integration assertions: event creation/availabilit
 
 **Overall**: FAIL — 40/43 ACs pass; one has a runtime evidence gap and two have observed edge-throttling failures.
 **What works**: local command/query flows, transactional inventory/outbox, cache fallback/invalidation, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, both DLQs, and the measured SES acceptance SLO.
-**Next step**: diagnose and correct edge admission, run the CIDR probe from a distinct network, then rerun independent validation. The demo must be destroyed and the state verified empty after this remote test run.
+**Next step**: diagnose and correct edge admission, run the CIDR probe from a distinct network, reprovision only for the retest, then rerun independent validation.
