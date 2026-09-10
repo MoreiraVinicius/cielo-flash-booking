@@ -83,5 +83,5 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 ## Success Criteria
 
 - [ ] A versão local configurada é Terraform 1.16.1 amd64.
-- [ ] Os dois root modules têm lockfiles que selecionam AWS Provider 6.62.0.
+- [ ] Os dois root modules têm lockfiles que selecionam AWS Provider 6.64.0.
 - [ ] Nenhuma operação remota é disparada durante a atualização.
