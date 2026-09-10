@@ -7,7 +7,7 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 ## Goals
 
 - [ ] Executar a infraestrutura localmente com Terraform 1.16.1 para Windows amd64.
-- [ ] Fixar a dependência AWS na versão estável 6.62.0 e validar a configuração compatível.
+- [ ] Fixar a dependência AWS na versão estável 6.64.0 e validar a configuração compatível.
 - [ ] Preservar o desenho REST API + VPC Link V2 + ALB e impedir `apply` remoto durante a atualização.
 
 ## Out of Scope
@@ -25,7 +25,7 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- |
 | Versão do Terraform | 1.16.1 estável, Windows amd64 | É a última versão estável publicada em 2 de setembro de 2026; 1.17 é alpha. | y |
-| Versão do provider | `hashicorp/aws` 6.62.0 | É a versão estável mais recente no Registry em 26 de agosto de 2026. | y |
+| Versão do provider | `hashicorp/aws` 6.64.0 | É a versão estável mais recente resolvida pelo Registry em 10 de setembro de 2026. | y |
 | Instalação local | Atualizar o Terraform existente gerenciado pelo Chocolatey, se o pacote disponibilizar 1.16.1 | Preserva o mecanismo pelo qual o binário atual foi instalado. | y |
 | Evidência remota | Apenas `fmt`, `init -upgrade`, `validate` e testes locais; registrar a ausência de `plan` autenticado | O projeto continua sem credenciais AWS e sem autorização de apply. | y |
 
@@ -56,7 +56,7 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 
 **Acceptance Criteria**:
 
-1. WHEN Terraform initializes each root module THEN the dependency lock file SHALL select `hashicorp/aws` `6.62.0`.
+1. WHEN Terraform initializes each root module THEN the dependency lock file SHALL select `hashicorp/aws` `6.64.0`.
 2. WHEN a REST API integration uses VPC Link V2 and an ALB THEN the configuration SHALL set `integration_target` to that ALB ARN.
 3. WHEN the updated root modules are validated locally THEN Terraform SHALL complete `fmt -check` and `validate` without configuration diagnostics.
 4. IF an authenticated AWS plan cannot be run THEN the upgrade evidence SHALL state that remote compatibility remains unverified.
@@ -74,7 +74,7 @@ O repositório usa Terraform 1.9.6 de 32 bits e AWS Provider 5.100.0, o que impe
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | TFUP-01 | P1: Toolchain atual | Execute | Verified |
-| TFUP-02 | P1: Provider AWS atual e compatível | Execute | Implementing |
+| TFUP-02 | P1: Provider AWS atual e compatível | Execute | Verified |
 | TFUP-03 | P1: Provider AWS atual e compatível | Execute | Implementing |
 | TFUP-04 | P1: Provider AWS atual e compatível | Verify | Pending |
 
