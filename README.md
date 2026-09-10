@@ -26,6 +26,18 @@ Os planos são independentes e sequenciais:
 
 2. [Arquitetura de alta carga](.specs/features/flash-booking-high-load/design.md): Multi-AZ, consultas e reservas escaladas separadamente.
 
+## Diagramas de arquitetura
+
+### Demo
+
+![Diagrama da arquitetura AWS demo](docs/images/flash-booking-aws-demo-v5.png)
+
+### Arquitetura-alvo high-load
+
+![Diagrama da arquitetura AWS high-load](docs/images/flash-booking-aws-high-load-v1.png)
+
+O diagrama high-load é a topologia-alvo. Ela permanece sem provisionamento e validação remota nesta entrega.
+
 O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 A relação entre cliente, reserva e evento está em [docs/data-model.md](docs/data-model.md). A cobertura do case, com limites de evidência, está em [docs/case-requirements-evaluation.md](docs/case-requirements-evaluation.md).
