@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1620" viewBox="0 0 2400 1620" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — Diagrama de sequência de uma reserva</title>
+  <desc id="desc">Fluxos de criação, publicação do outbox, notificação, expiração e consulta de reserva entre as três aplicações Java.</desc>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2c5279"/></marker>
+    <marker id="ad" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2369b4"/></marker>
+    <style>
+      .bg{fill:#f7f9fc}.title{font:700 34px Arial,sans-serif;fill:#15304d}.sub{font:18px Arial,sans-serif;fill:#5b6b7b}.actor{fill:#eaf3fc;stroke:#2369b4;stroke-width:2}.infra{fill:#eef1f4;stroke:#74808d;stroke-width:2}.actorT{font:700 16px Arial,sans-serif;fill:#15304d}.actorS{font:13px Arial,sans-serif;fill:#4d6174}.life{stroke:#91a1b0;stroke-width:1.5;stroke-dasharray:7 7}.active{fill:#cfe3f7;stroke:#2369b4;stroke-width:1.3}.sync{stroke:#2c5279;stroke-width:2.2;fill:none;marker-end:url(#a)}.reply{stroke:#66798b;stroke-width:1.8;stroke-dasharray:6 5;fill:none;marker-end:url(#a)}.async{stroke:#2369b4;stroke-width:2.2;stroke-dasharray:9 6;fill:none;marker-end:url(#ad)}.txt{font:14px Arial,sans-serif;fill:#2d4257}.small{font:12px Arial,sans-serif;fill:#506477}.frame{fill:#fff;stroke:#9aa9b7;stroke-width:1.5}.frameTitle{fill:#dbeafa;stroke:#2369b4;stroke-width:1.5}.frameText{font:700 15px Arial,sans-serif;fill:#15304d}.note{fill:#fff8d9;stroke:#d3b84b;stroke-width:1.3}.noteText{font:13px Arial,sans-serif;fill:#665422}.alt{fill:#f1f5f8;stroke:#aab6c1;stroke-width:1.3}.divider{stroke:#aab6c1;stroke-width:1.3;stroke-dasharray:5 4}
+    </style>
+  </defs>
+  <rect width="2200" height="1510" class="bg"/>
+  <text x="65" y="60" class="title">Flash Booking — Diagrama de sequência: reserva, eventos e leitura</text>
+  <text x="65" y="91" class="sub">Interação entre command-api, worker e query-api; azul tracejado representa mensageria assíncrona</text>
+
+  <!-- participants -->
+  <g>
+    <rect x="60" y="125" width="150" height="63" rx="7" class="infra"/><text x="135" y="152" text-anchor="middle" class="actorT">Cliente</text><text x="135" y="173" text-anchor="middle" class="actorS">Web / Mobile</text>
+    <rect x="300" y="125" width="190" height="63" rx="7" class="actor"/><text x="395" y="152" text-anchor="middle" class="actorT">command-api</text><text x="395" y="173" text-anchor="middle" class="actorS">Spring Boot</text>
+    <rect x="580" y="125" width="185" height="63" rx="7" class="infra"/><text x="672" y="152" text-anchor="middle" class="actorT">PostgreSQL</text><text x="672" y="173" text-anchor="middle" class="actorS">RDS</text>
+    <rect x="855" y="125" width="170" height="63" rx="7" class="actor"/><text x="940" y="152" text-anchor="middle" class="actorT">worker</text><text x="940" y="173" text-anchor="middle" class="actorS">Spring Boot</text>
+    <rect x="1115" y="125" width="185" height="63" rx="7" class="infra"/><text x="1207" y="152" text-anchor="middle" class="actorT">SQS Notification</text><text x="1207" y="173" text-anchor="middle" class="actorS">ReservationCreated</text>
+    <rect x="1390" y="125" width="185" height="63" rx="7" class="infra"/><text x="1482" y="152" text-anchor="middle" class="actorT">SQS Expiration</text><text x="1482" y="173" text-anchor="middle" class="actorS">reserva expira</text>
+    <rect x="1665" y="125" width="145" height="63" rx="7" class="infra"/><text x="1737" y="152" text-anchor="middle" class="actorT">Amazon SES</text><text x="1737" y="173" text-anchor="middle" class="actorS">e-mail</text>
+    <rect x="1900" y="125" width="185" height="63" rx="7" class="actor"/><text x="1992" y="152" text-anchor="middle" class="actorT">query-api</text><text x="1992" y="173" text-anchor="middle" class="actorS">Spring Boot</text>
+    <rect x="2165" y="125" width="185" height="63" rx="7" class="infra"/><text x="2257" y="152" text-anchor="middle" class="actorT">Valkey</text><text x="2257" y="173" text-anchor="middle" class="actorS">ElastiCache</text>
+  </g>
+  <g class="life"><line x1="135" y1="188" x2="135" y2="1550"/><line x1="395" y1="188" x2="395" y2="1550"/><line x1="672" y1="188" x2="672" y2="1550"/><line x1="940" y1="188" x2="940" y2="1550"/><line x1="1207" y1="188" x2="1207" y2="1550"/><line x1="1482" y1="188" x2="1482" y2="1550"/><line x1="1737" y1="188" x2="1737" y2="1550"/><line x1="1992" y1="188" x2="1992" y2="1550"/><line x1="2257" y1="188" x2="2257" y2="1550"/></g>
+
+  <!-- creation frame -->
+  <rect x="42" y="220" width="1535" height="355" rx="7" class="frame"/><rect x="43" y="221" width="330" height="34" class="frameTitle"/><text x="58" y="244" class="frameText">1. Criar reserva — caminho síncrono</text>
+  <rect x="387" y="278" width="16" height="225" class="active"/><rect x="664" y="320" width="16" height="142" class="active"/>
+  <path d="M135 290 H387" class="sync"/><text x="175" y="281" class="txt">POST /reservations + Idempotency-Key</text>
+  <path d="M395 332 H664" class="sync"/><text x="422" y="323" class="txt">claim chave; decremento atômico de inventário</text>
+  <path d="M395 375 H664" class="sync"/><text x="422" y="366" class="txt">salva reservation, customer e 2 eventos no outbox</text>
+  <path d="M664 420 H403" class="reply"/><text x="452" y="411" class="small">commit da mesma transação</text>
+  <path d="M395 480 H672" class="sync"/><text x="425" y="471" class="txt">finaliza a transação; listeners executam após o commit</text>
+  <path d="M395 525 H135" class="reply"/><text x="235" y="516" class="txt">201 Created (reservationId, expiresAt)</text>
+  <rect x="505" y="275" width="245" height="33" rx="4" class="note"/><text x="518" y="297" class="noteText">CreateReservationService @Transactional</text>
+
+  <!-- outbox frame -->
+  <rect x="550" y="610" width="1027" height="285" rx="7" class="frame"/><rect x="551" y="611" width="305" height="34" class="frameTitle"/><text x="566" y="634" class="frameText">2. Publicar o transactional outbox</text>
+  <rect x="932" y="665" width="16" height="190" class="active"/>
+  <path d="M940 684 H680" class="sync"/><text x="704" y="675" class="txt">OutboxSqsPublisher: findPending(100)</text>
+  <path d="M940 730 H1207" class="async"/><text x="963" y="721" class="txt">ReservationCreated {reservationId, outboxEventId}</text>
+  <path d="M940 776 H1482" class="async"/><text x="1000" y="767" class="txt">ReservationExpirationScheduled {reservationId, expiresAt}</text>
+  <path d="M940 822 H680" class="sync"/><text x="704" y="813" class="txt">markPublished; mantém pendente se SQS falhar</text>
+  <rect x="1045" y="842" width="445" height="34" rx="4" class="note"/><text x="1058" y="864" class="noteText">Delay do SQS é limitado; ExpirationReconciler cobre atrasos</text>
+
+  <!-- notification frame -->
+  <rect x="550" y="930" width="1260" height="280" rx="7" class="frame"/><rect x="551" y="931" width="350" height="34" class="frameTitle"/><text x="566" y="954" class="frameText">3. Notificação idempotente por e-mail</text>
+  <rect x="932" y="982" width="16" height="184" class="active"/><rect x="664" y="1045" width="16" height="95" class="active"/>
+  <path d="M1207 1000 H948" class="async"/><text x="975" y="991" class="txt">poll + recebe ReservationCreated</text>
+  <path d="M940 1045 H680" class="sync"/><text x="705" y="1036" class="txt">lockOrCreate delivery; consulta reserva</text>
+  <path d="M940 1090 H1737" class="sync"/><text x="1075" y="1081" class="txt">ReservationEmailService → SesReservationEmailSender</text>
+  <path d="M940 1135 H680" class="sync"/><text x="705" y="1126" class="txt">markSent(outboxEventId, providerMessageId)</text>
+  <path d="M940 1175 H1207" class="async"/><text x="974" y="1166" class="txt">deleteMessage somente quando acknowledged</text>
+
+  <!-- expiration and query frame -->
+  <rect x="42" y="1245" width="2310" height="315" rx="7" class="frame"/><rect x="43" y="1246" width="468" height="34" class="frameTitle"/><text x="58" y="1269" class="frameText">4. Expirar e depois consultar — dois caminhos</text>
+  <path d="M1482 1305 H948" class="async"/><text x="1045" y="1296" class="txt">SqsExpirationConsumer / ExpirationReconciler → expire(reservationId)</text>
+  <path d="M940 1345 H680" class="sync"/><text x="704" y="1336" class="txt">expirePending + increment inventory (TX); AFTER_COMMIT invalida cache</text>
+  <path d="M940 1385 H1482" class="async"/><text x="1060" y="1376" class="txt">deleteMessage após processar</text>
+  <path d="M135 1418 H1992" class="sync"/><text x="955" y="1409" class="txt">GET /reservations/{id}</text>
+  <path d="M1992 1455 H2257" class="sync"/><text x="2025" y="1446" class="txt">ReservationCache.get(id)</text>
+  <path d="M2257 1475 H1992" class="reply"/><text x="2050" y="1466" class="small">[hit] ReservationDetails</text>
+  <path d="M1992 1500 H680" class="sync"/><text x="1160" y="1491" class="small">[miss] GetReservationService → ReservationReader.findById(id)</text>
+  <path d="M1992 1525 H2257" class="sync"/><text x="2032" y="1516" class="small">ReservationCache.put(details, TTL)</text>
+  <path d="M1992 1545 H135" class="reply"/><text x="965" y="1536" class="small">200 OK; a leitura nunca espera outbox, notificação ou expiração</text>
+  <text x="65" y="1594" class="small">Linhas contínuas: chamada síncrona. Linhas azuis tracejadas: SQS. A resposta do comando não espera publicação, e-mail ou expiração.</text>
+</svg>

@@ -38,6 +38,18 @@ Os planos são independentes e sequenciais:
 
 O diagrama high-load é a topologia-alvo. Ela permanece sem provisionamento e validação remota nesta entrega.
 
+### C4 Model — componentes Java
+
+![Diagrama C4 de componentes](docs/images/flash-booking-c4-components.svg)
+
+O diagrama apresenta os componentes implementados nos perfis `query-api`, `command-api` e `worker`, incluindo as portas, adaptadores e integrações que os conectam.
+
+### Sequência de reserva
+
+![Diagrama de sequência de reserva](docs/images/flash-booking-sequence-reservation.svg)
+
+O fluxo separa a resposta síncrona do comando da publicação do outbox, das notificações, da expiração e da leitura cache-aside.
+
 O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 A relação entre cliente, reserva e evento está em [docs/data-model.md](docs/data-model.md). A cobertura do case, com limites de evidência, está em [docs/case-requirements-evaluation.md](docs/case-requirements-evaluation.md).

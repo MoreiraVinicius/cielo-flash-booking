@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1260" viewBox="0 0 2000 1260" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — C4 Model de componentes</title>
+  <desc id="desc">Diagrama C4 de componentes para os perfis query-api, command-api e worker, suas classes principais e integrações.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#4b5d70"/></marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2369b4"/></marker>
+    <style>
+      .bg{fill:#f7f9fc}.title{font:700 34px Arial,sans-serif;fill:#15304d}.subtitle{font:18px Arial,sans-serif;fill:#5b6b7b}.boundary{fill:#fff;stroke:#7d8996;stroke-width:2}.boundaryTitle{font:700 22px Arial,sans-serif;fill:#15304d}.boundarySub{font:15px Arial,sans-serif;fill:#657485}.component{fill:#eaf3fc;stroke:#2369b4;stroke-width:2}.componentTitle{font:700 16px Arial,sans-serif;fill:#15304d}.componentText{font:14px Arial,sans-serif;fill:#31465a}.external{fill:#eef1f4;stroke:#74808d;stroke-width:2}.externalTitle{font:700 16px Arial,sans-serif;fill:#273b4d}.externalText{font:13px Arial,sans-serif;fill:#4e5e6c}.arrow{fill:none;stroke:#4b5d70;stroke-width:2.3;marker-end:url(#arrow)}.async{fill:none;stroke:#2369b4;stroke-width:2.3;stroke-dasharray:9 7;marker-end:url(#arrowBlue)}.event{fill:none;stroke:#718096;stroke-width:2;stroke-dasharray:3 6;marker-end:url(#arrow)}.label{font:13px Arial,sans-serif;fill:#3f5366}.small{font:12px Arial,sans-serif;fill:#526579}.pill{fill:#dbeafa}.note{fill:#f1f5f8;stroke:#c2ccd6;stroke-width:1.5}.noteText{font:13px Arial,sans-serif;fill:#415568}
+    </style>
+  </defs>
+  <rect class="bg" width="2000" height="1260"/>
+  <text x="70" y="65" class="title">Flash Booking — C4 Model • Nível 3: Componentes</text>
+  <text x="70" y="96" class="subtitle">Componentes reais do código Java/Spring Boot — três aplicações executadas com perfis distintos</text>
+
+  <!-- Client -->
+  <rect x="45" y="194" width="120" height="92" rx="8" class="external"/>
+  <text x="105" y="230" text-anchor="middle" class="externalTitle">Cliente</text><text x="105" y="254" text-anchor="middle" class="externalText">Web / Mobile</text>
+
+  <!-- Query API -->
+  <rect x="205" y="150" width="500" height="690" rx="12" class="boundary"/>
+  <text x="230" y="188" class="boundaryTitle">query-api</text><text x="230" y="212" class="boundarySub">Aplicação Spring Boot • leitura</text>
+  <rect x="235" y="245" width="210" height="110" rx="7" class="component"/>
+  <text x="250" y="275" class="componentTitle">REST Query Controllers</text><text x="250" y="300" class="componentText">EventController</text><text x="250" y="321" class="componentText">ReservationQueryController</text>
+  <rect x="475" y="245" width="195" height="110" rx="7" class="component"/>
+  <text x="490" y="275" class="componentTitle">Casos de consulta</text><text x="490" y="300" class="componentText">GetEventService</text><text x="490" y="321" class="componentText">GetReservationService</text>
+  <rect x="235" y="418" width="210" height="130" rx="7" class="component"/>
+  <text x="250" y="448" class="componentTitle">Portas de cache</text><text x="250" y="473" class="componentText">EventAvailabilityCache</text><text x="250" y="494" class="componentText">ReservationCache</text><text x="250" y="524" class="small">cache-aside + circuit breaker</text>
+  <rect x="475" y="418" width="195" height="130" rx="7" class="component"/>
+  <text x="490" y="448" class="componentTitle">Portas de leitura</text><text x="490" y="473" class="componentText">EventReader</text><text x="490" y="494" class="componentText">ReservationReader</text><text x="490" y="524" class="small">fonte de verdade</text>
+  <rect x="235" y="615" width="435" height="90" rx="7" class="note"/>
+  <text x="253" y="646" class="noteText">Adaptadores: RedisEventAvailabilityCache, RedisReservationCache,</text><text x="253" y="668" class="noteText">EventPersistenceAdapter, JdbcReservationPersistenceAdapter</text>
+  <path d="M445 300 H475" class="arrow"/><text x="451" y="288" class="label">HTTP</text>
+  <path d="M572 355 V386 H340 V418" class="arrow"/><path d="M572 355 V418" class="arrow"/>
+  <text x="390" y="378" class="label">cache-aside</text>
+
+  <!-- Command API -->
+  <rect x="750" y="150" width="500" height="690" rx="12" class="boundary"/>
+  <text x="775" y="188" class="boundaryTitle">command-api</text><text x="775" y="212" class="boundarySub">Aplicação Spring Boot • comandos e consistência transacional</text>
+  <rect x="780" y="245" width="210" height="132" rx="7" class="component"/>
+  <text x="795" y="275" class="componentTitle">REST Command Controllers</text><text x="795" y="300" class="componentText">EventCommandController</text><text x="795" y="321" class="componentText">ReservationController</text><text x="795" y="342" class="componentText">ReservationCancellationController</text>
+  <rect x="1020" y="245" width="195" height="132" rx="7" class="component"/>
+  <text x="1035" y="275" class="componentTitle">Idempotência</text><text x="1035" y="300" class="componentText">PersistentIdempotencyService</text><text x="1035" y="327" class="small">IdempotencyStore</text>
+  <rect x="780" y="430" width="210" height="145" rx="7" class="component"/>
+  <text x="795" y="460" class="componentTitle">Casos de uso</text><text x="795" y="485" class="componentText">CreateEventService</text><text x="795" y="506" class="componentText">CreateReservationService</text><text x="795" y="527" class="componentText">CancelReservationService</text><text x="795" y="555" class="small">@Transactional</text>
+  <rect x="1020" y="430" width="195" height="145" rx="7" class="component"/>
+  <text x="1035" y="460" class="componentTitle">Portas de escrita</text><text x="1035" y="485" class="componentText">EventWriter</text><text x="1035" y="506" class="componentText">ReservationWriter</text><text x="1035" y="527" class="componentText">InventoryOperations</text><text x="1035" y="555" class="small">inclui outbox_event</text>
+  <rect x="780" y="635" width="435" height="95" rx="7" class="note"/>
+  <text x="798" y="664" class="noteText">Após commit: EventAvailabilityChanged / ReservationChanged</text><text x="798" y="687" class="noteText">→ EventAvailabilityInvalidationListener / ReservationCacheInvalidationListener</text>
+  <path d="M990 311 H1020" class="arrow"/><text x="994" y="299" class="label">Idempotency-Key</text>
+  <path d="M1117 377 V402 H885 V430" class="arrow"/><path d="M1117 377 V430" class="arrow"/>
+  <path d="M990 502 H1020" class="arrow"/>
+
+  <!-- Worker -->
+  <rect x="1295" y="150" width="500" height="690" rx="12" class="boundary"/>
+  <text x="1320" y="188" class="boundaryTitle">worker</text><text x="1320" y="212" class="boundarySub">Aplicação Spring Boot • publicação, expiração e notificação</text>
+  <rect x="1325" y="245" width="205" height="132" rx="7" class="component"/>
+  <text x="1340" y="275" class="componentTitle">Publicador do outbox</text><text x="1340" y="300" class="componentText">OutboxSqsPublisher</text><text x="1340" y="327" class="small">OutboxEventStore</text><text x="1340" y="348" class="small">polling agendado</text>
+  <rect x="1560" y="245" width="205" height="132" rx="7" class="component"/>
+  <text x="1575" y="275" class="componentTitle">Consumidores SQS</text><text x="1575" y="300" class="componentText">SqsExpirationConsumer</text><text x="1575" y="321" class="componentText">SqsReservationCreatedConsumer</text><text x="1575" y="348" class="small">polling agendado</text>
+  <rect x="1325" y="430" width="205" height="145" rx="7" class="component"/>
+  <text x="1340" y="460" class="componentTitle">Expiração</text><text x="1340" y="485" class="componentText">ExpireReservationService</text><text x="1340" y="506" class="componentText">ExpirationReconciler</text><text x="1340" y="534" class="small">libera inventário + eventos</text>
+  <rect x="1560" y="430" width="205" height="145" rx="7" class="component"/>
+  <text x="1575" y="460" class="componentTitle">Notificação por e-mail</text><text x="1575" y="485" class="componentText">ReservationEmailService</text><text x="1575" y="506" class="componentText">NotificationDeliveryStore</text><text x="1575" y="534" class="small">deduplicação e tentativas</text>
+  <rect x="1325" y="635" width="440" height="95" rx="7" class="note"/>
+  <text x="1343" y="664" class="noteText">Adaptadores: JdbcOutboxEventStore, JdbcNotificationDeliveryStore,</text><text x="1343" y="687" class="noteText">JdbcReservationPersistenceAdapter e SesReservationEmailSender</text>
+  <path d="M1530 311 H1560" class="arrow"/><path d="M1662 377 V402 H1428 V430" class="arrow"/><path d="M1662 377 V430" class="arrow"/>
+
+  <!-- External dependencies -->
+  <rect x="275" y="975" width="340" height="165" rx="9" class="external"/>
+  <text x="445" y="1012" text-anchor="middle" class="externalTitle">Amazon ElastiCache / Valkey</text><text x="445" y="1041" text-anchor="middle" class="externalText">Disponibilidade de evento e reserva</text><text x="445" y="1065" text-anchor="middle" class="externalText">TTL + cache-aside + invalidação</text>
+  <rect x="770" y="950" width="405" height="215" rx="9" class="external"/>
+  <text x="972" y="987" text-anchor="middle" class="externalTitle">Amazon RDS PostgreSQL</text><text x="972" y="1016" text-anchor="middle" class="externalText">events · inventory · reservations · customers</text><text x="972" y="1040" text-anchor="middle" class="externalText">idempotency_records · outbox_event</text><text x="972" y="1064" text-anchor="middle" class="externalText">notification_delivery</text><text x="972" y="1110" text-anchor="middle" class="small">fonte de verdade e limite de consistência transacional</text>
+  <rect x="1330" y="975" width="220" height="165" rx="9" class="external"/>
+  <text x="1440" y="1012" text-anchor="middle" class="externalTitle">Amazon SQS</text><text x="1440" y="1041" text-anchor="middle" class="externalText">notification queue</text><text x="1440" y="1065" text-anchor="middle" class="externalText">expiration queue</text>
+  <rect x="1620" y="975" width="170" height="165" rx="9" class="external"/>
+  <text x="1705" y="1012" text-anchor="middle" class="externalTitle">Amazon SES</text><text x="1705" y="1041" text-anchor="middle" class="externalText">e-mail de reserva</text>
+
+  <!-- Cross-boundary relationships -->
+  <path d="M165 240 H235" class="arrow"/><text x="174" y="228" class="label">GET</text>
+  <path d="M165 268 H745 V290 H780" class="arrow"/><text x="390" y="257" class="label">POST / cancelamento</text>
+  <path d="M340 548 V975" class="arrow"/><text x="351" y="770" class="label">get / put / evict</text>
+  <path d="M572 548 V900 H972 V950" class="arrow"/><text x="720" y="889" class="label">consultas JDBC</text>
+  <path d="M1117 575 V950" class="arrow"/><text x="1128" y="780" class="label">transação JDBC</text>
+  <path d="M1215 680 H1268 V910 H445 V975" class="event"/><text x="1110" y="905" class="label">após commit: evict</text>
+  <path d="M1428 575 V950" class="arrow"/><text x="1438" y="770" class="label">lê / atualiza</text>
+  <path d="M1530 311 V900 H1440 V975" class="async"/><text x="1544" y="690" class="label">ReservationCreated /</text><text x="1544" y="708" class="label">ReservationExpirationScheduled</text>
+  <path d="M1440 975 V900 H1662 V377" class="async"/><text x="1460" y="888" class="label">mensagens</text>
+  <path d="M1662 575 V900 H1705 V975" class="arrow"/><text x="1674" y="888" class="label">envia e-mail</text>
+  <path d="M1428 575 V920 H590 V975" class="event"/><text x="700" y="908" class="label">após expirar: invalida cache</text>
+
+  <rect x="70" y="1192" width="1800" height="40" rx="6" class="note"/>
+  <line x1="95" y1="1212" x2="145" y2="1212" class="arrow"/><text x="155" y="1217" class="small">chamada síncrona</text>
+  <line x1="350" y1="1212" x2="400" y2="1212" class="async"/><text x="410" y="1217" class="small">evento/mensagem assíncrona</text>
+  <line x1="685" y1="1212" x2="735" y2="1212" class="event"/><text x="745" y="1217" class="small">evento de aplicação após commit</text>
+  <text x="1840" y="1217" text-anchor="end" class="small">C4 Component diagram • componentes e relações implementadas no código</text>
+</svg>
