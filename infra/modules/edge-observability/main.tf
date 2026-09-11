@@ -12,6 +12,31 @@ locals {
       Principal = { AWS = var.trusted_principal_arns }
     }]
   })
+
+  api_resource_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "DenyUnapprovedSourceIp"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "execute-api:Invoke"
+        Resource  = "execute-api:/*"
+        Condition = { NotIpAddress = { "aws:SourceIp" = var.allowed_cidrs } }
+      },
+      {
+        Sid    = "AllowOnlyDemoInvokerFromApprovedNetworks"
+        Effect = "Allow"
+        # API Gateway resource policies accept a wildcard principal here; restrict
+        # the caller to the dedicated role using its request-context ARN. A role
+        # ARN directly in Principal is rejected by the REST API create endpoint.
+        Principal = "*"
+        Action    = "execute-api:Invoke"
+        Resource  = "execute-api:/*"
+        Condition = { ArnEquals = { "aws:PrincipalArn" = aws_iam_role.api_invoker.arn } }
+      },
+    ]
+  })
 }
 
 resource "aws_lb" "internal" {
@@ -167,30 +192,7 @@ resource "aws_api_gateway_rest_api" "this" {
   description = "IAM-authenticated private integration entrypoint for ${var.name}"
   endpoint_configuration { types = ["REGIONAL"] }
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "DenyUnapprovedSourceIp"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "execute-api:Invoke"
-        Resource  = "execute-api:/*"
-        Condition = { NotIpAddress = { "aws:SourceIp" = var.allowed_cidrs } }
-      },
-      {
-        Sid    = "AllowOnlyDemoInvokerFromApprovedNetworks"
-        Effect = "Allow"
-        # API Gateway resource policies accept a wildcard principal here; restrict
-        # the caller to the dedicated role using its request-context ARN.  A role
-        # ARN directly in Principal is rejected by the REST API create endpoint.
-        Principal = "*"
-        Action    = "execute-api:Invoke"
-        Resource  = "execute-api:/*"
-        Condition = { ArnEquals = { "aws:PrincipalArn" = aws_iam_role.api_invoker.arn } }
-      },
-    ]
-  })
+  policy = local.api_resource_policy
 
   tags = local.tags
 }
@@ -358,6 +360,7 @@ resource "aws_api_gateway_deployment" "this" {
       aws_api_gateway_integration.get_reservation.id,
       aws_api_gateway_integration.cancel_reservation.id
     ]))
+    api_policy = local.api_resource_policy
   }
 
   lifecycle { create_before_destroy = true }

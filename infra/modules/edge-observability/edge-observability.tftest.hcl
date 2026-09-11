@@ -91,4 +91,9 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     )
     error_message = "The resource policy must explicitly deny sources outside the configured CIDRs."
   }
+
+  assert {
+    condition     = aws_api_gateway_deployment.this.triggers["api_policy"] == local.api_resource_policy
+    error_message = "A resource-policy change must redeploy the API stage."
+  }
 }

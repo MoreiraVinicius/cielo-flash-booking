@@ -51,7 +51,7 @@ T01--T28 are marked `Complete`; T29 remains open pending the two edge-admission 
 | Notify-4 | SES failure preserves reservation, retries, then DLQ | Remote 2026-09-10: a reservation addressed to an unverified SES-sandbox recipient remained `PENDING`; after retries it reached the notification DLQ. The source queue's 60-second visibility was restored after the isolated probe. | PASS |
 | Notify-5 | Healthy worker requests delivery within 30s | Remote 2026-09-10: the SES mailbox simulator was accepted by the worker in `3.072s`; the probe reservation was then cancelled. The acceptance log contains no recipient data. | PASS |
 | Edge-1 | Invalid/no IAM SigV4 reaches `403` before VPC Link | Remote 2026-09-10: unsigned `GET /events/{unknown}` returned `403`; the same path signed by `ApiInvokerRole` returned application `404`. | PASS |
-| Edge-2 | Outside CIDR blocks before ALB | `edge-observability/main.tf:170-180` defines SourceIp policy | GAP — no deployed outside-CIDR observation |
+| Edge-2 | Outside CIDR blocks before ALB | Remote 2026-09-11: a SigV4 `GET /events/cidr-probe` signed by `ApiInvokerRole`, with a temporarily incompatible CIDR policy deployed, returned `403`; its API access-log record had no integration status and a source outside the temporary range. The original CIDR was restored immediately. | PASS |
 | Edge-3 | GET 20rps/40 burst yields `429` | Deployed stage reports `20`/`40`; a controlled 60-request signed GET burst returned `37x 404` and `23x 503`, with no `429`. | FAIL |
 | Edge-4 | POST/DELETE 5rps/10 burst yields `429` | Deployed stage reports `5`/`10`; a controlled 20-request safe POST burst returned `20x 400`, with no `429`. | FAIL |
 | Edge-5 | Only API Gateway public; internals private | `edge-observability.tftest.hcl:57-58`; `data-plane.tftest.hcl:15-22`; `network.tftest.hcl:27-33` | PASS (static topology) |
@@ -63,7 +63,7 @@ T01--T28 are marked `Complete`; T29 remains open pending the two edge-admission 
 | Runtime-5 | No console resource creation | `demo-runbook.md:70` documents Terraform-only creation | PASS (reviewed contract; remote execution remains unobserved) |
 | Runtime-6 | 1h30 runbook directs destroy/verification | `demo-runbook.md:90-103` — destroy and state-list procedure | PASS |
 
-**Spec-anchored status**: 35/43 criteria have matching executable/static evidence; 8 criteria are gaps. No criterion was treated as covered solely because a description exists.
+**Spec-anchored status**: 36/43 criteria have matching executable/static evidence; 7 criteria are gaps. No criterion was treated as covered solely because a description exists.
 
 ## Edge cases
 
@@ -107,10 +107,9 @@ All five required routes have integration assertions: event creation/availabilit
 ## Fix plans
 
 1. **P1 — correct and retest edge admission.** The deployed method settings report the desired limits, but the controlled bursts did not return `THROTTLED`/`429`. Diagnose the `503` integration behavior and make the edge response deterministic before claiming Edge-3 or Edge-4.
-2. **P1 — run Edge-2 from a distinct network.** A second, non-allowed source is required to prove the resource policy blocks before the VPC Link; do not weaken the policy merely to create the test.
 
 ## Summary
 
-**Overall**: FAIL — 40/43 ACs pass; one has a runtime evidence gap and two have observed edge-throttling failures.
-**What works**: local command/query flows, transactional inventory/outbox, cache fallback/invalidation, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, both DLQs, and the measured SES acceptance SLO.
-**Next step**: diagnose and correct edge admission, run the CIDR probe from a distinct network, reprovision only for the retest, then rerun independent validation.
+**Overall**: FAIL — 41/43 ACs pass; the two remaining observed failures are edge-throttling responses.
+**What works**: local command/query flows, transactional inventory/outbox, cache fallback/invalidation, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, CIDR admission, both DLQs, and the measured SES acceptance SLO.
+**Next step**: diagnose and correct edge throttling so the configured limits return `429`, then rerun independent validation.
