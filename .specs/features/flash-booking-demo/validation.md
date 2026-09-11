@@ -116,3 +116,20 @@ All five required routes have integration assertions: event creation/availabilit
 **Overall**: PASS — 43/43 ACs pass under the revised, provider-accurate throttling criteria.
 **What works**: local command/query flows, transactional inventory/outbox, cache fallback/invalidation, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, CIDR admission, both DLQs, and the measured SES acceptance SLO.
 **Next step**: none. A future requirement for deterministic `429` admission requires a separate architecture decision and implementation task.
+
+## Independent verification
+
+**Verifier date**: 2026-09-11
+**Reviewed diff**: `c29f114..9899fc6`
+**Scope**: T29 specification, task completion, validation evidence, and project handoff. No AWS resource was created or queried.
+
+| Command | Result |
+| --- | --- |
+| `python C:\Users\vinic\.codex\skills\tlc-spec-driven\scripts\validate_spec.py .specs\features\flash-booking-demo\spec.md` | PASS — 0 errors, 0 warnings |
+| `python C:\Users\vinic\.codex\skills\tlc-spec-driven\scripts\validate_tasks.py .specs\features\flash-booking-demo\tasks.md` | PASS — 0 errors, 0 warnings |
+| `python C:\Users\vinic\.codex\skills\tlc-spec-driven\scripts\validate_state.py flash-booking-demo` | PASS — 0 errors |
+| `git diff --check c29f114..9899fc6` | PASS |
+
+The revised criteria at `spec.md:130-131` require effective stage targets and a recorded signed-burst distribution, not a deterministic `429`. Edge-3 has a dated remote burst observation; Edge-4 has a dated safe POST burst observation, while both POST and DELETE targets are evidenced without claiming a stateful DELETE or concurrent command execution (`validation.md:58-59`; `infra/modules/edge-observability/main.tf:416-427`). T29 is complete (`tasks.md:427-437`), all seven requirements are `Validated` (`spec.md:168-174`), and the handoff is reconciled as complete (`.specs/STATE.md:148-155`).
+
+**Verdict**: PASS — T29 is provider-accurate, traceable, and complete under the user-approved best-effort throttling contract.
