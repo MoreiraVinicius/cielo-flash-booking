@@ -140,16 +140,16 @@
 - **Status:** active
 - **Decision:** A demo mantém somente IAM/SigV4 como credencial de cliente. Os limites de stage do API Gateway continuam configurados, mas são documentados como metas de melhor esforço, sem alegar `429` determinístico.
 - **Reason:** O teste remoto concorrente confirmou os limites efetivos, mas não observou `429`. API key e usage plan acrescentariam um segundo segredo e continuariam sujeitos a melhor esforço; um limitador determinístico expandiria a arquitetura da demo.
-- **Trade-off:** Edge-3 e Edge-4 permanecem falhos contra a especificação atual. A entrega registra esse desvio em vez de ocultá-lo com um teste ou script ad hoc.
+- **Trade-off:** O resultado de um burst não é previsível como `429`; a validação exige os limites efetivos e registra a distribuição observada. A entrega deixa explícita essa semântica em vez de ocultar o resultado real.
 - **Scope:** Contrato de borda, runbook e validação da demo.
 
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
 - **Phase / Task**: Phase 5 / T29 - complete; provider-accurate throttling validation passed
-- **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (`a6535dd`), T25 (`f43635d`), T26 (`53f696e`), T27 (this commit)
+- **Completed**: T01--T29. A validação provider-accurate foi commitada em `67e8b4b`.
 - **In-progress**: Nenhum. T29 passou com a validação de throttling alinhada à semântica de melhor esforço do API Gateway. A demo foi destruída e o state foi verificado vazio.
 - **Next step**: Nenhum para a entrega atual. Se uma nova demonstração precisar ser aplicada, trate a identidade SES preexistente fora do state como decisão operacional antes do apply.
 - **Blockers**: Nenhum para a entrega validada. Uma nova aplicação pode exigir importar ou gerir condicionalmente a identidade SES existente fora do state. Docker Engine está saudável e Terraform é `1.16.1` com AWS provider `6.64.0`.
-- **Uncommitted files**: Os artefatos desta conclusão serão commitados nesta tarefa; `demo.tfvars` permanece ignorado e não contém credenciais commitadas.
+- **Uncommitted files**: `README.md`, três diagramas em `docs/images/` e `docs/images/flash-booking-aws-high-load-v2.svg` são alterações externas a esta tarefa e não serão incluídos neste commit. `demo.tfvars` permanece ignorado e não contém credenciais commitadas.
 - **Branch**: `main`
