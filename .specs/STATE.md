@@ -138,10 +138,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 5 / T29 - CIDR remote validation and teardown complete; final verifier still pending
+- **Phase / Task**: Phase 5 / T29 - throttling diagnosis complete; final verifier blocked on an admission-contract decision
 - **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (`a6535dd`), T25 (`f43635d`), T26 (`53f696e`), T27 (this commit)
-- **In-progress** (file:line): `.specs/features/flash-booking-demo/validation.md` records passing remote CIDR denial evidence and two observed edge-throttling failures; the demo has been destroyed and verified.
-- **Next step**: diagnose the configured GET and command throttles so controlled bursts return `429`, then request an independent final validation.
-- **Blockers**: The temporary AWS roles are available. The remaining functional blockers are: controlled GET burst returned `503` rather than required `429`; controlled safe POST burst returned `400` rather than required `429`. Docker Engine is healthy and Terraform is `1.16.1` with AWS provider `6.64.0`.
-- **Uncommitted files**: none; local `demo.tfvars` remains ignored and contains no committed credentials.
+- **In-progress** (file:line): `scripts/edge-throttle-probe.ps1` reproduces the GET failure with 80 SigV4 calls dispatched in 834 ms; the stage has the configured limits but no `429` or throttle metric. The demo has been destroyed and state verified empty.
+- **Next step**: obtain an explicit decision whether to add an API-key usage-plan contract for deterministic per-client admission, or retain IAM-only admission and document AWS best-effort throttling as a specification limitation.
+- **Blockers**: Edge-3 and Edge-4 remain failed. The last apply also found an SES sender identity already outside Terraform state; it must be imported or managed conditionally before another full demo apply. Docker Engine is healthy and Terraform is `1.16.1` with AWS provider `6.64.0`.
+- **Uncommitted files**: `scripts/edge-throttle-probe.ps1`, throttling diagnosis and handoff updates; local `demo.tfvars` remains ignored and contains no committed credentials.
 - **Branch**: `main`

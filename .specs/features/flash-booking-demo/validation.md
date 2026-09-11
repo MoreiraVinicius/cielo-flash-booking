@@ -52,7 +52,7 @@ T01--T28 are marked `Complete`; T29 remains open pending the two edge-admission 
 | Notify-5 | Healthy worker requests delivery within 30s | Remote 2026-09-10: the SES mailbox simulator was accepted by the worker in `3.072s`; the probe reservation was then cancelled. The acceptance log contains no recipient data. | PASS |
 | Edge-1 | Invalid/no IAM SigV4 reaches `403` before VPC Link | Remote 2026-09-10: unsigned `GET /events/{unknown}` returned `403`; the same path signed by `ApiInvokerRole` returned application `404`. | PASS |
 | Edge-2 | Outside CIDR blocks before ALB | Remote 2026-09-11: a SigV4 `GET /events/cidr-probe` signed by `ApiInvokerRole`, with a temporarily incompatible CIDR policy deployed, returned `403`; its API access-log record had no integration status and a source outside the temporary range. The original CIDR was restored immediately. | PASS |
-| Edge-3 | GET 20rps/40 burst yields `429` | Deployed stage reports `20`/`40`; a controlled 60-request signed GET burst returned `37x 404` and `23x 503`, with no `429`. | FAIL |
+| Edge-3 | GET 20rps/40 burst yields `429` | Remote 2026-09-11: stage reports `20`/`40` for `events/{id}/GET`; `scripts/edge-throttle-probe.ps1` started 80 signed GETs within 834 ms and received `80x 503`, with no `429` and no throttle metric datapoint. A second run was blocked by the separate WAF IP rule with `403`. | FAIL |
 | Edge-4 | POST/DELETE 5rps/10 burst yields `429` | Deployed stage reports `5`/`10`; a controlled 20-request safe POST burst returned `20x 400`, with no `429`. | FAIL |
 | Edge-5 | Only API Gateway public; internals private | `edge-observability.tftest.hcl:57-58`; `data-plane.tftest.hcl:15-22`; `network.tftest.hcl:27-33` | PASS (static topology) |
 | Edge-6 | Budget alerts at 50/80/100 and documented non-stop | `edge-observability.tftest.hcl:71-73` — three notifications; `demo-runbook.md:76` | PASS |
@@ -106,7 +106,7 @@ All five required routes have integration assertions: event creation/availabilit
 
 ## Fix plans
 
-1. **P1 — correct and retest edge admission.** The deployed method settings report the desired limits, but the controlled bursts did not return `THROTTLED`/`429`. Diagnose the `503` integration behavior and make the edge response deterministic before claiming Edge-3 or Edge-4.
+1. **P1 — decide the deterministic admission contract.** API Gateway stage limits are documented by AWS as best-effort targets and the parallel probe did not emit `429` despite effective `20`/`40` settings. Requiring an API key with a usage plan would add a second client credential; that contract change requires an explicit decision before implementation.
 
 ## Summary
 
