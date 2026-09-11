@@ -5,7 +5,7 @@
 Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente após seus testes e gate passarem. Atualize este arquivo antes de criar um commit Conventional Commit atômico.
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
-**Status:** Draft
+**Status:** Complete
 **Task count:** 29
 
 ## Test Coverage Matrix

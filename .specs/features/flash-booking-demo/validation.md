@@ -1,6 +1,6 @@
 # Flash Booking Demo Validation
 
-**Date**: 2026-09-10
+**Date**: 2026-09-11
 **Spec**: `.specs/features/flash-booking-demo/spec.md`  
 **Diff range**: `37e45ca..2869392` (`2869392` adds Compose readiness handling)  
 **Verifier**: independent agent (author != verifier)
@@ -56,7 +56,7 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 | Edge-1 | Invalid/no IAM SigV4 reaches `403` before VPC Link | Remote 2026-09-10: unsigned `GET /events/{unknown}` returned `403`; the same path signed by `ApiInvokerRole` returned application `404`. | PASS |
 | Edge-2 | Outside CIDR blocks before ALB | Remote 2026-09-11: a SigV4 `GET /events/cidr-probe` signed by `ApiInvokerRole`, with a temporarily incompatible CIDR policy deployed, returned `403`; its API access-log record had no integration status and a source outside the temporary range. The original CIDR was restored immediately. | PASS |
 | Edge-3 | GET target 20rps/40 burst is effective and its burst outcome is recorded | Remote 2026-09-11: stage reports `20`/`40` for `events/{id}/GET`; 80 signed GETs started within 834 ms and received `80x 503`, with no `429` and no throttle metric datapoint. A second run was blocked by the separate WAF IP rule with `403`. | PASS |
-| Edge-4 | POST/DELETE target 5rps/10 burst is effective and its burst outcome is recorded | Deployed stage reports `5`/`10`; a controlled 20-request safe POST burst returned `20x 400`, with no `429`. | PASS |
+| Edge-4 | POST/DELETE target 5rps/10 is effective and a safe command burst outcome is recorded | Remote 2026-09-11: stage reports `5`/`10` for both `events/POST` and `reservations/{id}/DELETE`; a controlled 20-request safe POST burst returned `20x 400`, with no `429`. `AWS_IAM` is configured on POST (`infra/modules/edge-observability/main.tf:247`), so the application `400` confirms the signed request passed edge authentication. DELETE was not invoked because it requires a persisted reservation and has a stateful effect; its equal target is evidenced by `infra/modules/edge-observability/main.tf:416-427`. | PASS |
 | Edge-5 | Only API Gateway public; internals private | `edge-observability.tftest.hcl:57-58`; `data-plane.tftest.hcl:15-22`; `network.tftest.hcl:27-33` | PASS (static topology) |
 | Edge-6 | Budget alerts at 50/80/100 and documented non-stop | `edge-observability.tftest.hcl:71-73` — three notifications; `demo-runbook.md:76` | PASS |
 | Runtime-1 | Compose exposes all local services | `compose.yaml:20-134`; `compose-smoke.ps1:42-61` checks both APIs and Mailpit after health | PASS (cold-start smoke passed for `2869392`) |

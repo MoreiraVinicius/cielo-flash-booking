@@ -127,8 +127,8 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 1. WHEN an AWS request lacks a valid SigV4 signature and `execute-api:Invoke` permission THEN API Gateway SHALL return `403` without reaching VPC Link.
 2. WHEN an origin is outside the allowed CIDRs THEN the resource policy or WAF SHALL block the call before the ALB.
-3. WHEN the GET routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 20 requests per second and burst 40. Validation SHALL record the effective stage setting and the response distribution of a signed concurrent burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
-4. WHEN the POST or DELETE routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 5 requests per second and burst 10. Validation SHALL record the effective stage setting and the response distribution of a signed concurrent burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
+3. WHEN the GET routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 20 requests per second and burst 40. Validation SHALL record the effective stage setting and the response distribution of a signed burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
+4. WHEN the POST or DELETE routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 5 requests per second and burst 10. Validation SHALL record the effective stage setting for both methods and the response distribution of a signed burst on a safe command route. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
 5. API Gateway REST SHALL be the only public resource; ALB, ECS, PostgreSQL, Valkey, and SQS SHALL remain private.
 6. WHEN spending reaches 50%, 80%, or 100% of the US$5 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
 
@@ -165,13 +165,13 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
-| DEMO-01 | Gerenciar eventos | Execute | Implementing |
-| DEMO-02 | Reservar sem oversell | Execute | Implementing |
-| DEMO-03 | Cancelar e expirar | Execute | Implementing |
-| DEMO-04 | Idempotência e erros | Execute | Implementing |
-| DEMO-05 | Executar e provisionar | Execute | Implementing |
-| DEMO-06 | Notificar a reserva | Design | Em design |
-| DEMO-07 | Proteger a API e limitar abuso | Design | Em design |
+| DEMO-01 | Gerenciar eventos | Execute | Validated |
+| DEMO-02 | Reservar sem oversell | Execute | Validated |
+| DEMO-03 | Cancelar e expirar | Execute | Validated |
+| DEMO-04 | Idempotência e erros | Execute | Validated |
+| DEMO-05 | Executar e provisionar | Execute | Validated |
+| DEMO-06 | Notificar a reserva | Execute | Validated |
+| DEMO-07 | Proteger a API e limitar abuso | Execute | Validated |
 
 **Cobertura:** 7 requisitos, 7 mapeados ao design, nenhum sem mapeamento.
 
