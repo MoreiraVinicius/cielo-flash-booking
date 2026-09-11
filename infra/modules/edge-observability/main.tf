@@ -169,20 +169,27 @@ resource "aws_api_gateway_rest_api" "this" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid    = "AllowOnlyDemoInvokerFromApprovedNetworks"
-      Effect = "Allow"
-      # API Gateway resource policies accept a wildcard principal here; restrict
-      # the caller to the dedicated role using its request-context ARN.  A role
-      # ARN directly in Principal is rejected by the REST API create endpoint.
-      Principal = "*"
-      Action    = "execute-api:Invoke"
-      Resource  = "execute-api:/*"
-      Condition = {
-        IpAddress = { "aws:SourceIp" = var.allowed_cidrs }
-        ArnEquals = { "aws:PrincipalArn" = aws_iam_role.api_invoker.arn }
-      }
-    }]
+    Statement = [
+      {
+        Sid       = "DenyUnapprovedSourceIp"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "execute-api:Invoke"
+        Resource  = "execute-api:/*"
+        Condition = { NotIpAddress = { "aws:SourceIp" = var.allowed_cidrs } }
+      },
+      {
+        Sid    = "AllowOnlyDemoInvokerFromApprovedNetworks"
+        Effect = "Allow"
+        # API Gateway resource policies accept a wildcard principal here; restrict
+        # the caller to the dedicated role using its request-context ARN.  A role
+        # ARN directly in Principal is rejected by the REST API create endpoint.
+        Principal = "*"
+        Action    = "execute-api:Invoke"
+        Resource  = "execute-api:/*"
+        Condition = { ArnEquals = { "aws:PrincipalArn" = aws_iam_role.api_invoker.arn } }
+      },
+    ]
   })
 
   tags = local.tags

@@ -77,4 +77,18 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     condition     = jsondecode(aws_iam_role_policy.api_invoker.policy).Statement[0].Action == "execute-api:Invoke"
     error_message = "ApiInvokerRole must grant only API invocation and never infrastructure provisioning."
   }
+
+  assert {
+    condition = try(
+      one([
+        for statement in jsondecode(aws_api_gateway_rest_api.this.policy).Statement : statement
+        if statement.Sid == "DenyUnapprovedSourceIp"
+        ]).Effect == "Deny" && tolist(one([
+          for statement in jsondecode(aws_api_gateway_rest_api.this.policy).Statement : statement
+          if statement.Sid == "DenyUnapprovedSourceIp"
+      ]).Condition.NotIpAddress["aws:SourceIp"]) == var.allowed_cidrs,
+      false,
+    )
+    error_message = "The resource policy must explicitly deny sources outside the configured CIDRs."
+  }
 }
