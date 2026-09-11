@@ -34,7 +34,7 @@ Os planos são independentes e sequenciais:
 
 ### Arquitetura-alvo high-load
 
-![Diagrama da arquitetura AWS high-load](docs/images/flash-booking-aws-high-load-v1.png)
+![Diagrama da arquitetura AWS high-load](docs/images/flash-booking-aws-high-load-v2.svg)
 
 O diagrama high-load é a topologia-alvo. Ela permanece sem provisionamento e validação remota nesta entrega.
 
@@ -42,13 +42,13 @@ O diagrama high-load é a topologia-alvo. Ela permanece sem provisionamento e va
 
 ![Diagrama C4 de componentes](docs/images/flash-booking-c4-components.svg)
 
-O diagrama apresenta os componentes implementados nos perfis `query-api`, `command-api` e `worker`, incluindo as portas, adaptadores e integrações que os conectam.
+O diagrama apresenta os componentes implementados nos perfis `query-api`, `command-api` e `worker`, incluindo portas, adaptadores, padrões de resiliência e a observabilidade disponível.
 
 ### Sequência de reserva
 
 ![Diagrama de sequência de reserva](docs/images/flash-booking-sequence-reservation.svg)
 
-O fluxo separa a resposta síncrona do comando da publicação do outbox, das notificações, da expiração e da leitura cache-aside.
+O fluxo separa a resposta síncrona do comando da publicação do outbox, das notificações, da expiração e da leitura cache-aside, incluindo retry, DLQ, reconciliação e fallback.
 
 O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
