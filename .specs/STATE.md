@@ -135,13 +135,21 @@
 - **Trade-off:** AWS Budgets atualiza custos periodicamente e alerta; não impõe interrupção imediata nem garante teto financeiro absoluto.
 - **Scope:** Infraestrutura Terraform e documentação operacional da demo.
 
+### AD-018 - Manter IAM/SigV4 e aceitar throttling de melhor esforço
+
+- **Status:** active
+- **Decision:** A demo mantém somente IAM/SigV4 como credencial de cliente. Os limites de stage do API Gateway continuam configurados, mas são documentados como metas de melhor esforço, sem alegar `429` determinístico.
+- **Reason:** O teste remoto concorrente confirmou os limites efetivos, mas não observou `429`. API key e usage plan acrescentariam um segundo segredo e continuariam sujeitos a melhor esforço; um limitador determinístico expandiria a arquitetura da demo.
+- **Trade-off:** Edge-3 e Edge-4 permanecem falhos contra a especificação atual. A entrega registra esse desvio em vez de ocultá-lo com um teste ou script ad hoc.
+- **Scope:** Contrato de borda, runbook e validação da demo.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 5 / T29 - throttling diagnosis complete; final verifier blocked on an admission-contract decision
+- **Phase / Task**: Phase 5 / T29 - IAM-only decision recorded; feature remains incomplete because Edge-3 and Edge-4 fail
 - **Completed**: T01 (`37e45ca`), T02 (`ae2efcc`), T03 (`e055f13`), T04 (`fbab81e`), T05 (`6a1fd2e`), T06 (`0f8054c`), T07 (`3bea022`), T08 (`80cdb2e`), T09 (`523795c`), T10 (`434d88c`), T11 (`e0a3eab`), T12 (`b246f53`), Phase 2 review corrections (`ed6e50e`), T13 (`081b287`), T14 (`ad40a41`), T15 (`52ef303`), T16 (`cd66dd3`), T17 (`6c8be2a`), T18 (`f2eaead`), T19 (`1ce4696`), T20 (`da302ec`), T21 (`45356bd`), T22 (`3cdbfca`), T23 (`f327db7`), T24 (`a6535dd`), T25 (`f43635d`), T26 (`53f696e`), T27 (this commit)
-- **In-progress** (file:line): `scripts/edge-throttle-probe.ps1` reproduces the GET failure with 80 SigV4 calls dispatched in 834 ms; the stage has the configured limits but no `429` or throttle metric. The demo has been destroyed and state verified empty.
-- **Next step**: obtain an explicit decision whether to add an API-key usage-plan contract for deterministic per-client admission, or retain IAM-only admission and document AWS best-effort throttling as a specification limitation.
+- **In-progress**: Nenhum. A decisão IAM-only foi registrada; o probe temporário foi removido porque não é um procedimento operacional mantido. A demo foi destruída e o state foi verificado vazio.
+- **Next step**: conservar a entrega como `FAIL` honesto. Só retomar T29 se houver autorização explícita para mudar o contrato de admissão ou a especificação que exige `429`.
 - **Blockers**: Edge-3 and Edge-4 remain failed. The last apply also found an SES sender identity already outside Terraform state; it must be imported or managed conditionally before another full demo apply. Docker Engine is healthy and Terraform is `1.16.1` with AWS provider `6.64.0`.
-- **Uncommitted files**: `scripts/edge-throttle-probe.ps1`, throttling diagnosis and handoff updates; local `demo.tfvars` remains ignored and contains no committed credentials.
+- **Uncommitted files**: Nenhum esperado após o commit desta decisão; `demo.tfvars` permanece ignorado e não contém credenciais commitadas.
 - **Branch**: `main`
