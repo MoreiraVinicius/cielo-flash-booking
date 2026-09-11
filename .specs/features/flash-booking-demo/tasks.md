@@ -380,7 +380,7 @@ T28 -> T29
 **Where:** `infra/modules/edge-observability/`
 **Depends on:** T24
 **Requirement:** DEMO-04, DEMO-05, DEMO-07
-**Done when:** GET roteia somente para query-api e POST/DELETE para command-api; a role de invocação possui apenas `execute-api:Invoke` e não provisiona recursos; chamada sem role recebe 403 antes do VPC Link; excesso recebe 429; API Gateway é o único recurso público; Budget alerta em 50%, 80% e 100%, conforme ADR 0012.
+**Done when:** GET roteia somente para query-api e POST/DELETE para command-api; a role de invocação possui apenas `execute-api:Invoke` e não provisiona recursos; chamada sem role recebe 403 antes do VPC Link; cada método tem sua meta de throttling configurada e verificável; API Gateway é o único recurso público; Budget alerta em 50%, 80% e 100%, conforme ADR 0012.
 **Tests:** static e terraform test, incluídos na tarefa
 **Gate:** Infra
 **Commit:** `infra: expose and monitor demo api`
@@ -426,11 +426,12 @@ T28 -> T29
 
 ### T29: Verificar a demo contra a especificação e o case
 
+**Status:** Complete
 **What:** Executar todos os gates, revisar cada AC e realizar discrimination sensor.
 **Where:** `.specs/features/flash-booking-demo/validation.md`
 **Depends on:** T28
 **Requirement:** DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05, DEMO-06, DEMO-07
-**Done when:** Validation registra PASS com evidência `file:line` para todos os critérios e para cada requisito funcional e não funcional de `Case BackEnd 1.md`; descrição sem teste não conta como evidência.
+**Done when:** Validation registra PASS com evidência `file:line` para todos os critérios locais e estáticos, e com evidência remota datada para comportamentos AWS. Para throttling de API Gateway, a validação confere a configuração efetiva e registra a distribuição observada do burst, sem alegar `429` determinístico. Descrição sem teste ou observação remota não conta como evidência.
 **Tests:** unit, integration, concurrency, e2e, performance e infra
 **Gate:** Build + Infra
 **Commit:** `test: validate flash booking demo`

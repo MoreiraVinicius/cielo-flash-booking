@@ -73,7 +73,7 @@ O `plan` e o `apply` usam o campo `aws_profile` de `demo.tfvars` para escolher o
 
 O único endpoint público é o API Gateway REST. A infraestrutura exige IAM e SigV4, além da allowlist de CIDR. O operador assume `ApiInvokerRole`, que só recebe `execute-api:Invoke`; ela não provisiona nem destrói recursos. Postman deve usar autorização AWS Signature. Um teste simples pelo AWS CLI ou `curl` deve assinar a requisição com as credenciais temporárias dessa role.
 
-Uma chamada sem assinatura válida, sem `execute-api:Invoke` ou fora do CIDR deve receber `403` antes de alcançar o VPC Link. A borda configura GET em 20 req/s (burst 40) e POST/DELETE em 5 req/s (burst 10). Esses limites do API Gateway são metas de melhor esforço: a validação remota da demo não observou `429`, portanto não devem ser tratados como admissão determinística. Budget emite alertas a 50%, 80% e 100% de US$5, mas não é um interruptor financeiro imediato.
+Uma chamada sem assinatura válida, sem `execute-api:Invoke` ou fora do CIDR deve receber `403` antes de alcançar o VPC Link. A borda configura GET em 20 req/s (burst 40) e POST/DELETE em 5 req/s (burst 10). [Esses limites do API Gateway são metas de melhor esforço](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html): a validação remota da demo não observou `429`, portanto não devem ser tratados como admissão determinística. Budget emite alertas a 50%, 80% e 100% de US$5, mas não é um interruptor financeiro imediato.
 
 ## Roteiro de Case Review
 

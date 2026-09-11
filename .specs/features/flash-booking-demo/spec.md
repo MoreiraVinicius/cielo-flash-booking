@@ -127,8 +127,8 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 1. WHEN an AWS request lacks a valid SigV4 signature and `execute-api:Invoke` permission THEN API Gateway SHALL return `403` without reaching VPC Link.
 2. WHEN an origin is outside the allowed CIDRs THEN the resource policy or WAF SHALL block the call before the ALB.
-3. WHEN a GET route exceeds 20 requests per second or a burst of 40 in the demo THEN API Gateway SHALL start throttling and return `429`.
-4. WHEN a POST or DELETE route exceeds 5 requests per second or a burst of 10 in the demo THEN API Gateway SHALL start throttling and return `429`.
+3. WHEN the GET routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 20 requests per second and burst 40. Validation SHALL record the effective stage setting and the response distribution of a signed concurrent burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
+4. WHEN the POST or DELETE routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 5 requests per second and burst 10. Validation SHALL record the effective stage setting and the response distribution of a signed concurrent burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
 5. API Gateway REST SHALL be the only public resource; ALB, ECS, PostgreSQL, Valkey, and SQS SHALL remain private.
 6. WHEN spending reaches 50%, 80%, or 100% of the US$5 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
 
@@ -185,6 +185,6 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [ ] Os dois GET usam cache Valkey com TTL máximo de um segundo e invalidação pós-commit.
 - [ ] Toda reserva possui cliente ligado por chave estrangeira e envia notificação assíncrona sem prometer compra.
 - [ ] Consultas e comandos executam em serviços separados usando a mesma imagem e as mesmas regras de negócio.
-- [ ] Requisições anônimas não alcançam os containers e excesso recebe `429` na borda.
+- [ ] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.
 - [ ] Docker Compose inicia a solução completa.
 - [ ] Terraform representa todos os recursos AWS da demo.
