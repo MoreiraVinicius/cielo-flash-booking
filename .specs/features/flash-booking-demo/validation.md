@@ -98,7 +98,7 @@ Scratch used a detached temporary worktree at `2869392`; no `git stash` was used
 | Terraform format/validate | PASS locally; `terraform validate` passed bootstrap, network, data-plane, compute, edge-observability, and demo environment. |
 | Terraform module tests | PASS: network 1/1, data-plane 1/1, compute 1/1, edge-observability 1/1. |
 | Remote Terraform plan/apply | PASS — temporary assumed roles, remote plan/apply and post-rollout ECS/target-health checks completed. |
-| Remote Terraform destroy | PASS — `terraform destroy` completed; `terraform state list` returned `0`, and ECS/RDS/Valkey/NAT no longer have active demo resources. |
+| Remote Terraform destroy | PASS — 2026-09-11: `terraform destroy` removed 106 demo resources; `terraform state list` returned `0`, and API Gateway, RDS, Valkey and NAT no longer have active demo resources. |
 
 ## Case BackEnd 1 report
 
