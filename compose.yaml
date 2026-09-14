@@ -130,5 +130,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: flash_booking
       SPRING_DATA_REDIS_HOST: valkey
       SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8080"
     deploy:
       replicas: 2

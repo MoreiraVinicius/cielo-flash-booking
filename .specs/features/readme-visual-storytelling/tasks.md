@@ -65,7 +65,7 @@ T06 -> T07
 
 ### T02: Corrigir o harness de carga multiprocesso
 
-**Status:** Pending
+**Status:** Complete
 **What:** Fazer o perfil de concorrência publicar portas efêmeras, descobrir ao menos duas instâncias e distribuir VUs explicitamente entre elas; registrar metadados e impedir publicação após falha.
 **Where:** `compose.yaml`, `performance/demo/`
 **Depends on:** T01
@@ -74,6 +74,7 @@ T06 -> T07
 **Tests:** `docker compose config`, `k6 inspect` dos três scripts e revisão do fluxo de falha
 **Gate:** Performance
 **Commit:** `test(performance): make local baseline multiprocess`
+**Result:** Réplicas publicam portas efêmeras, o runner exige duas URLs únicas e os VUs de comandos/misto são distribuídos e marcados por processo; Compose, sintaxe PowerShell e os três `k6 inspect` passaram.
 
 ### T03: Publicar um baseline local rastreável
 

@@ -7,12 +7,15 @@ export const options = {
   summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
 };
 
-const commandBaseUrl = __ENV.COMMAND_BASE_URL || 'http://localhost:8082';
+const commandBaseUrls = (__ENV.COMMAND_BASE_URLS || __ENV.COMMAND_BASE_URL || 'http://localhost:8082')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
 const queryBaseUrl = __ENV.QUERY_BASE_URL || 'http://localhost:8081';
 const idempotencyKey = () => `${Date.now()}-${Math.random()}`;
 
 export function setup() {
-  const response = http.post(`${commandBaseUrl}/events`, JSON.stringify({ name: 'query benchmark', capacity: 10000 }), {
+  const response = http.post(`${commandBaseUrls[0]}/events`, JSON.stringify({ name: 'query benchmark', capacity: 10000 }), {
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey() },
   });
   check(response, { 'benchmark event created': (result) => result.status === 201 });
