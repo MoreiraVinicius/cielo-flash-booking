@@ -121,7 +121,7 @@ T06 -> T07
 
 ### T06: Reescrever o README com divulgação progressiva
 
-**Status:** Pending
+**Status:** Complete
 **What:** Montar a narrativa final com hero, TL;DR, quick start, contrato HTTP, invariante, método, arquiteturas, evidências, resiliência, segurança, observabilidade, limitações e galeria recolhível.
 **Where:** `README.md`
 **Depends on:** T04, T05
@@ -130,6 +130,7 @@ T06 -> T07
 **Tests:** revisão de leitura, links e termos obrigatórios
 **Gate:** Documentation
 **Commit:** `docs: rebuild readme around evidence and clarity`
+**Result:** README reorganizado em 208 linhas com hero, TL;DR, quick start, exatamente cinco endpoints, regra de estoque, spec-driven, comparação arquitetural, evidências, carga, resiliência/segurança/observabilidade, limites e quatro deep dives recolhíveis; 29 referências locais resolvidas.
 
 ### T07: Automatizar e fechar a validação documental
 

@@ -1,86 +1,208 @@
-# Flash Booking - Cielo Backend Case
+![Flash Booking — reserva temporária de ingressos para flash sales](docs/images/flash-booking-hero.svg)
 
-Este repositório parte do case de reserva de ingressos.
+# Flash Booking
 
-## Requisitos
+Backend para **reserva temporária de ingressos em flash sales**, desenvolvido como case técnico independente no contexto da Cielo. O sistema protege o último ingresso sob concorrência, expira reservas abandonadas e separa consultas, comandos e trabalho assíncrono sem duplicar as regras de negócio.
 
-- [Enunciado consolidado](Case%20BackEnd%201.md)
-- Cinco endpoints REST para eventos e reservas.
-- Múltiplas instâncias, oversell zero, expiração automática e idempotência.
-- Java, Spring Boot, testes automatizados e Docker Compose.
-- Runtime integralmente na AWS, provisionado por Terraform.
-- Uso de IA documentado e decisões explicáveis no Case Review.
+> O domínio termina em `PENDING`, `CANCELLED` ou `EXPIRED`. **Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega.** Este projeto não é um produto oficial da Cielo.
 
-## Planos de execução
+## TL;DR
 
-As duas arquiteturas compartilham o mesmo código Java, controllers, schema, migrations, endpoints, autenticação, notificação e contrato de cache. O que muda é a infraestrutura AWS e a configuração de runtime injetada por Terraform.
+| Pergunta | Resposta curta |
+| --- | --- |
+| O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
+| Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
+| Qual é a evidência? | Demo com validação independente **PASS em 43/43 critérios**; **38 testes unitários + 56 de integração = 94 aprovados**. |
+| A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
+| E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
-A mesma imagem inicia em serviços separados de consultas, comandos e worker. Isso permite escalar GETs e reservas de forma independente sem criar regras de negócio específicas de carga.
+## Executar localmente
 
-Os planos são independentes e sequenciais:
+Pré-requisitos: Docker Desktop saudável. Java 21 é necessário apenas para executar Maven fora do container.
 
-1. [Arquitetura demo](.specs/features/flash-booking-demo/design.md): econômica, completa e operável por uma pessoa.
+```powershell
+# Sobe Query API, Command API, worker, PostgreSQL, Valkey, SQS local e Mailpit
+docker compose up --build --detach
 
-2. [Arquitetura de alta carga](.specs/features/flash-booking-high-load/design.md): Multi-AZ, consultas e reservas escaladas separadamente.
+# Exercita evento, reserva, consultas e entrega de e-mail
+.\scripts\compose-smoke.ps1
 
-## Diagramas de arquitetura
+# Encerra a stack
+docker compose down
+```
 
-### C4 Model — Demo
+| Serviço local | Endereço | Função |
+| --- | --- | --- |
+| Query API | `http://localhost:8081` | Consultas de eventos e reservas |
+| Command API | `http://localhost:8082` | Criação e cancelamento |
+| Mailpit | `http://localhost:8025` | Caixa de e-mail da demonstração |
+
+Para executar os gates Java:
+
+```powershell
+# 38 testes unitários
+.\mvnw.cmd test
+
+# Gate completo: unitários + 56 testes de integração
+.\mvnw.cmd clean verify -Pintegration
+```
+
+Em Linux/macOS, use `./mvnw` no lugar de `.\mvnw.cmd`. O [runbook da demo](docs/demo-runbook.md) cobre autenticação temporária, revisão da infraestrutura e o ciclo de aplicação/destruição; nenhuma credencial é versionada.
+
+## Contrato HTTP
+
+Os comandos mutáveis exigem `Idempotency-Key`. Erros usam `application/problem+json` e as respostas incluem correlation ID.
+
+| Método | Rota | Serviço | Resultado principal |
+| --- | --- | --- | --- |
+| `POST` | `/events` | Command API | Cria um evento com capacidade positiva |
+| `GET` | `/events/{id}` | Query API | Consulta capacidade total e disponível |
+| `POST` | `/events/{id}/reservations` | Command API | Cria cliente e reserva `PENDING` sem exceder estoque |
+| `GET` | `/reservations/{id}` | Query API | Consulta dados, validade, estado e motivo terminal |
+| `DELETE` | `/reservations/{id}` | Command API | Cancela uma reserva pendente e devolve capacidade uma vez |
+
+A coleção [Postman para a demo AWS](postman/README.md) contém as cinco chamadas e o fluxo IAM/SigV4, mas o endpoint é deliberadamente temporário e não está ativo.
+
+## Como o último ingresso é protegido
+
+![Duas requisições disputam o último ingresso; uma reserva vence e a outra não produz efeito](docs/images/flash-booking-last-ticket.svg)
+
+O caminho síncrono é curto e autoritativo:
+
+1. a Command API valida o cliente e a chave de idempotência;
+2. uma transação PostgreSQL tenta decrementar `available` somente se ainda houver quantidade suficiente;
+3. o vencedor persiste cliente, reserva `PENDING` e eventos no outbox;
+4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
+5. somente depois do commit o cache afetado é invalidado.
+
+O caminho assíncrono começa **depois** da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
+
+## Desenvolvimento orientado por especificação
+
+![Fluxo do case até a validação independente e lane planejada de alta carga](docs/images/flash-booking-spec-driven.svg)
+
+Cada critério foi escrito antes da implementação, ligado a tarefas e validado contra uma saída observável. O fluxo completo da demo foi:
+
+`case → spec EARS → design + ADRs → tarefas atômicas → testes/gates → verificador independente`
+
+A IA ajudou a estruturar especificações, alternativas, tarefas, testes, infraestrutura e documentação. As decisões de domínio, segurança, custo e escopo permaneceram explícitas no repositório; credenciais AWS não foram fornecidas à IA nem versionadas. O histórico pré-implementação foi preservado em [.specs/REVIEW.md](.specs/REVIEW.md), claramente rotulado como registro histórico.
+
+## Demo versus arquitetura-alvo
+
+![Comparação entre a demo validada e a arquitetura-alvo high-load](docs/images/flash-booking-architecture-evolution.svg)
+
+As duas arquiteturas iniciam **a mesma imagem Java** em três modos:
+
+- `query-api`: atende os dois GETs e usa cache-aside;
+- `command-api`: cria eventos, reserva e cancela com transações autoritativas;
+- `worker`: publica outbox, expira/reconcilia reservas e envia notificações.
+
+| Dimensão | Demo validada | High-load planejada |
+| --- | --- | --- |
+| Objetivo | Menor custo e operação por uma pessoa | Disponibilidade e escala guiadas por gargalo medido |
+| Compute | Uma task ECS por serviço | Múltiplas tasks Multi-AZ e autoscaling independente |
+| Dados | RDS PostgreSQL Single-AZ e Valkey econômico | Aurora PostgreSQL, RDS Proxy e Valkey Multi-AZ |
+| Assíncrono | Filas e DLQs separadas; um worker | Workers escalados por backlog e idade da mensagem |
+| Estado | Aplicada, observada, validada e destruída | Design + 20 tarefas Draft; sem runtime remoto |
+
+O gatilho de evolução não é “mais componentes”. São métricas: saturação do writer, p95/p99 por rota, conexões, hit rate, backlog e idade da mensagem. O core, os controllers, o schema, as migrations, a idempotência e o outbox permanecem iguais.
+
+## Evidência de qualidade
+
+| Gate | Resultado | O que comprova |
+| --- | ---: | --- |
+| Critérios de aceitação | **43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime |
+| Testes unitários | **38/38** | Regras de domínio e serviços de aplicação |
+| Testes de integração | **56/56** | PostgreSQL, Valkey, SQS, concorrência, controllers e migrations |
+| Sensor de discriminação | **2/2 mutações mortas** | Os testes falham quando segurança ou decremento de estoque são quebrados |
+| Compose smoke | **PASS** | Query, command, worker, banco, cache, fila e Mailpit integrados |
+| Módulos de infraestrutura | **4/4 PASS** | Rede, dados, compute e edge/observabilidade |
+| Demo AWS | **PASS** | Apply, serviços saudáveis, IAM/CIDR, DLQs, SES e destroy |
+
+O relatório com `file:line`, assertions e observações remotas está em [validation.md](.specs/features/flash-booking-demo/validation.md). A [avaliação contra o case](docs/case-requirements-evaluation.md) distingue implementação, validação e arquitetura-alvo.
+
+## Testes de carga
+
+![Baseline local de consultas, reservas e tráfego misto](docs/images/flash-booking-performance.svg)
+
+O baseline canônico contém VUs constantes por 15 segundos, percentis e zero falhas HTTP nos três cenários. Ele serve para comparação local, **não** como SLO, limite sustentável ou alegação de capacidade AWS.
+
+Há uma limitação importante: a execução histórica acima iniciou réplicas extras, mas chamou apenas o endpoint de comandos publicado em `localhost:8082`; por isso ela não comprova distribuição multiprocesso. O runner atual descobre duas portas de réplicas e distribui os VUs explicitamente, porém a reexecução de 2026-09-14 foi bloqueada antes da carga por uma falha local do Docker Desktop. Nenhum número novo foi inventado.
+
+Dados, proveniência e procedimento de reprodução: [performance/demo/README.md](performance/demo/README.md) e [baseline.json](performance/demo/baseline.json).
+
+## Resiliência, segurança e observabilidade
+
+| Risco | Padrão aplicado | Sinal ou evidência |
+| --- | --- | --- |
+| Oversell e corrida terminal | Update/transição condicional, constraints e transação única | Linhas afetadas, disponibilidade e testes concorrentes |
+| Retry de comando | Idempotência PostgreSQL por 24 h, ligada a operação/alvo/hash | Repetição igual, conflito `409` e registro persistido |
+| Mensagem perdida ou duplicada | Transactional outbox, consumidor idempotente, retry limitado e DLQ por fluxo | Backlog, idade da mensagem, DLQ e logs correlacionados |
+| Cache lento ou indisponível | Timeout de 100 ms, bulkhead de 5 fallbacks/task e circuito após 5 falhas em 10 s | Hits/misses, fallback, circuito e pressão no PostgreSQL |
+| Expiração atrasada | SQS com atraso + reconciliador usando o relógio UTC do banco | Idade da fila e conclusão até `expiresAt + 5s` em condição saudável |
+| Falha de e-mail | Notificação desacoplada, retry e DLQ; estoque não é revertido | Estado de entrega, aceite do SES e DLQ de notificação |
+| Abuso na borda | IAM/SigV4, resource policy, allowlist, WAF e throttling de melhor esforço | `403`, logs do API Gateway/WAF e distribuição de respostas |
+
+Na demo AWS, API Gateway era a única entrada pública; ALB, ECS, RDS e Valkey não recebiam tráfego direto de clientes. Logs e alarmes do CloudWatch foram separados por serviço e dependência, com correlation ID atravessando a API. Os limites do API Gateway e o AWS Budget são camadas de redução de risco — não garantem `429` determinístico nem um teto financeiro imediato.
+
+## Limites e trade-offs assumidos
+
+- A demo troca alta disponibilidade por custo: uma task por serviço, RDS Single-AZ e NAT único.
+- O benchmark é curto e local; não mede soak, saturação progressiva, failover ou custo por carga.
+- O snapshot final de PostgreSQL não prova ausência de lock waits durante toda a execução.
+- High-load ainda não comprova capacidade, RTO/RPO, failover, atraso de réplica ou operação Multi-AZ.
+- IAM/SigV4 autentica operadores/avaliadores na borda; cadastro e login de cliente final estão fora do case.
+- Pagamento, compra confirmada, frontend e CI/CD permanecem fora do escopo.
+
+## Diagramas detalhados
+
+Os resumos acima são a trilha principal. As vistas completas ficam aqui para análise arquitetural e de código.
+
+<details>
+<summary><strong>C4 · Demo AWS validada</strong></summary>
 
 ![C4 Model da arquitetura demo](docs/images/flash-booking-c4-demo.svg)
 
-Esta vista apresenta o sistema, seus containers Java e as dependências AWS da demo, mantendo explícitos os limites de capacidade, resiliência e observabilidade desse ambiente econômico.
+Contexto, containers Java, dependências AWS, resiliência e observabilidade da topologia econômica executada.
 
-### C4 Model — Arquitetura-alvo high-load
+</details>
+
+<details>
+<summary><strong>C4 · Arquitetura-alvo high-load</strong></summary>
 
 ![C4 Model da arquitetura high-load](docs/images/flash-booking-c4-high-load.svg)
 
-Esta vista mostra a evolução Multi-AZ, o escalonamento independente das três aplicações e os caminhos separados de leitura e escrita. A topologia high-load permanece sem provisionamento e validação remota nesta entrega.
+Evolução Multi-AZ e escala independente. Esta vista representa intenção arquitetural, não um ambiente provisionado.
 
-### C4 Model — componentes Java
+</details>
 
-![Diagrama C4 de componentes](docs/images/flash-booking-c4-components.svg)
+<details>
+<summary><strong>C4 · Componentes dos três modos Java</strong></summary>
 
-O diagrama apresenta os componentes implementados nos perfis `query-api`, `command-api` e `worker`, incluindo portas, adaptadores, padrões de resiliência e a observabilidade disponível.
+![C4 Model dos componentes Java](docs/images/flash-booking-c4-components.svg)
 
-### Sequência de reserva
+Controllers, serviços de aplicação, portas e adaptadores compartilhados por Query API, Command API e worker.
 
-![Diagrama de sequência de reserva](docs/images/flash-booking-sequence-reservation.svg)
+</details>
 
-O fluxo separa a resposta síncrona do comando da publicação do outbox, das notificações, da expiração e da leitura cache-aside, incluindo retry, DLQ, reconciliação e fallback.
+<details>
+<summary><strong>Sequência · reserva, outbox, cache, expiração e e-mail</strong></summary>
 
-## Idempotência
+![Sequência completa de uma reserva](docs/images/flash-booking-sequence-reservation.svg)
 
-Os comandos `POST /events`, `POST /events/{id}/reservations` e `DELETE /reservations/{id}` exigem `Idempotency-Key`. A primeira chamada grava no PostgreSQL a chave, o método, o alvo normalizado, o hash do payload, o status e o corpo da resposta. Um retry com o mesmo método, rota e corpo devolve o resultado já persistido, sem repetir o efeito de negócio. Reutilizar a mesma chave para um pedido diferente retorna `409`; enviá-la ausente retorna `400`, sem efeito. Falhas inesperadas `5xx` fazem rollback e podem ser tentadas novamente. O schema registra expiração em 24 horas para o registro de idempotência; a semântica completa está no [ADR 0007](docs/adr/0007-idempotencia-persistente-de-comandos.md).
+Separa a transação síncrona da publicação e dos consumidores assíncronos, incluindo retries, DLQs e reconciliação.
 
-![Fluxo prático de idempotência](docs/images/flash-booking-idempotency.png)
+</details>
 
-O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+## Mapa da documentação
 
-A relação entre cliente, reserva e evento está em [docs/data-model.md](docs/data-model.md). A cobertura do case, com limites de evidência, está em [docs/case-requirements-evaluation.md](docs/case-requirements-evaluation.md).
-
-As explicações sobre concorrência, oversell, consistência eventual, cache, autenticação e e-mail estão em [docs/perguntas-e-respostas.md](docs/perguntas-e-respostas.md).
-
-## Ordem de entrega
-
-1. Executar as [29 tarefas da demo](.specs/features/flash-booking-demo/tasks.md).
-2. Obter validação independente PASS da demo.
-3. Medir o envelope de capacidade.
-4. Preparar e validar estaticamente as [20 tarefas de alta carga](.specs/features/flash-booking-high-load/tasks.md) somente quando os gatilhos justificarem. Não aplicar esse ambiente nem executar testes remotos nesta entrega.
-
-CI/CD não faz parte do escopo. A demo é o único ambiente AWS a ser aplicado e fica ativa no máximo 1h30; a arquitetura de alta carga é documentação, testes estáticos/mockados e plano futuro. Os planos documentam build, testes, publicação manual da imagem e provisionamento por Terraform sem exigir recursos criados pelo console AWS.
-
-## Credenciais para a demonstração
-
-O caminho recomendado é autenticar no host, não dentro do container da aplicação:
-
-1. O provisionador usa um perfil com credenciais temporárias na AWS CLI da própria máquina. Com AWS CLI 2.32 ou posterior, `aws login --profile flash-booking-demo` fornece credenciais curtas e renováveis; se a organização já usa IAM Identity Center, deve-se manter o fluxo existente com `aws sso login`.
-2. Terraform recebe o perfil explicitamente, sem chaves em `*.tfvars`, imagem, repositório ou variáveis versionadas.
-3. Cada operador ou entrevistador assume `ApiInvokerRole`, limitada a `execute-api:Invoke`, e assina as chamadas com SigV4. A role de invocação não pode provisionar nem destruir infraestrutura.
-4. Os containers da aplicação usam ECS task roles. Eles nunca recebem nem montam o diretório de credenciais do operador.
-
-Executar AWS CLI/Terraform em um container de ferramentas seria possível, mas exigiria repassar o perfil e renovar a sessão através do volume montado. Para uma única pessoa e uma janela curta, isso aumenta o risco de expor credenciais sem melhorar a reprodutibilidade da aplicação. Docker Compose e testes locais não exigem credenciais AWS reais.
-
-API Gateway REST, resource policy, WAF e throttling protegem o único ponto público; veja o [ADR 0012](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md). Instruções oficiais: [login pela AWS CLI](https://docs.aws.amazon.com/signin/latest/userguide/command-line-sign-in.html) e [boas práticas de IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html).
-
-O e-mail enviado após `ReservationCreated` confirma uma reserva temporária, não uma compra. Docker Compose usa Mailpit; AWS usa SES com identidades verificadas durante a demonstração.
+| Quero entender… | Comece por |
+| --- | --- |
+| O enunciado original | [Case BackEnd 1.md](Case%20BackEnd%201.md) |
+| Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [29 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação PASS](.specs/features/flash-booking-demo/validation.md) |
+| Evolução high-load | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [20 tarefas planejadas](.specs/features/flash-booking-high-load/tasks.md) |
+| Modelo de dados | [Customer → Reservation → Event](docs/data-model.md) |
+| Decisões e trade-offs | [PostgreSQL autoritativo](docs/adr/0004-postgresql-como-fonte-autoritativa.md) · [cache](docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md) · [segurança](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md) · [serviços](docs/adr/0013-separar-servicos-de-consulta-e-comando.md) |
+| Operar ou apresentar a demo | [runbook](docs/demo-runbook.md) · [Postman](postman/README.md) · [custos](docs/cost-estimate.md) |
+| Perguntas de arquitetura | [perguntas e respostas](docs/perguntas-e-respostas.md) · [avaliação do case](docs/case-requirements-evaluation.md) |
+| Carga local | [metodologia e limites](performance/demo/README.md) · [dados canônicos](performance/demo/baseline.json) |
