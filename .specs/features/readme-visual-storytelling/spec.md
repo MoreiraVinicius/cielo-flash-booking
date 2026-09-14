@@ -68,7 +68,7 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 **Acceptance Criteria:**
 
 1. WHEN the README explains development workflow THEN it SHALL show the trace `case -> spec -> design/ADRs -> tasks -> tests/gates -> independent verifier` and SHALL distinguish the completed demo lane from the planned high-load lane.
-2. IF local load-test metrics are published THEN the repository SHALL use `req/s`, latency percentiles, failure rate, scenario size, provenance, and a local-only disclaimer; the command workload SHALL address at least two explicit command-api processes rather than an unexposed replica set.
+2. IF local load-test metrics are published THEN the repository SHALL use `req/s`, latency percentiles, failure rate, scenario size, provenance, and a local-only disclaimer; the current command workload SHALL address at least two explicit command-api processes. IF Docker is unavailable and the historical single-endpoint baseline is retained THEN that limitation SHALL be visible and the baseline SHALL NOT count as multiprocess evidence.
 3. WHEN documentation validation runs THEN it SHALL fail for missing README assets, invalid SVG XML, absent truth labels, a non-five-endpoint contract, or a malformed performance evidence file.
 
 **Teste independente:** Executar o validador documental e inspecionar o relatório de carga versionado e o gráfico derivado.
@@ -98,4 +98,3 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 - [ ] Todas as imagens referenciadas existem, são SVGs válidos quando aplicável e têm descrição acessível.
 - [ ] O baseline publicado é local, reproduzível e não usa `TPS` como sinônimo de requisições HTTP por segundo.
 - [ ] O validador documental e os gates do projeto passam.
-

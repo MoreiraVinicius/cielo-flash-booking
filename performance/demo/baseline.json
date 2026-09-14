@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-09T17:47:01-03:00",
+  "sourceCommit": "9f3a81a75cd76357c01b5f7c823893d13038c99c",
+  "worktreeCleanAtStart": null,
+  "environment": {
+    "scope": "local Docker Compose on Windows",
+    "os": "Windows; exact version was not captured by the original run",
+    "logicalProcessors": null,
+    "physicalMemoryGb": null,
+    "docker": null,
+    "dockerCompose": null,
+    "k6": null,
+    "applicationImage": null,
+    "commandApiProcesses": 1
+  },
+  "scenarios": [
+    {
+      "name": "query",
+      "label": "Consultas",
+      "workload": "GET de disponibilidade",
+      "vus": 5,
+      "durationSeconds": 15,
+      "requests": 23809,
+      "requestsPerSecond": 1538.86,
+      "latencyMs": {
+        "p50": 2.4,
+        "p95": 6.73,
+        "p99": 11.57
+      },
+      "httpFailureRate": 0,
+      "checksPassed": 23809,
+      "checksFailed": 0,
+      "aggregateLatency": false
+    },
+    {
+      "name": "reservation",
+      "label": "Reservas",
+      "workload": "POST de uma reserva por iteração no endpoint de comando publicado",
+      "vus": 3,
+      "durationSeconds": 15,
+      "requests": 4018,
+      "requestsPerSecond": 267.3,
+      "latencyMs": {
+        "p50": 10.39,
+        "p95": 16.87,
+        "p99": 24.82
+      },
+      "httpFailureRate": 0,
+      "checksPassed": 4018,
+      "checksFailed": 0,
+      "aggregateLatency": false
+    },
+    {
+      "name": "mixed",
+      "label": "Misto (agregado)",
+      "workload": "um GET por iteração e um POST a cada três iterações",
+      "vus": 4,
+      "durationSeconds": 15,
+      "requests": 12655,
+      "requestsPerSecond": 841.65,
+      "latencyMs": {
+        "p50": 3.45,
+        "p95": 10.57,
+        "p99": 15.44
+      },
+      "httpFailureRate": 0,
+      "checksPassed": 12655,
+      "checksFailed": 0,
+      "aggregateLatency": true
+    }
+  ],
+  "cache": {
+    "scope": "cumulative counters captured after the three original scenarios; reset timing was not recorded",
+    "hits": 28530,
+    "misses": 4767,
+    "hitRatePercent": 85.68
+  },
+  "database": {
+    "scope": "final snapshot after all three scenarios; not a time series",
+    "connectionsAtEnd": 51,
+    "waitingLocksAtEnd": 0
+  },
+  "provenance": {
+    "mode": "historical-baseline-import",
+    "sourceArtifacts": "ignored k6 summaries and dependency snapshots created locally on 2026-09-09",
+    "workloadCommit": "9f3a81a75cd76357c01b5f7c823893d13038c99c",
+    "repositoryHeadAtCapture": "not recorded; file timestamps place the run between commits 2c6723c and 2869392",
+    "normalizedAt": "2026-09-14"
+  },
+  "reexecution": {
+    "attemptedAt": "2026-09-14",
+    "result": "blocked-before-workload",
+    "reason": "Docker Desktop backend could not initialize its local sailor-ingest socket; no new metrics were claimed"
+  },
+  "limitations": [
+    "Local 15-second constant-VU snapshots are not production SLOs or a sustainable capacity envelope.",
+    "The historical runner sent command traffic only to localhost:8082; this baseline is not multiprocess evidence.",
+    "The current runner requires two explicit command-api processes, but its corrected workload has not yet produced a canonical run.",
+    "The mixed latency percentiles aggregate read and write requests.",
+    "The PostgreSQL lock value is a final snapshot and does not prove zero waits during the run.",
+    "Oversell safety is established by integration and concurrency assertions, not by this throughput chart.",
+    "The high-load AWS target was not provisioned or benchmarked."
+  ]
+}

@@ -78,7 +78,7 @@ T06 -> T07
 
 ### T03: Publicar um baseline local rastreável
 
-**Status:** Pending
+**Status:** Complete
 **What:** Executar o harness corrigido quando Docker estiver disponível, versionar o resumo sanitizado e gerar um gráfico derivado; caso contrário, normalizar somente o baseline já versionado e declarar a limitação.
 **Where:** `performance/demo/baseline.json`, `performance/demo/README.md`, `docs/images/flash-booking-performance.svg`
 **Depends on:** T02
@@ -87,6 +87,7 @@ T06 -> T07
 **Tests:** validação do schema, XML, números e unidades contra o JSON
 **Gate:** Performance, Visual
 **Commit:** `docs(performance): publish reproducible local baseline`
+**Result:** O baseline bruto preservado foi normalizado com proveniência e limitações; o gráfico deriva os três cenários em `req/s`. A tentativa de reexecução parou antes da carga por falha do socket interno do Docker, portanto nenhum número novo foi alegado e a execução histórica ficou marcada como single-endpoint.
 
 ## Phase 2: Visual Narrative
 

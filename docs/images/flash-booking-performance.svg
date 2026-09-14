@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Baseline local do Flash Booking</title>
+  <desc id="desc">Comparação de requisições por segundo e latências p95 e p99 em consultas, reservas e tráfego misto. Todos os cenários tiveram zero falhas HTTP. A execução histórica usou um endpoint de comandos e não comprova distribuição multiprocesso.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102a43"/>
+      <stop offset="1" stop-color="#173f5f"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#061522" flood-opacity="0.25"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 20px; font-weight: 700; letter-spacing: 2px; }
+      .title { font-size: 46px; font-weight: 750; }
+      .subtitle { font-size: 23px; }
+      .row-title { font-size: 25px; font-weight: 700; }
+      .rps { font-size: 34px; font-weight: 750; }
+      .metric { font-size: 20px; font-weight: 650; }
+      .small { font-size: 17px; }
+      .note { font-size: 16px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="800" rx="32" fill="url(#background)"/>
+  <circle cx="1465" cy="80" r="180" fill="#2f80ed" opacity="0.12"/>
+  <circle cx="1520" cy="690" r="250" fill="#35b5a4" opacity="0.08"/>
+
+  <g class="sans" fill="#f8fbff">
+    <text x="76" y="68" class="eyebrow" fill="#9fc8f3">EVIDÊNCIA DE DESEMPENHO</text>
+    <text x="76" y="124" class="title">Baseline local · 9 set 2026</text>
+    <text x="76" y="164" class="subtitle" fill="#c8d8e8">Snapshots de 15 segundos com VUs constantes — não são SLO nem capacidade de produção.</text>
+  </g>
+
+  <g class="sans" filter="url(#shadow)">
+    <rect x="76" y="194" width="260" height="54" rx="27" fill="#1f6f5c"/>
+    <circle cx="108" cy="221" r="10" fill="#77e0b5"/>
+    <text x="130" y="228" class="metric" fill="#ffffff">0% falhas HTTP</text>
+
+    <rect x="354" y="194" width="500" height="54" rx="27" fill="#70551e"/>
+    <path d="M386 209 L397 231 L375 231 Z" fill="#ffd166"/>
+    <text x="414" y="228" class="small" fill="#fff4ce">Histórico: 1 endpoint de comandos exercitado</text>
+
+    <rect x="872" y="194" width="420" height="54" rx="27" fill="#214f76"/>
+    <path d="M902 221 l8 8 15-18" fill="none" stroke="#8ed0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="940" y="228" class="small" fill="#e2f3ff">Runner atual exige 2 processos</text>
+  </g>
+
+  <g class="sans">
+    <text x="76" y="302" class="eyebrow" fill="#9fc8f3">VAZÃO · REQ/S</text>
+    <text x="1240" y="302" class="eyebrow" fill="#9fc8f3">LATÊNCIA</text>
+
+    <g transform="translate(0 0)">
+      <text x="76" y="352" class="row-title" fill="#ffffff">Consultas · 5 VUs</text>
+      <text x="76" y="392" class="rps" fill="#69a8ff">1.538,86</text>
+      <rect x="360" y="335" width="820" height="50" rx="14" fill="#0b2033"/>
+      <rect x="360" y="335" width="820" height="50" rx="14" fill="#2f80ed"/>
+      <text x="1240" y="354" class="metric" fill="#ffffff">p95  6,73 ms</text>
+      <text x="1240" y="383" class="small" fill="#c8d8e8">p99  11,57 ms</text>
+    </g>
+
+    <g transform="translate(0 112)">
+      <text x="76" y="352" class="row-title" fill="#ffffff">Reservas · 3 VUs</text>
+      <text x="76" y="392" class="rps" fill="#ffd166">267,30</text>
+      <rect x="360" y="335" width="820" height="50" rx="14" fill="#0b2033"/>
+      <rect x="360" y="335" width="142" height="50" rx="14" fill="#f2b84b"/>
+      <text x="1240" y="354" class="metric" fill="#ffffff">p95  16,87 ms</text>
+      <text x="1240" y="383" class="small" fill="#c8d8e8">p99  24,82 ms</text>
+    </g>
+
+    <g transform="translate(0 224)">
+      <text x="76" y="352" class="row-title" fill="#ffffff">Misto · 4 VUs</text>
+      <text x="76" y="392" class="rps" fill="#67d5c6">841,65</text>
+      <rect x="360" y="335" width="820" height="50" rx="14" fill="#0b2033"/>
+      <rect x="360" y="335" width="448" height="50" rx="14" fill="#35b5a4"/>
+      <text x="1240" y="354" class="metric" fill="#ffffff">p95  10,57 ms</text>
+      <text x="1240" y="383" class="small" fill="#c8d8e8">p99  15,44 ms</text>
+      <text x="360" y="414" class="small" fill="#abc3d9">Latência agregada de GET + POST</text>
+    </g>
+  </g>
+
+  <g class="sans" transform="translate(76 670)">
+    <rect width="1448" height="88" rx="18" fill="#0b2033" opacity="0.92"/>
+    <text x="28" y="36" class="metric" fill="#ffffff">Valkey  85,68% hit rate</text>
+    <line x1="352" y1="20" x2="352" y2="68" stroke="#41627f"/>
+    <text x="386" y="36" class="metric" fill="#ffffff">PostgreSQL  51 conexões</text>
+    <text x="386" y="64" class="note" fill="#abc3d9">snapshot final · 0 locks aguardando nesse instante</text>
+    <line x1="820" y1="20" x2="820" y2="68" stroke="#41627f"/>
+    <text x="854" y="34" class="small" fill="#ffd98a">Limite conhecido</text>
+    <text x="854" y="62" class="note" fill="#dce8f2">Nova execução multiprocesso bloqueada pelo Docker; nenhum número foi inventado.</text>
+  </g>
+</svg>
