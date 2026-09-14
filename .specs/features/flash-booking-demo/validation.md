@@ -135,3 +135,25 @@ All five required routes have integration assertions: event creation/availabilit
 The revised criteria at `spec.md:130-131` require effective stage targets and a recorded signed-burst distribution, not a deterministic `429`. Edge-3 has a dated remote burst observation; Edge-4 has a dated safe POST burst observation, while both POST and DELETE targets are evidenced without claiming a stateful DELETE or concurrent command execution (`validation.md:58-59`; `infra/modules/edge-observability/main.tf:416-427`). T29 is complete (`tasks.md:427-437`), all seven requirements are `Validated` (`spec.md:168-174`), and the handoff is reconciled as complete (`.specs/STATE.md:148-155`).
 
 **Verdict**: PASS — T29 is provider-accurate, traceable, and complete under the user-approved best-effort throttling contract.
+
+## Independent verification — v1 cache-scope correction
+
+**Verifier date**: 2026-09-14
+**Reviewed diff**: `4e1a9f93b6e06e366500dadb580ab6054094a87d..6597aa8` (cache-scope commits `5632009` and `6597aa8`; concurrent commit `d37fb53` is unrelated)
+**Scope**: code-only correction; no Docker, Terraform or AWS command was run.
+
+| Affected criterion | Evidence | Result |
+| --- | --- | --- |
+| Event-5 — Valkey remains exclusive to `GET /events/{id}` | `GetEventService.java:42-73`; `RedisEventAvailabilityCache.java:17-49` | PASS |
+| Reserve-4 — reservation exposes event only as `{id,name}` | `JdbcReservationPersistenceAdapter.java:37-47,166-185`; `ReservationQueryControllerIT.java:62-74` | PASS (IT compiled previously; not re-executed without Docker) |
+| Reserve-5 — every reservation lookup reads PostgreSQL and does not depend on Valkey | `GetReservationService.java:10-18`; `GetReservationServiceTest.java:42-51`; `ReservationQueryControllerIT.java:96-110` | PASS (unit); IT not re-executed without Docker |
+| Expire-7 — cancellation/expiry invalidates only the event-availability cache | `CancelReservationService.java:42-49`; `ExpireReservationService.java:34-39`; `ReservationQueryControllerIT.java:114-131`; `SqsExpirationConsumerIT.java:78-95` | PASS (unit); IT not re-executed without Docker |
+| High-load remains future design | `.specs/features/flash-booking-high-load/design.md:5-7`; `.specs/features/flash-booking-high-load/tasks.md:8` | PASS |
+
+Static search found no remaining `ReservationCache`, `ReservationChanged`, `RedisReservationCache` or `reservation:*` cache key in tracked source. Test integrity remained 92 `@Test` methods before and after the correction. The demo and high-load spec/task validators, demo state validator and `git diff --check` passed. Maven ran the complete unit suite with 38 tests, 0 failures and 0 skipped. After the final cleanup, 77 production sources compiled from the real tree and the targeted `GetReservationServiceTest` plus `ExpireReservationServiceTest` suite passed 7/7. Both corrected SVGs are valid XML and `scripts/validate-readme.ps1` passed.
+
+Code quality is surgical and consistent with the existing Spring/JDBC boundaries. The final cleanup removed the obsolete `reservationId` parameter from `ExpireReservationService.expireAndReturn` and clarified the `EventReader` label without introducing a new abstraction.
+
+The lightweight sensor used a detached scratch worktree based on `6597aa8` and injected memoization into `GetReservationService`, targeting `GetReservationServiceTest.java:42-51`. The mutant was killed: `get_whenCalledTwice_readsThePersistencePortTwice` expected two calls to `ReservationReader.findById` and observed one. Result: 1/1 killed, 0 survived. The scratch worktree was removed and real-tree porcelain returned to the baseline containing only this `validation.md` update.
+
+**Scoped verdict**: PASS — the code-only cache-scope correction satisfies the affected v1 criteria, the discrimination sensor distinguishes a reintroduced reservation cache, and no code-quality gap remains. Runtime execution of the affected integration tests remains explicitly pending because Docker is unavailable; their sources compile and the limitation does not convert high-load draft design into delivered behavior.
