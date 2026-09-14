@@ -81,7 +81,7 @@ O caminho assíncrono começa **depois** da resposta da reserva. O worker public
 
 ![Primeira chamada, retry igual e conflito ao reutilizar uma chave de idempotência](docs/images/flash-booking-idempotency.png)
 
-Os comandos de criar evento, reservar e cancelar exigem `Idempotency-Key`. A primeira chamada salva chave, operação, alvo normalizado, hash do payload, status e corpo da resposta no PostgreSQL. Um retry idêntico devolve o resultado persistido sem repetir o efeito; reutilizar a chave para outro pedido retorna `409`; omiti-la retorna `400` sem executar o comando. Registros expiram após 24 horas. A decisão completa está no [ADR 0007](docs/adr/0007-idempotencia-persistente-de-comandos.md).
+Os comandos de criar evento, reservar e cancelar exigem `Idempotency-Key`. A primeira chamada salva chave, operação, alvo normalizado, hash do payload, status e corpo da resposta no PostgreSQL. Durante 24 horas, um retry idêntico devolve o resultado persistido sem repetir o efeito e reutilizar a chave para outro pedido retorna `409`; omiti-la retorna `400` sem executar o comando. No vencimento medido pelo banco, a chave pode ser reivindicada atomicamente como um comando novo. O worker remove linhas vencidas em lotes, mas a limpeza não prolonga nem encurta a janela. A decisão completa está no [ADR 0007](docs/adr/0007-idempotencia-persistente-de-comandos.md).
 
 ## Desenvolvimento orientado por especificação
 

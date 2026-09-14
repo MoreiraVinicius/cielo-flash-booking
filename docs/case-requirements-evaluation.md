@@ -38,7 +38,7 @@ O domínio entregue é de **reserva temporária**. Não há pagamento, compra co
 | Oversell zero | Decremento condicional no PostgreSQL e constraints; criação da reserva ocorre na mesma transação. | Testes concorrentes aceitam no máximo a capacidade. O benchmark não é a prova dessa propriedade. |
 | Múltiplas instâncias | `query-api`, `command-api` e `worker` iniciam a mesma imagem em modos separados; perfil local cria duas réplicas adicionais de comandos. | Configuração e harness local; a demo AWS econômica usou uma task por serviço. |
 | Expiração automática | Outbox, SQS com atraso, consumidor idempotente e reconciliador pelo relógio do banco. | Integração e probe remoto; devolução saudável até `expiresAt + 5s`. |
-| Idempotência | Resultado final persistido no PostgreSQL por 24 horas, ligado a operação, alvo e hash do payload. | Repetição igual devolve a mesma resposta; conflito recebe `409`. |
+| Idempotência | Resultado final persistido no PostgreSQL por uma janela de 24 horas, ligado a operação, alvo e hash do payload; aquisição e vencimento usam o relógio do banco. | Dentro da janela, repetição igual devolve a mesma resposta e conflito recebe `409`; após ela, a chave pode ser reivindicada atomicamente. O worker limpa somente vencidos em lotes. |
 | Consistência eventual | Cache-aside Valkey somente para disponibilidade de evento, TTL máximo de 1 segundo e invalidação após commit. | Testes de hit, miss, invalidação e fallback; consulta de reserva não depende do cache e cache nunca autoriza comando. |
 | Erros explícitos | `application/problem+json`, correlation ID e códigos `400`, `403`, `404`, `409`, `500` e `503`. | Testes de controller e falhas de dependência. |
 

@@ -87,8 +87,8 @@
 ### AD-012 - Idempotência durável e relógio transacional
 
 - **Status:** active
-- **Decision:** PostgreSQL mantém o resultado de comandos por 24 horas e decide a elegibilidade de expiração pelo próprio relógio UTC.
-- **Reason:** Múltiplas tasks não podem depender de memória, cache ou relógios locais para preservar um único efeito e impedir expiração antecipada.
+- **Decision:** PostgreSQL mantém o resultado de comandos por uma janela de 24 horas medida pelo próprio relógio UTC. Durante a janela, a chave reproduz o resultado compatível ou rejeita reutilização incompatível; no vencimento, uma nova tentativa pode reivindicá-la atomicamente. Registros vencidos são removidos pelo worker em lotes limitados, sem participar da decisão de validade.
+- **Reason:** Múltiplas tasks não podem depender de memória, cache, limpeza pontual ou relógios locais para preservar um único efeito. A separação entre validade lógica e remoção física evita tanto a reutilização antecipada quanto o bloqueio eterno da chave.
 - **Scope:** Domínio e persistência compartilhados pelas duas arquiteturas.
 - **ADR:** [ADR 0007](../docs/adr/0007-idempotencia-persistente-de-comandos.md) e [ADR 0008](../docs/adr/0008-relogio-do-banco-para-expiracao.md).
 

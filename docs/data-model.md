@@ -62,7 +62,7 @@ erDiagram
     }
 ```
 
-`IDEMPOTENCY_RECORD` não aparece no diagrama de domínio porque controla comandos HTTP, não a relação entre eventos, clientes e reservas. Ele contém `key`, `operation`, `normalized_target`, `payload_hash`, `response_status`, `response_body`, `created_at` e `expires_at`, com unicidade suficiente para serializar a mesma operação.
+`IDEMPOTENCY_RECORD` não aparece no diagrama de domínio porque controla comandos HTTP, não a relação entre eventos, clientes e reservas. Ele contém `idempotency_key`, `operation`, `normalized_target`, `payload_hash`, `response_status`, `response_body`, `created_at` e `expires_at`. A chave é globalmente única enquanto a linha representa a janela atual; operação, alvo e hash são a impressão digital. A aquisição usa a própria unicidade para inserir uma chave nova ou substituir atomicamente uma linha vencida, preservando um único executor mesmo quando duas instâncias disputam a reutilização.
 
 ## Entidades e responsabilidades
 
@@ -122,7 +122,7 @@ Uma reserva pertence a exatamente um cliente e um evento. Um cliente pode realiz
 | `reservation(customer_id, created_at desc)` | histórico futuro do cliente | Mantém o relacionamento navegável sem criar endpoint agora. |
 | `reservation(expires_at) WHERE status = 'PENDING'` | reconciliador de expiração | Mantém a varredura de vencidas pequena. |
 | `outbox_event(occurred_at) WHERE published_at IS NULL` | publicação pendente | Evita reler eventos já publicados. |
-| `idempotency_record(expires_at)` | limpeza da retenção de 24 horas | Permite limpeza em lotes limitados. |
+| `idempotency_record(expires_at)` | seleção de registros vencidos | Permite ao worker limpar, por padrão, até 500 linhas por rodada sem varrer toda a tabela; a aquisição continua decidindo a validade. |
 
 ## Escritas concorrentes e prevenção de oversell
 

@@ -24,7 +24,7 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 - Reservas pendentes expiram em 10 minutos, valor configurável.
 - Com banco e processamento saudáveis, a devolução de capacidade deve concluir até expiresAt + 5 segundos, sem estender a validade; ver [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md).
 - CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP do [ADR 0006](../../../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
-- Idempotência dos comandos é persistida por 24 horas no PostgreSQL conforme o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
+- Idempotência dos comandos usa uma janela de 24 horas no PostgreSQL: a validade é decidida atomicamente pelo relógio do banco e o worker remove registros vencidos em lotes, conforme o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
 - A elegibilidade de expiração usa o relógio do PostgreSQL conforme o [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md).
 - `GET /events/{id}` usa ElastiCache for Valkey compartilhado, com TTL máximo de um segundo. `GET /reservations/{id}` consulta PostgreSQL e retorna somente `{id, name}` como referência do evento. O cache não autoriza reservas; ver [ADR 0005](../../../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
 - Toda reserva pertence a um `Customer`. O Java trata o e-mail antes da busca e persiste somente a forma canônica na coluna `email`, conforme [ADR 0010](../../../docs/adr/0010-cliente-como-entidade-da-reserva.md) e [modelagem de dados](../../../docs/data-model.md).

@@ -79,7 +79,7 @@ Uma chamada sem assinatura válida, sem `execute-api:Invoke` ou fora do CIDR dev
 
 1. Mostre os cinco endpoints e o fluxo local composto.
 2. Explique que a atualização condicional do PostgreSQL e as constraints decidem o estoque. Mais réplicas não mudam essa regra e não permitem oversell.
-3. Mostre a transação que inclui cliente, inventário, reserva e outbox. Explique idempotência por 24 horas, consumidor duplicado e reconciliador de expiração.
+3. Mostre a transação que inclui idempotência, cliente, inventário, reserva e outbox. Explique a janela idempotente de 24 horas pelo relógio do banco, a reutilização atômica após o vencimento, a limpeza limitada no worker, o consumidor duplicado e o reconciliador de expiração.
 4. Diferencie reserva temporária de compra. O e-mail é assíncrono, usa SES em AWS e Mailpit localmente e não reverte a reserva quando falha.
 5. Mostre cache-aside de no máximo um segundo e invalidação após commit. PostgreSQL continua sendo a fonte de verdade.
 6. Mostre os três modos da mesma imagem: consultas, comandos e worker. Eles escalam e recebem permissões diferentes.

@@ -26,9 +26,19 @@ class JdbcIdempotencyStore implements IdempotencyStore {
         return jdbcTemplate.update("""
                 INSERT INTO idempotency_record (
                     id, idempotency_key, operation, normalized_target, payload_hash,
-                    response_status, response_body, expires_at)
-                VALUES (?, ?, ?, ?, ?, 102, '{"state":"IN_PROGRESS"}'::jsonb, now() + interval '24 hours')
-                ON CONFLICT (idempotency_key) DO NOTHING
+                    response_status, response_body, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, 102, '{"state":"IN_PROGRESS"}'::jsonb,
+                    clock_timestamp(), clock_timestamp() + interval '24 hours')
+                ON CONFLICT (idempotency_key) DO UPDATE
+                SET id = EXCLUDED.id,
+                    operation = EXCLUDED.operation,
+                    normalized_target = EXCLUDED.normalized_target,
+                    payload_hash = EXCLUDED.payload_hash,
+                    response_status = EXCLUDED.response_status,
+                    response_body = EXCLUDED.response_body,
+                    created_at = EXCLUDED.created_at,
+                    expires_at = EXCLUDED.expires_at
+                WHERE idempotency_record.expires_at <= clock_timestamp()
                 """,
                 UUID.randomUUID(),
                 command.key(),
@@ -63,6 +73,27 @@ class JdbcIdempotencyStore implements IdempotencyStore {
         if (updated != 1) {
             throw new IllegalStateException("could not complete idempotency record");
         }
+    }
+
+    @Override
+    public int deleteExpired(int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("idempotency cleanup limit must be positive");
+        }
+        return jdbcTemplate.update("""
+                WITH expired AS (
+                    SELECT id
+                    FROM idempotency_record
+                    WHERE expires_at <= clock_timestamp()
+                    ORDER BY expires_at, id
+                    LIMIT ?
+                    FOR UPDATE SKIP LOCKED
+                )
+                DELETE FROM idempotency_record AS current_record
+                USING expired
+                WHERE current_record.id = expired.id
+                    AND current_record.expires_at <= clock_timestamp()
+                """, limit);
     }
 
     private String serialize(Object responseBody) {

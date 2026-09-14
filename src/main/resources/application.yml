@@ -37,3 +37,9 @@ flash-booking:
 
 reservation:
   hold-duration: 10m
+
+idempotency:
+  cleanup:
+    batch-size: 500
+    fixed-delay: 5s
+    initial-delay: 5s

@@ -114,31 +114,40 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
-    void createReservation_whenRequestRepeatsInParallel_createsOneReservationAndOneInventoryEffect() throws Exception {
+    void createReservation_whenKeyExpires_allowsOneNewEffectAcrossParallelRetries() throws Exception {
         UUID eventId = insertEvent(10, 10);
         String key = UUID.randomUUID().toString();
         String request = objectMapper.writeValueAsString(Map.of(
                 "quantity", 1,
                 "customer", Map.of("name", "Ana", "email", "ana@example.com")));
-        List<Callable<String>> requests = new ArrayList<>();
-        for (int index = 0; index < 2; index++) {
-            requests.add(() -> mockMvc.perform(post("/events/{eventId}/reservations", eventId)
-                            .header("Idempotency-Key", key)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(request))
-                    .andExpect(status().isCreated())
-                    .andReturn().getResponse().getContentAsString());
-        }
+        List<String> initialResponses = performParallelReservationRequests(eventId, key, request);
 
-        List<Future<String>> responses = executor.invokeAll(requests);
-        String first = responses.getFirst().get();
-        for (Future<String> response : responses) {
-            assertThat(objectMapper.readTree(response.get())).isEqualTo(objectMapper.readTree(first));
-        }
-
+        assertThat(objectMapper.readTree(initialResponses.get(1)))
+                .isEqualTo(objectMapper.readTree(initialResponses.getFirst()));
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(9);
+
+        jdbcTemplate.update(
+                "UPDATE idempotency_record SET expires_at = clock_timestamp() - interval '1 second' WHERE idempotency_key = ?",
+                key);
+        String newRequest = objectMapper.writeValueAsString(Map.of(
+                "quantity", 1,
+                "customer", Map.of("name", "Bia", "email", "bia@example.com")));
+
+        List<String> reclaimedResponses = performParallelReservationRequests(eventId, key, newRequest);
+
+        assertThat(objectMapper.readTree(reclaimedResponses.get(1)))
+                .isEqualTo(objectMapper.readTree(reclaimedResponses.getFirst()));
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(8);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT expires_at > clock_timestamp() FROM idempotency_record WHERE idempotency_key = ?",
+                        Boolean.class,
+                        key))
+                .isTrue();
     }
 
     @Test
@@ -255,6 +264,24 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 available,
                 java.sql.Timestamp.from(Instant.parse("2026-09-09T12:00:00Z")));
         return id;
+    }
+
+    private List<String> performParallelReservationRequests(UUID eventId, String key, String request) throws Exception {
+        List<Callable<String>> requests = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            requests.add(() -> mockMvc.perform(post("/events/{eventId}/reservations", eventId)
+                            .header("Idempotency-Key", key)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(request))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString());
+        }
+
+        List<String> responses = new ArrayList<>();
+        for (Future<String> response : executor.invokeAll(requests)) {
+            responses.add(response.get());
+        }
+        return responses;
     }
 
     private UUID insertPendingReservation() {

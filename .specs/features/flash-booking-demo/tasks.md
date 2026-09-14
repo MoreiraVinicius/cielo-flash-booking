@@ -230,11 +230,11 @@ T28 -> T29
 ### T13: Implementar idempotência
 
 **Status:** Complete
-**What:** Persistir chave, operação, alvo normalizado, hash do payload e resposta dos comandos mutáveis por 24 horas.
-**Where:** `src/main/java/com/cielo/flashbooking/application/idempotency/`
+**What:** Persistir chave, operação, alvo normalizado, hash do payload e resposta dos comandos mutáveis em uma janela de 24 horas decidida pelo PostgreSQL; permitir reivindicação atômica após o vencimento e limpar registros vencidos em lotes no worker.
+**Where:** `src/main/java/com/cielo/flashbooking/application/idempotency/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/idempotency/` e `src/main/resources/application.yml`
 **Depends on:** T07, T10, T12
 **Requirement:** DEMO-04
-**Done when:** Repetição com operação, alvo e payload iguais retorna a resposta final persistida; reutilização incompatível retorna 409; respostas finais de domínio, inclusive 409 por capacidade, são preservadas; 5xx não é preservado; concorrência gera um efeito. Seguir ADR 0007.
+**Done when:** Antes do vencimento, repetição com operação, alvo e payload iguais retorna a resposta final persistida e reutilização incompatível retorna 409; respostas finais de domínio, inclusive 409 por capacidade, são preservadas; 5xx não é preservado; depois do vencimento, uma nova impressão digital pode reivindicar a chave, inclusive com concorrência gerando um único novo efeito; a limpeza limitada remove apenas registros vencidos e não define a validade. Seguir ADR 0007.
 **Tests:** unit, integration e concurrency, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(api): add persistent idempotency`

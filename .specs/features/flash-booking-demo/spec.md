@@ -96,14 +96,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Acceptance Criteria:**
 
-1. WHEN a mutable operation repeats the same `Idempotency-Key` and payload THEN the system SHALL return the original result without a new effect.
-2. IF an `Idempotency-Key` is reused with a different payload THEN the system SHALL return `409`.
+1. WHEN a mutable operation repeats the same unexpired `Idempotency-Key` and request fingerprint THEN the system SHALL return the original result without a new effect.
+2. IF an unexpired `Idempotency-Key` is reused with a different operation, normalized target, or payload hash THEN the system SHALL return `409`.
 3. WHEN a response is produced THEN the system SHALL include a correlation identifier.
 4. IF an unexpected error occurs THEN the system SHALL return `500` without exposing internal details.
-5. WHEN a command accepts an `Idempotency-Key` THEN the system SHALL persist the key, operation, normalized target, payload hash, and final response for 24 hours; an identical repeat SHALL return the same response and an incompatible reuse SHALL return `409`.
+5. WHEN a command accepts an `Idempotency-Key` THEN the system SHALL persist the key, operation, normalized target, payload hash, and final response for a 24-hour window measured by the PostgreSQL clock; at or after `expires_at`, the next command SHALL atomically reclaim the key as a new request, including under concurrent retries; the worker SHALL remove only expired records in bounded batches without extending the logical window.
 6. IF a mutable endpoint does not receive an `Idempotency-Key` THEN the system SHALL return `400` as `application/problem+json` without executing the command.
 
-**Teste independente:** Repetir requisições iguais e conflitantes, inclusive em paralelo.
+**Teste independente:** Repetir requisições iguais e conflitantes antes do vencimento, reutilizar uma chave vencida em paralelo e provar que a limpeza limitada preserva registros ativos.
 
 ### P1: Notificar a reserva
 

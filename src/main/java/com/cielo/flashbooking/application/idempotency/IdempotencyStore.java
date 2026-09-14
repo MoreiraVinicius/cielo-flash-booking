@@ -10,6 +10,8 @@ public interface IdempotencyStore {
 
     void complete(String key, IdempotencyResponse response);
 
+    int deleteExpired(int limit);
+
     record StoredIdempotencyResponse(
             String operation, String normalizedTarget, String payloadHash, int status, String responseBody) {
 

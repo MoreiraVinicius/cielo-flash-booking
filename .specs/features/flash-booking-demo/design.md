@@ -118,9 +118,11 @@ Um cliente realiza várias reservas; cada reserva pertence a exatamente um clien
 
 ### IdempotencyRecord
 
-- Chave composta por operação, alvo normalizado e `Idempotency-Key`.
-- Armazena hash do payload, status HTTP, resposta serializada e vencimento de 24 horas.
-- Restrição única serializa chamadas concorrentes com a mesma chave; segue o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
+- `Idempotency-Key` é globalmente única durante a janela; operação, alvo normalizado e hash do payload formam a impressão digital usada para distinguir replay de conflito.
+- Armazena status HTTP, resposta serializada, criação e vencimento após 24 horas, ambos medidos pelo PostgreSQL.
+- A aquisição insere uma chave nova ou substitui atomicamente o registro vencido. A restrição única e o `ON CONFLICT` serializam chamadas concorrentes; somente a vencedora executa o comando.
+- O worker remove até 500 registros vencidos a cada cinco segundos por padrão, com tamanho e intervalos tipados em `idempotency.cleanup` e aquisição via `FOR UPDATE SKIP LOCKED`. A limpeza é manutenção de retenção: atraso ou concorrência com uma nova aquisição não prolonga a janela nem apaga uma chave reativada.
+- O desenho segue o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
 
 ### OutboxEvent
 
@@ -157,7 +159,7 @@ sequenceDiagram
     end
 ```
 
-O caminho de capacidade insuficiente não deixa a chave em aberto: após a tentativa transacional sem efeito, grava a resposta final `409` no registro de idempotência. Falhas transitórias `5xx` não são armazenadas como resultado final.
+O caminho de capacidade insuficiente não deixa a chave em aberto: após a tentativa transacional sem efeito, grava a resposta final `409` no registro de idempotência. Falhas transitórias `5xx` não são armazenadas como resultado final. A validade é avaliada na aquisição pelo relógio do PostgreSQL; a leitura subsequente do registro existente pertence à mesma decisão transacional e não reabre a disputa na fronteira do vencimento.
 
 ### Defesa contra oversell
 
