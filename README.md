@@ -77,6 +77,12 @@ O caminho síncrono é curto e autoritativo:
 
 O caminho assíncrono começa **depois** da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
 
+## Idempotência na prática
+
+![Primeira chamada, retry igual e conflito ao reutilizar uma chave de idempotência](docs/images/flash-booking-idempotency.png)
+
+Os comandos de criar evento, reservar e cancelar exigem `Idempotency-Key`. A primeira chamada salva chave, operação, alvo normalizado, hash do payload, status e corpo da resposta no PostgreSQL. Um retry idêntico devolve o resultado persistido sem repetir o efeito; reutilizar a chave para outro pedido retorna `409`; omiti-la retorna `400` sem executar o comando. Registros expiram após 24 horas. A decisão completa está no [ADR 0007](docs/adr/0007-idempotencia-persistente-de-comandos.md).
+
 ## Desenvolvimento orientado por especificação
 
 ![Fluxo do case até a validação independente e lane planejada de alta carga](docs/images/flash-booking-spec-driven.svg)
