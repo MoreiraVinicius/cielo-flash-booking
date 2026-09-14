@@ -1,65 +1,118 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="560" viewBox="0 0 1600 560" role="img" aria-labelledby="title desc">
-  <title id="title">Flash Booking</title>
-  <desc id="desc">Identidade visual original do case técnico de backend para reserva temporária de ingressos. A demo está validada; a arquitetura de alta carga permanece como alvo planejado.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620" role="img" aria-labelledby="title desc">
+  <title id="title">Cielo Flash Booking</title>
+  <desc id="desc">Hero visual em linguagem de produto Cielo para um sistema de reserva temporária de ingressos em alta demanda. Um cartão mostra o último ingresso disponível e uma reserva protegida por tempo limitado. O projeto é identificado como case técnico não oficial.</desc>
+
   <defs>
-    <linearGradient id="hero-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0e2a43"/>
-      <stop offset="0.7" stop-color="#174c73"/>
-      <stop offset="1" stop-color="#1168bd"/>
+    <linearGradient id="brand-background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#204986"/>
+      <stop offset="0.58" stop-color="#017CEB"/>
+      <stop offset="1" stop-color="#00AEEF"/>
     </linearGradient>
-    <linearGradient id="ticket-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#e8f4ff"/>
-      <stop offset="1" stop-color="#b8dcff"/>
+    <linearGradient id="reservation-background" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#E8F8FE"/>
+      <stop offset="1" stop-color="#F4FBFF"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#06131e" flood-opacity="0.3"/>
+    <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#12335E" flood-opacity="0.25"/>
     </filter>
     <style>
-      .sans { font-family: Inter, "Segoe UI", Arial, sans-serif; }
-      .eyebrow { font-size: 20px; font-weight: 700; letter-spacing: 2.4px; }
-      .title { font-size: 72px; font-weight: 780; letter-spacing: -1.5px; }
-      .subtitle { font-size: 28px; font-weight: 430; }
-      .badge { font-size: 19px; font-weight: 650; }
-      .small { font-size: 16px; }
+      .brand-font { font-family: Montserrat, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 18px; font-weight: 700; letter-spacing: 2.2px; }
+      .hero-title { font-size: 66px; font-weight: 760; letter-spacing: -2px; }
+      .hero-copy { font-size: 31px; font-weight: 520; letter-spacing: -0.4px; }
+      .body { font-size: 19px; font-weight: 450; }
+      .chip { font-size: 16px; font-weight: 650; }
+      .card-label { font-size: 14px; font-weight: 750; letter-spacing: 1.5px; }
+      .card-title { font-size: 30px; font-weight: 720; }
+      .card-body { font-size: 17px; font-weight: 500; }
+      .number { font-size: 58px; font-weight: 760; }
+      .timer { font-size: 31px; font-weight: 740; }
+      .small { font-size: 14px; font-weight: 500; }
     </style>
   </defs>
 
-  <rect width="1600" height="560" rx="36" fill="url(#hero-bg)"/>
-  <circle cx="1460" cy="88" r="230" fill="#ffffff" opacity="0.05"/>
-  <circle cx="1350" cy="570" r="300" fill="#35b5a4" opacity="0.08"/>
-  <path d="M0 470 C320 410 480 530 800 472 S1260 410 1600 480 L1600 560 L0 560 Z" fill="#071d30" opacity="0.24"/>
+  <rect width="1600" height="620" rx="34" fill="url(#brand-background)"/>
 
-  <g transform="translate(92 88)" filter="url(#shadow)">
-    <path d="M42 16 H326 C326 52 350 76 386 76 V302 C350 302 326 326 326 362 H42 C42 326 18 302 -18 302 V76 C18 76 42 52 42 16 Z" fill="url(#ticket-bg)" stroke="#ffffff" stroke-width="5"/>
-    <line x1="292" y1="38" x2="292" y2="340" stroke="#6ea9d7" stroke-width="4" stroke-dasharray="13 13"/>
-    <path d="M183 62 L115 202 H178 L144 318 L264 156 H200 L246 62 Z" fill="#f2b84b" stroke="#8d6512" stroke-width="4" stroke-linejoin="round"/>
-    <circle cx="335" cy="130" r="21" fill="#1168bd"/>
-    <path d="M335 117 V131 L345 139" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="335" cy="246" r="21" fill="#35b5a4"/>
-    <path d="M325 246 l7 7 14-16" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-
-  <g class="sans" transform="translate(560 0)">
-    <text x="0" y="112" class="eyebrow" fill="#a9d3f5">CASE TÉCNICO INDEPENDENTE · CONTEXTO CIELO</text>
-    <text x="0" y="196" class="title" fill="#ffffff">Flash Booking</text>
-    <text x="0" y="242" class="subtitle" fill="#d9e8f5">Reserva temporária de ingressos para flash sales.</text>
-    <text x="0" y="281" class="subtitle" fill="#d9e8f5">Consistência primeiro; escala guiada por evidência.</text>
-
-    <g transform="translate(0 330)">
-      <rect width="260" height="58" rx="18" fill="#e9f7f2"/>
-      <circle cx="31" cy="29" r="10" fill="#26866a"/>
-      <text x="54" y="36" class="badge" fill="#17483c">Demo · 43/43 PASS</text>
-
-      <rect x="278" width="196" height="58" rx="18" fill="#e8f4ff"/>
-      <path d="M306 20 l7 7 14-16" fill="none" stroke="#1168bd" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="340" y="36" class="badge" fill="#174c73">94 testes</text>
-
-      <rect x="492" width="390" height="58" rx="18" fill="#fff5d9"/>
-      <path d="M520 20 L532 40 H508 Z" fill="#b47a08"/>
-      <text x="550" y="36" class="badge" fill="#674b13">High-load · arquitetura-alvo</text>
+  <!-- Sky-led language: dominant Cielo blue, soft cloud forms and restrained secondary accents. -->
+  <circle cx="1505" cy="70" r="238" fill="#FFFFFF" opacity="0.09"/>
+  <circle cx="1440" cy="585" r="260" fill="#204986" opacity="0.16"/>
+  <path d="M0 535 C215 475 390 585 640 527 C845 480 1025 500 1215 555 L1215 620 L0 620 Z" fill="#FFFFFF" opacity="0.08"/>
+  <g class="brand-font" transform="translate(88 0)">
+    <g transform="translate(0 64)">
+      <rect width="268" height="42" rx="21" fill="#FFFFFF" opacity="0.16"/>
+      <circle cx="22" cy="21" r="7" fill="#E0E566"/>
+      <text x="41" y="27" class="eyebrow" fill="#FFFFFF">CIELO · BACKEND CASE</text>
     </g>
 
-    <text x="0" y="446" class="small" fill="#b9cedf">Java 21 · Spring Boot 3 · PostgreSQL · Valkey · SQS · AWS</text>
-    <text x="0" y="482" class="small" fill="#8fb1cc">Projeto de avaliação; não é um produto ou identidade visual oficial da Cielo.</text>
+    <text x="0" y="190" class="hero-title" fill="#FFFFFF">Cielo Flash Booking</text>
+    <text x="0" y="252" class="hero-copy" fill="#FFFFFF">Ingressos em alta demanda.</text>
+    <text x="0" y="296" class="hero-copy" fill="#FFFFFF">Reservas sem oversell.</text>
+    <text x="0" y="348" class="body" fill="#E9F7FF">Protege o último ingresso, mantém a reserva por tempo limitado</text>
+    <text x="0" y="377" class="body" fill="#E9F7FF">e desacopla o trabalho assíncrono da experiência do cliente.</text>
+
+    <g transform="translate(0 420)">
+      <rect width="192" height="48" rx="24" fill="#FFFFFF"/>
+      <circle cx="25" cy="24" r="10" fill="#00AEEF"/>
+      <path d="M20 24 l4 4 8-10" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="45" y="30" class="chip" fill="#204986">Demo validada</text>
+
+      <rect x="208" width="178" height="48" rx="24" fill="#204986" opacity="0.72"/>
+      <path d="M232 16 v16 M224 24 h16" stroke="#E0E566" stroke-width="3" stroke-linecap="round"/>
+      <text x="251" y="30" class="chip" fill="#FFFFFF">94 testes</text>
+
+      <rect x="402" width="246" height="48" rx="24" fill="#204986" opacity="0.72"/>
+      <path d="M426 31 C426 19 434 15 441 15 C448 15 456 19 456 31" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+      <text x="470" y="30" class="chip" fill="#FFFFFF">Alta carga planejada</text>
+    </g>
+
+    <text x="0" y="556" class="small" fill="#D8F2FD">Conceito técnico independente. Não é um produto oficial da Cielo.</text>
+  </g>
+
+  <g class="brand-font" transform="translate(986 68)" filter="url(#card-shadow)">
+    <rect width="526" height="484" rx="30" fill="#FFFFFF"/>
+
+    <g transform="translate(34 31)">
+      <rect width="112" height="29" rx="14.5" fill="#E8F8FE"/>
+      <text x="18" y="20" class="card-label" fill="#017CEB">FLASH SALE</text>
+      <circle cx="433" cy="14" r="14" fill="#F1F2F2"/>
+      <path d="M428 14 l4 4 8-10" fill="none" stroke="#00AEEF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <g transform="translate(34 86)">
+      <text x="0" y="28" class="card-title" fill="#231F20">Festival Horizonte</text>
+      <text x="0" y="59" class="card-body" fill="#5A646E">14 set · São Paulo · Pista</text>
+    </g>
+
+    <line x1="34" y1="168" x2="492" y2="168" stroke="#E5E8EB" stroke-width="2"/>
+
+    <g transform="translate(34 194)">
+      <text x="0" y="17" class="card-label" fill="#5A646E">ÚLTIMO INGRESSO</text>
+      <text x="0" y="78" class="number" fill="#204986">01</text>
+      <rect x="111" y="39" width="135" height="35" rx="17.5" fill="#EAF6D4"/>
+      <circle cx="132" cy="56.5" r="6" fill="#7C9824"/>
+      <text x="147" y="62" class="small" fill="#536719">DISPONÍVEL</text>
+      <text x="318" y="45" class="small" fill="#5A646E">a partir de</text>
+      <text x="318" y="75" class="card-title" fill="#231F20">R$ 120</text>
+    </g>
+
+    <g transform="translate(34 302)">
+      <rect width="458" height="104" rx="22" fill="url(#reservation-background)" stroke="#B8E7F8" stroke-width="2"/>
+      <circle cx="39" cy="52" r="22" fill="#00AEEF"/>
+      <path d="M29 52 l7 7 14-17" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="76" y="43" class="card-title" font-size="21" fill="#204986">Reserva protegida</text>
+      <text x="76" y="72" class="card-body" fill="#5A646E">Finalize antes que o tempo acabe</text>
+      <text x="362" y="61" class="timer" fill="#E0004D">09:58</text>
+    </g>
+
+    <g transform="translate(34 443)">
+      <circle cx="9" cy="8" r="8" fill="#00AEEF"/>
+      <line x1="17" y1="8" x2="212" y2="8" stroke="#00AEEF" stroke-width="3"/>
+      <circle cx="221" cy="8" r="8" fill="#00AEEF"/>
+      <line x1="229" y1="8" x2="424" y2="8" stroke="#D8DEE3" stroke-width="3"/>
+      <circle cx="433" cy="8" r="8" fill="#D8DEE3"/>
+      <text x="0" y="34" class="small" fill="#5A646E">Pedido</text>
+      <text x="172" y="34" class="small" fill="#5A646E">Estoque protegido</text>
+      <text x="385" y="34" class="small" fill="#5A646E">Confirmação</text>
+    </g>
   </g>
 </svg>
