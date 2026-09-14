@@ -135,4 +135,3 @@ O arquivo é um resumo sanitizado; não contém credenciais, hosts privados ou p
 | Alta carga | Sempre marcada como alvo | Respeita AD-006 e evita transformar desenho em evidência. |
 
 Nenhuma decisão desta feature altera um padrão arquitetural do produto; por isso não há novo `AD-NNN`.
-
