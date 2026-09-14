@@ -106,7 +106,7 @@ T06 -> T07
 
 ### T05: Visualizar o processo e a evolução arquitetural
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar uma trilha do desenvolvimento orientado por especificação e uma comparação compacta entre demo e high-load.
 **Where:** `docs/images/flash-booking-spec-driven.svg`, `docs/images/flash-booking-architecture-evolution.svg`
 **Depends on:** T03
@@ -115,6 +115,7 @@ T06 -> T07
 **Tests:** XML, render, inspeção visual e revisão contra specs/ADRs
 **Gate:** Visual
 **Commit:** `docs(visual): compare delivery and target architecture`
+**Result:** A trilha visual registra case, 7 requisitos, 13 ADRs, 29 tarefas, 94 testes e verificação 43/43; a comparação preserva o core compartilhado e separa a demo validada da topologia Multi-AZ ainda não aplicada.
 
 ## Phase 3: Editorial Assembly
 

@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Comparação entre a arquitetura demo e a arquitetura-alvo high-load</title>
+  <desc id="desc">As duas topologias usam o mesmo core Java com Query API, Command API e Worker. A demo validada prioriza economia com banco Single-AZ e uma task por serviço. High-load é um alvo não provisionado com Multi-AZ, múltiplas tasks, autoscaling, Aurora, RDS Proxy e Valkey Multi-AZ.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#102a43" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66859c"/>
+    </marker>
+    <style>
+      .sans { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 18px; font-weight: 750; letter-spacing: 2px; }
+      .title { font-size: 42px; font-weight: 760; }
+      .subtitle { font-size: 21px; }
+      .column-title { font-size: 27px; font-weight: 760; }
+      .box-title { font-size: 20px; font-weight: 720; }
+      .body { font-size: 17px; }
+      .small { font-size: 15px; }
+      .badge { font-size: 17px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" rx="30" fill="#f4f7fa"/>
+  <g class="sans">
+    <text x="64" y="58" class="eyebrow" fill="#1168bd">EVOLUÇÃO ARQUITETURAL</text>
+    <text x="64" y="108" class="title" fill="#17324d">O domínio não muda; a topologia evolui</text>
+    <text x="64" y="145" class="subtitle" fill="#557086">Separar consulta, comando e trabalho assíncrono permite escalar onde a métrica indicar.</text>
+  </g>
+
+  <g class="sans" filter="url(#shadow)">
+    <rect x="64" y="178" width="1472" height="98" rx="20" fill="#17324d"/>
+    <text x="96" y="214" class="eyebrow" fill="#9fc8f3">CORE COMPARTILHADO</text>
+    <text x="96" y="250" class="box-title" fill="#ffffff">Uma imagem Java · Query API · Command API · Worker · domínio · schema · migrations · contrato HTTP</text>
+    <rect x="1268" y="202" width="232" height="48" rx="24" fill="#2b5878"/>
+    <text x="1304" y="233" class="badge" fill="#e8f4ff">oversell zero</text>
+  </g>
+
+  <g class="sans" filter="url(#shadow)">
+    <rect x="64" y="310" width="704" height="506" rx="24" fill="#ffffff"/>
+    <rect x="64" y="310" width="704" height="82" rx="24" fill="#dff3ec"/>
+    <path d="M64 368 H768 V392 H64 Z" fill="#dff3ec"/>
+    <circle cx="104" cy="350" r="18" fill="#26866a"/>
+    <path d="M95 350 l7 7 14-17" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="140" y="359" class="column-title" fill="#17483c">Demo econômica</text>
+    <rect x="560" y="328" width="172" height="44" rx="22" fill="#1f7a63"/>
+    <text x="597" y="356" class="badge" fill="#ffffff">VALIDADA</text>
+
+    <rect x="112" y="420" width="608" height="62" rx="16" fill="#eff6ff" stroke="#8fc3ee"/>
+    <text x="140" y="447" class="box-title" fill="#17324d">Borda</text>
+    <text x="236" y="447" class="body" fill="#557086">API Gateway · IAM/SigV4 · WAF → ALB privado</text>
+    <text x="140" y="470" class="small" fill="#7b92a5">único ponto público; throttling é melhor esforço</text>
+
+    <path d="M416 482 V510" fill="none" stroke="#66859c" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="112" y="520" width="608" height="96" rx="16" fill="#e8f4ff" stroke="#8fc3ee"/>
+    <text x="140" y="552" class="box-title" fill="#17324d">ECS Fargate · 1 task por serviço</text>
+    <rect x="140" y="570" width="155" height="30" rx="15" fill="#1168bd"/>
+    <text x="171" y="591" class="small" fill="#ffffff">Query API</text>
+    <rect x="310" y="570" width="170" height="30" rx="15" fill="#1168bd"/>
+    <text x="334" y="591" class="small" fill="#ffffff">Command API</text>
+    <rect x="495" y="570" width="120" height="30" rx="15" fill="#526f87"/>
+    <text x="530" y="591" class="small" fill="#ffffff">Worker</text>
+
+    <path d="M416 616 V644" fill="none" stroke="#66859c" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="112" y="654" width="288" height="94" rx="16" fill="#f3f6f8" stroke="#a9bdcc"/>
+    <text x="140" y="686" class="box-title" fill="#17324d">Dados</text>
+    <text x="140" y="715" class="body" fill="#557086">RDS PostgreSQL Single-AZ</text>
+    <text x="140" y="738" class="small" fill="#7b92a5">Valkey econômico · cache-aside</text>
+    <rect x="432" y="654" width="288" height="94" rx="16" fill="#f3f6f8" stroke="#a9bdcc"/>
+    <text x="460" y="686" class="box-title" fill="#17324d">Assíncrono</text>
+    <text x="460" y="715" class="body" fill="#557086">SQS + DLQs · SES</text>
+    <text x="460" y="738" class="small" fill="#7b92a5">outbox + retries + reconciliação</text>
+
+    <text x="112" y="787" class="body" fill="#356557">Aplicada, observada e destruída; state final vazio.</text>
+  </g>
+
+  <g class="sans" filter="url(#shadow)">
+    <rect x="832" y="310" width="704" height="506" rx="24" fill="#ffffff"/>
+    <rect x="832" y="310" width="704" height="82" rx="24" fill="#e5ebf0"/>
+    <path d="M832 368 H1536 V392 H832 Z" fill="#e5ebf0"/>
+    <circle cx="872" cy="350" r="18" fill="#61798c"/>
+    <path d="M872 339 V361 M861 350 H883" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    <text x="908" y="359" class="column-title" fill="#17324d">High-load alvo</text>
+    <rect x="1300" y="328" width="200" height="44" rx="22" fill="#6b7f8f"/>
+    <text x="1331" y="356" class="badge" fill="#ffffff">NÃO APLICADA</text>
+
+    <rect x="880" y="420" width="608" height="62" rx="16" fill="#eff6ff" stroke="#8fc3ee"/>
+    <text x="908" y="447" class="box-title" fill="#17324d">Borda HA</text>
+    <text x="1010" y="447" class="body" fill="#557086">mesma segurança → ALB distribuído em AZs</text>
+    <text x="908" y="470" class="small" fill="#7b92a5">admissão e sinais separados por rota</text>
+
+    <path d="M1184 482 V510" fill="none" stroke="#66859c" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="880" y="520" width="608" height="96" rx="16" fill="#e8f4ff" stroke="#8fc3ee"/>
+    <text x="908" y="552" class="box-title" fill="#17324d">ECS Fargate · ≥2 tasks/serviço · Multi-AZ + autoscaling</text>
+    <rect x="908" y="570" width="155" height="30" rx="15" fill="#1168bd"/>
+    <text x="939" y="591" class="small" fill="#ffffff">Query API</text>
+    <rect x="1078" y="570" width="170" height="30" rx="15" fill="#1168bd"/>
+    <text x="1102" y="591" class="small" fill="#ffffff">Command API</text>
+    <rect x="1263" y="570" width="145" height="30" rx="15" fill="#526f87"/>
+    <text x="1281" y="591" class="small" fill="#ffffff">Worker/backlog</text>
+
+    <path d="M1184 616 V644" fill="none" stroke="#66859c" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="880" y="654" width="288" height="94" rx="16" fill="#f3f6f8" stroke="#a9bdcc"/>
+    <text x="908" y="686" class="box-title" fill="#17324d">Dados HA</text>
+    <text x="908" y="715" class="body" fill="#557086">Aurora + RDS Proxy</text>
+    <text x="908" y="738" class="small" fill="#7b92a5">Valkey Multi-AZ</text>
+    <rect x="1200" y="654" width="288" height="94" rx="16" fill="#f3f6f8" stroke="#a9bdcc"/>
+    <text x="1228" y="686" class="box-title" fill="#17324d">Assíncrono</text>
+    <text x="1228" y="715" class="body" fill="#557086">SQS + DLQs · SES</text>
+    <text x="1228" y="738" class="small" fill="#7b92a5">workers escalam por backlog</text>
+
+    <text x="880" y="787" class="body" fill="#765c27">Capacidade, failover e custo ainda não comprovados.</text>
+  </g>
+
+  <g class="sans">
+    <rect x="64" y="844" width="1472" height="38" rx="19" fill="#dfe8ef"/>
+    <text x="94" y="869" class="small" fill="#17324d">Não muda: domínio, APIs, idempotência, outbox e migrations.</text>
+    <text x="720" y="869" class="small" fill="#17324d">Muda: AZs, capacidade, réplicas, proxy, autoscaling e operação.</text>
+  </g>
+</svg>
