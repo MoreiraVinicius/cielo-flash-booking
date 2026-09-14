@@ -6,10 +6,10 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 ## Goals
 
-- [ ] Entregar os cinco endpoints do case com comportamento verificável.
-- [ ] Garantir consistência dos comandos sob concorrência.
-- [ ] Executar localmente por Docker Compose.
-- [ ] Provisionar todo o runtime AWS por Terraform.
+- [x] Entregar os cinco endpoints do case com comportamento verificável.
+- [x] Garantir consistência dos comandos sob concorrência.
+- [x] Executar localmente por Docker Compose.
+- [x] Provisionar todo o runtime AWS por Terraform.
 
 ## Out of Scope
 
@@ -177,14 +177,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 ## Success Criteria
 
-- [ ] Os cinco endpoints passam nos testes de contrato.
-- [ ] Nenhum teste concorrente produz oversell.
-- [ ] Cancelamento e expiração devolvem capacidade uma vez.
-- [ ] Expiração saudável conclui devolução até expiresAt + 5 segundos, inclusive pelo reconciliador na ausência de mensagem.
-- [ ] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
-- [ ] Os dois GET usam cache Valkey com TTL máximo de um segundo e invalidação pós-commit.
-- [ ] Toda reserva possui cliente ligado por chave estrangeira e envia notificação assíncrona sem prometer compra.
-- [ ] Consultas e comandos executam em serviços separados usando a mesma imagem e as mesmas regras de negócio.
-- [ ] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.
-- [ ] Docker Compose inicia a solução completa.
-- [ ] Terraform representa todos os recursos AWS da demo.
+- [x] Os cinco endpoints passam nos testes de contrato.
+- [x] Nenhum teste concorrente produz oversell.
+- [x] Cancelamento e expiração devolvem capacidade uma vez.
+- [x] Expiração saudável conclui devolução até expiresAt + 5 segundos, inclusive pelo reconciliador na ausência de mensagem.
+- [x] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
+- [x] Os dois GET usam cache Valkey com TTL máximo de um segundo e invalidação pós-commit.
+- [x] Toda reserva possui cliente ligado por chave estrangeira e envia notificação assíncrona sem prometer compra.
+- [x] Consultas e comandos executam em serviços separados usando a mesma imagem e as mesmas regras de negócio.
+- [x] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.
+- [x] Docker Compose inicia a solução completa.
+- [x] Terraform representa todos os recursos AWS da demo.

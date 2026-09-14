@@ -84,7 +84,7 @@ Uma chamada sem assinatura válida, sem `execute-api:Invoke` ou fora do CIDR dev
 5. Mostre cache-aside de no máximo um segundo e invalidação após commit. PostgreSQL continua sendo a fonte de verdade.
 6. Mostre os três modos da mesma imagem: consultas, comandos e worker. Eles escalam e recebem permissões diferentes.
 7. Mostre API Gateway IAM/SigV4, WAF, allowlist, throttling e o ALB privado. API Gateway é a única entrada pública.
-8. Mostre os gates, o baseline local e o Terraform dividido por módulos. Declare a limitação: sem credenciais AWS locais, só houve validação estática/mockada, não um `plan` remoto.
+8. Mostre os gates, o baseline local e o Terraform dividido por módulos. Separe as evidências: a demo teve plan/apply, smoke tests e destroy remotos concluídos; a arquitetura high-load continua apenas validada estaticamente, sem ambiente remoto.
 9. Mostre o orçamento, a janela de 1h30 e o encerramento abaixo.
 
 ## Encerrar a demonstração

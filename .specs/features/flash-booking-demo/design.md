@@ -1,7 +1,7 @@
 # Design da demo Flash Booking
 
 **Especificação:** `.specs/features/flash-booking-demo/spec.md`
-**Estado:** Rascunho
+**Estado:** Validated
 
 ## Visão geral da arquitetura
 

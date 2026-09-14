@@ -14,7 +14,7 @@ The local implementation, tests, static infrastructure checks, and two behavior-
 
 ## Task completion
 
-T01--T29 are marked `Complete`. The demo teardown completed with Terraform state count `0`; the worker telemetry is committed separately as `6871399`.
+T01--T29 are marked `Complete`. The demo teardown completed with Terraform state count `0`; the equivalent worker telemetry change in this branch is commit `2b84639`.
 
 ## Spec-anchored acceptance criteria
 

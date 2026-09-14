@@ -1,63 +1,72 @@
-# Avaliação das arquiteturas contra o case
+# Avaliação da entrega contra o case
 
-Esta avaliação compara a cobertura documental com `Case BackEnd 1.md`. “Coberto” significa que spec, design e tasks possuem uma solução verificável; não significa que código ou infraestrutura já tenham sido executados. A demo ainda precisa de evidência local e AWS. A arquitetura de alta carga será validada somente de forma estática nesta entrega.
+Esta matriz separa três níveis que não devem ser confundidos:
+
+- **Implementado**: existe código ou infraestrutura versionada.
+- **Validado**: há teste, gate ou observação remota citada.
+- **Arquitetura-alvo**: existe design verificável, mas ainda não há runtime provisionado.
+
+A fonte consolidada da demo é a [validação independente](../.specs/features/flash-booking-demo/validation.md), concluída em 2026-09-11. A arquitetura [high-load](../.specs/features/flash-booking-high-load/design.md) é uma evolução planejada e não foi aplicada nem testada remotamente.
+
+## Resultado em uma página
+
+| Área | Demo entregue | High-load alvo |
+| --- | --- | --- |
+| Estado | **PASS — 43/43 critérios** | **Planejada — sem provisionamento remoto** |
+| Código Java | Implementado e compartilhado entre três modos | Reutiliza o mesmo domínio, schema e imagem |
+| Execução local | Compose e smoke test validados | Não é um segundo produto local |
+| AWS | Plan/apply, probes e destroy concluídos; state final vazio | Topologia Multi-AZ descrita, não aplicada |
+| Testes | 38 unitários + 56 de integração = **94 aprovados** | Reutiliza gates da demo; falha/capacidade remotas pendentes |
+| Desempenho | Baseline local curto; não representa capacidade de produção | Sem benchmark ou SLO comprovado |
 
 ## Requisitos funcionais
 
-| Requisito do case | Demo | Alta carga | Evidência planejada |
-| --- | --- | --- | --- |
-| `POST /events` | Coberto pelo serviço de comandos. | Mesmo controller, domínio e schema da demo. | Contrato `201/400`, teste de integração e idempotência. |
-| `GET /events/{id}` | Coberto pelo serviço de consultas e cache Valkey. | Mesmo código; mais tasks e Valkey Multi-AZ. | Teste de hit, miss, TTL, fallback e `404`. |
-| `POST /events/{id}/reservations` | Coberto com cliente, estoque condicional e outbox. | Mesmo código; serviço de comandos escala independentemente. | Testes concorrentes com mais solicitações que capacidade. |
-| `GET /reservations/{id}` | Coberto pelo serviço de consultas, incluindo cliente e motivo terminal. | Mesmo código e contrato. | Teste de contrato, cache e `404`. |
-| `DELETE /reservations/{id}` | Coberto com transição condicional e devolução única. | Mesmo código e transação. | Teste de repetição e corrida com expiração. |
+| Rota do case | Comportamento entregue | Evidência principal |
+| --- | --- | --- |
+| `POST /events` | Cria evento com capacidade positiva; erros usam Problem Details e idempotência obrigatória. | `EventControllerIT` e `IdempotencyControllerIT` |
+| `GET /events/{id}` | Retorna capacidade total/disponível com cache-aside de até 1 segundo. | `EventControllerIT` |
+| `POST /events/{id}/reservations` | Persiste cliente e reserva `PENDING`, decrementa estoque e grava outbox na mesma transação. | `ReservationControllerIT` e testes de concorrência |
+| `GET /reservations/{id}` | Retorna evento, cliente, quantidade, validade, estado e motivo terminal. | `ReservationQueryControllerIT` |
+| `DELETE /reservations/{id}` | Cancela uma reserva pendente e devolve estoque exatamente uma vez. | `ReservationQueryControllerIT` e testes de corrida |
 
-Resultado funcional: as duas arquiteturas cobrem os cinco endpoints no desenho. A ligação `Customer -> Reservation -> Event` e o e-mail de reserva são extensões compatíveis, sem criar novas rotas obrigatórias.
+O domínio entregue é de **reserva temporária**. Não há pagamento, compra confirmada ou emissão de ingresso. O e-mail informa a reserva e seu prazo, sem prometer venda concluída.
 
 ## Requisitos não funcionais
 
-| Requisito do case | Demo | Alta carga | Limite ou prova exigida |
-| --- | --- | --- | --- |
-| Múltiplas instâncias simultâneas | Três serviços separados; perfil local de concorrência inicia ao menos duas instâncias de comandos. AWS econômica usa uma task por serviço. | Mínimo de duas tasks por serviço em AZs distintas. | Teste local deve atravessar processos distintos; alta carga não será comprovada remotamente agora. |
-| Nunca permitir oversell | PostgreSQL faz decremento condicional e constraints; cancelamento/expiração devolvem uma vez. | Mesma transação e mesmas migrations no Aurora PostgreSQL. | Soma aceita nunca supera capacidade; `available` permanece entre zero e capacidade. |
-| Expiração automática | Outbox, SQS com atraso, consumidor idempotente e reconciliador pelo relógio do banco. | Mesmo worker, com escala por backlog e Multi-AZ. | Com componentes saudáveis, devolução termina até `expiresAt + 5s`. |
-| Idempotência | Registro PostgreSQL de 24 horas para todos os comandos. | Mesmo schema e comportamento. | Retry igual repete resposta; chave incompatível retorna `409`. |
-| Consistência eventual da disponibilidade | Os dois GETs usam Valkey com TTL máximo de um segundo e invalidação após commit. | Mesmo contrato em Valkey Multi-AZ. | Cache nunca autoriza reserva; banco continua fonte autoritativa. |
-| Tratamento explícito de erros | Problem Details, correlation ID, `400`, `403`, `404`, `409`, `429`, `500` e `503`. | Mesmo contrato HTTP. | Testes de controller e falhas de dependência. |
-
-Resultado não funcional: o desenho cobre todos os requisitos. A demo consegue provar concorrência e consistência localmente sem pagar pela topologia de alta carga. A arquitetura alta preserva as regras, mas desempenho, failover e capacidade continuam “não comprovados” até existir ambiente autorizado.
-
-## Restrições e preferências técnicas
-
-| Item | Avaliação |
-| --- | --- |
-| Java e Spring Boot | Um binário Java 21/Spring Boot com modos `query-api`, `command-api` e `worker`. |
-| APIs REST | Cinco rotas em controllers, com contratos e erros explícitos. |
-| Sistemas distribuídos | Concorrência no banco, outbox, SQS, cache eventual, retries e DLQs estão cobertos. |
-| Qualidade de código | Módulos por capacidade de negócio, domínio independente de AWS/Spring e regras de dependência verificáveis. |
-| Testes | Unitários, integração com PostgreSQL/Valkey/mensageria, concorrência multiprocesso, contrato e Terraform. |
-| Segurança | API Gateway REST com IAM/SigV4, resource policy, WAF, throttling e backends privados. |
-| Docker Compose | Inclui consultas, comandos, worker, PostgreSQL, Valkey, mensageria e Mailpit. |
-| README | Deve documentar build, execução, credenciais temporárias, teste, apply/destroy e uso de IA. |
-| CI/CD | Continua fora da entrega imediata; é preferência da vaga, não obrigação textual do case. |
-
-## Restrições de entrega
-
-| Exigência do case | Cobertura nas duas arquiteturas | Estado real |
+| Requisito | Mecanismo | Evidência e limite |
 | --- | --- | --- |
-| Docker Compose | A demo local inicia consultas, comandos, worker, PostgreSQL, Valkey, mensageria e Mailpit; o mesmo artefato é a base da alta carga. | Planejado nas tasks; ainda não executado. |
-| Testes automatizados | Há matriz para unidade, integração, contrato, concorrência multiprocesso e infraestrutura. | Planejados; nenhum resultado pode ser presumido. |
-| README e instruções | Build, execução local, autenticação, Terraform, custo e destruição estão no plano documental. | Parcial: decisões existem, comandos finais dependem da implementação. |
-| Repositório GitHub | Publicação e histórico revisável fazem parte da entrega do case. | Não comprovado: este diretório não é um repositório Git nesta revisão. |
-| Decisões, trade-offs e evoluções | ADRs cobrem escopo, reserva, expiração, banco, cache, idempotência, relógio, cliente, e-mail, segurança e separação operacional. | Coberto documentalmente; deve permanecer consistente com o código futuro. |
-| Solução completa e funcional | A demo é a candidata executável; alta carga reutiliza o mesmo código e acrescenta apenas topologia. | Não atendido ainda, pois a implementação não foi autorizada nem realizada. |
+| Oversell zero | Decremento condicional no PostgreSQL e constraints; criação da reserva ocorre na mesma transação. | Testes concorrentes aceitam no máximo a capacidade. O benchmark não é a prova dessa propriedade. |
+| Múltiplas instâncias | `query-api`, `command-api` e `worker` iniciam a mesma imagem em modos separados; perfil local cria duas réplicas adicionais de comandos. | Configuração e harness local; a demo AWS econômica usou uma task por serviço. |
+| Expiração automática | Outbox, SQS com atraso, consumidor idempotente e reconciliador pelo relógio do banco. | Integração e probe remoto; devolução saudável até `expiresAt + 5s`. |
+| Idempotência | Resultado final persistido no PostgreSQL por 24 horas, ligado a operação, alvo e hash do payload. | Repetição igual devolve a mesma resposta; conflito recebe `409`. |
+| Consistência eventual | Cache-aside Valkey para os dois GETs, TTL máximo de 1 segundo e invalidação após commit. | Testes de hit, miss, invalidação e fallback; cache nunca autoriza reserva. |
+| Erros explícitos | `application/problem+json`, correlation ID e códigos `400`, `403`, `404`, `409`, `500` e `503`. | Testes de controller e falhas de dependência. |
 
-## Funcionalidade adicional: e-mail
+## Resiliência e observabilidade
 
-O e-mail confirma a criação de uma reserva temporária, não uma compra. Ele sai de `ReservationCreated` pelo outbox, SQS e SES. Falha de envio não altera estoque nem estado; retry esgotado vai para DLQ e alarme. No sandbox do SES, somente identidades verificadas participam da demonstração.
+| Risco | Padrão aplicado | Sinal observado |
+| --- | --- | --- |
+| Mensagem perdida ou repetida | Transactional outbox, entrega pelo menos uma vez, consumidor idempotente e DLQ por fluxo | backlog, idade da mensagem, DLQ e logs correlacionados |
+| Cache indisponível | timeout de 100 ms, bulkhead de 5 fallbacks por task e circuit breaker após 5 falhas/10 s | hit rate, falhas, circuito aberto e pressão no banco |
+| Expiração atrasada | mensagem atrasada + reconciliador consultando o relógio do PostgreSQL | idade da fila e atraso até o estado terminal |
+| Corrida entre cancelar e expirar | transição condicional; somente o vencedor devolve estoque | linhas afetadas, estado terminal e disponibilidade |
+| Rajada ou abuso na borda | IAM/SigV4, resource policy, WAF e throttling de melhor esforço | logs do API Gateway/WAF e distribuição de respostas |
+
+Os limites do API Gateway e o AWS Budget reduzem risco, mas não são garantias determinísticas de admissão ou teto de custo. O snapshot PostgreSQL do benchmark é coletado ao final e não prova ausência de lock waits durante toda a execução.
+
+## Infraestrutura e operação
+
+| Item | Estado |
+| --- | --- |
+| Java/Spring Boot | Java 21, Spring Boot 3 e arquitetura hexagonal em monólito modular. |
+| Runtime local | Query API, Command API, worker, PostgreSQL, Valkey, LocalStack/SQS e Mailpit em Compose. |
+| Runtime AWS demo | API Gateway REST, IAM/SigV4, WAF, VPC Link, ALB privado, ECS Fargate, RDS, Valkey, SQS/DLQs, SES, logs, alarmes e Budget. |
+| Provisionamento | Recursos AWS criados por Terraform; nenhuma etapa de console faz parte do contrato. |
+| Encerramento | `terraform destroy` removeu 106 recursos da demo e o state terminou vazio. |
+| CI/CD | Fora do escopo desta entrega. |
 
 ## Veredito
 
-- **Demo:** atende documentalmente aos requisitos funcionais e não funcionais; ainda não atende como entrega executável enquanto código, testes e infraestrutura não produzirem evidência.
-- **Alta carga:** atende documentalmente com o mesmo código e regras da demo; sua topologia amplia disponibilidade e escala independente, mas não pode ser declarada validada em produção nesta entrega.
-- **Regra de aprovação:** nenhuma arquitetura recebe PASS apenas por estar descrita. Cada linha da matriz precisa de teste ou, quando a alta carga não for aplicada, deve permanecer marcada como evidência remota pendente.
+- **Demo:** completa e validada para o escopo do case, com evidência local, estática e remota. O baseline de carga é uma fotografia local curta, não um SLO de produção.
+- **High-load:** desenho de evolução Multi-AZ que conserva o mesmo core Java. Capacidade, failover, RTO/RPO e custo operacional continuam não comprovados até existir ambiente autorizado.
+- **Regra de comunicação:** arquitetura descrita mostra intenção; somente teste ou observação registrada mostra comportamento.

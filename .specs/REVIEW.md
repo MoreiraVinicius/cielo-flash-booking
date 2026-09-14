@@ -1,6 +1,8 @@
-# Sabatina das especificações
+# Sabatina das especificações — registro histórico
 
-Status: revisão documental consolidada. Este registro não aprova implementação nem transforma decisões descritas em evidência executada.
+> Este documento preserva a revisão **pré-implementação**. As frases no futuro e as lacunas abaixo descrevem aquele momento, não o estado atual. A fonte vigente é a [validação independente da demo](features/flash-booking-demo/validation.md), concluída com 43/43 critérios em 2026-09-11; a arquitetura high-load permanece planejada e não provisionada.
+
+Status histórico: revisão documental consolidada antes da implementação. Este registro, isoladamente, não aprova código nem transforma decisões descritas em evidência executada.
 
 ## Base examinada
 

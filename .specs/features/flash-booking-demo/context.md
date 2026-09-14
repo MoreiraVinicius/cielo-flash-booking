@@ -1,6 +1,6 @@
 # Contexto da demo Flash Booking
 
-**Estado:** Pronto para design
+**Estado:** Validated
 
 ## Limite da feature
 

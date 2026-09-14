@@ -52,7 +52,7 @@ T06 -> T07
 
 ### T01: Reconciliar o estado documental da entrega
 
-**Status:** Pending
+**Status:** Complete
 **What:** Atualizar documentos públicos e metadados históricos para refletir que a demo foi implementada, validada, aplicada e destruída, mantendo high-load como alvo não executado.
 **Where:** `.specs/features/flash-booking-demo/`, `.specs/REVIEW.md`, `docs/case-requirements-evaluation.md`, `docs/demo-runbook.md`
 **Depends on:** none
@@ -61,6 +61,7 @@ T06 -> T07
 **Tests:** validação estrutural das specs e busca dirigida por afirmações obsoletas
 **Gate:** Spec
 **Commit:** `docs: reconcile validated demo evidence`
+**Result:** Estados da demo, checklist de sucesso, avaliação do case, runbook e registro histórico reconciliados com a validação independente de 2026-09-11.
 
 ### T02: Corrigir o harness de carga multiprocesso
 
@@ -137,4 +138,3 @@ T06 -> T07
 **Tests:** gate documental, Maven build, validate_spec, validate_tasks, validate_state após verificação independente
 **Gate:** Build
 **Commit:** `test(docs): validate readme evidence contract`
-
