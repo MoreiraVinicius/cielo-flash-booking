@@ -117,7 +117,7 @@ Deployment nodes e infrastructure nodes:
 - “AWS Budgets — US$ 5, alertas 50%/80%/100%”.
 
 Containers C4 implantados no node ECS/Fargate, todos derivados da mesma imagem Java 21 / Spring Boot 3 no ECR:
-- “Query API [Container]”: perfil query-api, 1 task, expõe GET /events/{id} e GET /reservations/{id}, acessa PostgreSQL via JDBC/TLS e Valkey via RESP/TLS.
+- “Query API [Container]”: perfil query-api, 1 task, expõe GET /events/{id} e GET /reservations/{id}; consulta reservas no PostgreSQL e usa Valkey somente para disponibilidade de evento.
 - “Command API [Container]”: perfil command-api, 1 task, expõe POST /events, POST /events/{id}/reservations e DELETE /reservations/{id}, grava no PostgreSQL e invalida cache após commit.
 - “Worker [Container]”: perfil worker, 1 task, processa transactional outbox, expiração, reconciliação e notificação; usa PostgreSQL, SQS e SES; não recebe tráfego do ALB.
 
@@ -127,7 +127,7 @@ Relações C4 obrigatórias:
 - API Gateway -> VPC Link -> ALB interno: “HTTP proxy privado”.
 - ALB -> Query API: “GET, HTTP:8080”.
 - ALB -> Command API: “POST/DELETE, HTTP:8080”.
-- Query API -> Valkey: “Cache-aside, RESP/TLS”.
+- Query API -> Valkey: “Cache-aside de disponibilidade de evento, RESP/TLS”.
 - Query API -> PostgreSQL: “Leitura, JDBC/TLS”.
 - Command API -> PostgreSQL: “Transação autoritativa + outbox, JDBC/TLS”.
 - Command API -> Valkey: “Invalidação pós-commit, RESP/TLS”.
@@ -155,7 +155,7 @@ Pessoa:
 - “Operador / consumidor da API”: usa credenciais temporárias e HTTPS com IAM/SigV4.
 
 Software System boundary:
-- “Flash Booking”: mantém exatamente o mesmo domínio, endpoints, schema, migrations e imagem da demo.
+- “Flash Booking”: preserva domínio, endpoints, schema e migrations da demo; adaptadores operacionais evoluem no mesmo artefato Java.
 
 Deployment nodes e infrastructure nodes planejados por Terraform:
 - “AWS Region”.
@@ -177,7 +177,7 @@ Deployment nodes e infrastructure nodes planejados por Terraform:
 - “Terraform state high-load separado do state demo”.
 
 Containers C4 implantados no ECS/Fargate, todos executando a mesma imagem Java 21 / Spring Boot 3 do ECR:
-- “Query API [Container] — 2..N tasks”: serve os dois GETs; escala independentemente por requisições, p95, CPU e cache hit rate.
+- “Query API [Container] — 2..N tasks”: serve os dois GETs; usa cache apenas para evento e escala por requisições, p95, CPU e hit rate de disponibilidade.
 - “Command API [Container] — 2..N tasks”: serve POST/DELETE; escala por requisições, p95, CPU e conexões, além de scheduled pre-scaling antes da flash sale; o máximo é limitado pelo envelope do writer.
 - “Worker [Container] — 2..N tasks”: outbox, expiração, reconciliação e notificação; escala por backlog por task e idade da mensagem, com concorrência separada por fila.
 Distribua no mínimo duas instâncias de cada container entre AZs distintas. Mostre deployment, task role e política de escala independentes, apesar de compartilharem o mesmo artefato.
@@ -188,7 +188,7 @@ Relações C4 obrigatórias:
 - API Gateway -> VPC Link -> ALB: “HTTP proxy privado”.
 - ALB -> Query API: “GET, HTTP:8080”.
 - ALB -> Command API: “POST/DELETE, HTTP:8080”.
-- Query API -> Valkey: “Cache-aside, RESP/TLS”.
+- Query API -> Valkey: “Cache-aside de disponibilidade de evento, RESP/TLS”.
 - Query API -> RDS Proxy read-only -> Aurora readers: “GET de disponibilidade em cache miss, JDBC/TLS”.
 - Query API -> RDS Proxy read-write -> Aurora writer: “GET de reserva com read-after-write, JDBC/TLS”.
 - Command API -> RDS Proxy read-write -> Aurora writer: “Transações autoritativas e outbox, JDBC/TLS”.

@@ -13,7 +13,7 @@ A fonte consolidada da demo é a [validação independente](../.specs/features/f
 | Área | Demo entregue | High-load alvo |
 | --- | --- | --- |
 | Estado | **PASS — 43/43 critérios** | **Planejada — sem provisionamento remoto** |
-| Código Java | Implementado e compartilhado entre três modos | Reutiliza o mesmo domínio, schema e imagem |
+| Código Java | Implementado e compartilhado entre três modos | Preserva domínio, contratos e schema; adaptadores operacionais pertencem à evolução futura |
 | Execução local | Compose e smoke test validados | Não é um segundo produto local |
 | AWS | Plan/apply, probes e destroy concluídos; state final vazio | Topologia Multi-AZ descrita, não aplicada |
 | Testes | 38 unitários + 56 de integração = **94 aprovados** | Reutiliza gates da demo; falha/capacidade remotas pendentes |
@@ -26,7 +26,7 @@ A fonte consolidada da demo é a [validação independente](../.specs/features/f
 | `POST /events` | Cria evento com capacidade positiva; erros usam Problem Details e idempotência obrigatória. | `EventControllerIT` e `IdempotencyControllerIT` |
 | `GET /events/{id}` | Retorna capacidade total/disponível com cache-aside de até 1 segundo. | `EventControllerIT` |
 | `POST /events/{id}/reservations` | Persiste cliente e reserva `PENDING`, decrementa estoque e grava outbox na mesma transação. | `ReservationControllerIT` e testes de concorrência |
-| `GET /reservations/{id}` | Retorna evento, cliente, quantidade, validade, estado e motivo terminal. | `ReservationQueryControllerIT` |
+| `GET /reservations/{id}` | Retorna a reserva, o cliente e a referência estável do evento `{id, name}` diretamente do PostgreSQL. | `ReservationQueryControllerIT` |
 | `DELETE /reservations/{id}` | Cancela uma reserva pendente e devolve estoque exatamente uma vez. | `ReservationQueryControllerIT` e testes de corrida |
 
 O domínio entregue é de **reserva temporária**. Não há pagamento, compra confirmada ou emissão de ingresso. O e-mail informa a reserva e seu prazo, sem prometer venda concluída.
@@ -39,7 +39,7 @@ O domínio entregue é de **reserva temporária**. Não há pagamento, compra co
 | Múltiplas instâncias | `query-api`, `command-api` e `worker` iniciam a mesma imagem em modos separados; perfil local cria duas réplicas adicionais de comandos. | Configuração e harness local; a demo AWS econômica usou uma task por serviço. |
 | Expiração automática | Outbox, SQS com atraso, consumidor idempotente e reconciliador pelo relógio do banco. | Integração e probe remoto; devolução saudável até `expiresAt + 5s`. |
 | Idempotência | Resultado final persistido no PostgreSQL por 24 horas, ligado a operação, alvo e hash do payload. | Repetição igual devolve a mesma resposta; conflito recebe `409`. |
-| Consistência eventual | Cache-aside Valkey para os dois GETs, TTL máximo de 1 segundo e invalidação após commit. | Testes de hit, miss, invalidação e fallback; cache nunca autoriza reserva. |
+| Consistência eventual | Cache-aside Valkey somente para disponibilidade de evento, TTL máximo de 1 segundo e invalidação após commit. | Testes de hit, miss, invalidação e fallback; consulta de reserva não depende do cache e cache nunca autoriza comando. |
 | Erros explícitos | `application/problem+json`, correlation ID e códigos `400`, `403`, `404`, `409`, `500` e `503`. | Testes de controller e falhas de dependência. |
 
 ## Resiliência e observabilidade
@@ -47,7 +47,7 @@ O domínio entregue é de **reserva temporária**. Não há pagamento, compra co
 | Risco | Padrão aplicado | Sinal observado |
 | --- | --- | --- |
 | Mensagem perdida ou repetida | Transactional outbox, entrega pelo menos uma vez, consumidor idempotente e DLQ por fluxo | backlog, idade da mensagem, DLQ e logs correlacionados |
-| Cache indisponível | timeout de 100 ms, bulkhead de 5 fallbacks por task e circuit breaker após 5 falhas/10 s | hit rate, falhas, circuito aberto e pressão no banco |
+| Cache de evento indisponível | timeout de 100 ms, bulkhead de 5 fallbacks por task e circuit breaker após 5 falhas/10 s | hit rate, falhas, circuito aberto e pressão no banco |
 | Expiração atrasada | mensagem atrasada + reconciliador consultando o relógio do PostgreSQL | idade da fila e atraso até o estado terminal |
 | Corrida entre cancelar e expirar | transição condicional; somente o vencedor devolve estoque | linhas afetadas, estado terminal e disponibilidade |
 | Rajada ou abuso na borda | IAM/SigV4, resource policy, WAF e throttling de melhor esforço | logs do API Gateway/WAF e distribuição de respostas |

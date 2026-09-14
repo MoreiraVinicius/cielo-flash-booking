@@ -2,7 +2,7 @@
 
 ## Execution Protocol
 
-Execute estas tarefas com a skill `tlc-spec-driven` somente após a validação PASS da demo. Nesta entrega, executar somente documentação, validação estática e `terraform test` com providers mockados; é proibido aplicar o ambiente high-load ou alegar evidência de carga/failover remoto. Uma tarefa termina após testes e gate. Cada tarefa gera um commit atômico.
+Estas tarefas descrevem uma evolução futura e permanecem `Draft`. Execute-as com a skill `tlc-spec-driven` somente quando a implementação high-load for autorizada. É proibido tratar o desenho atual como código, infraestrutura, capacidade ou failover entregues. Uma tarefa futura termina após testes e gate e gera um commit atômico.
 
 **Design:** `.specs/features/flash-booking-high-load/design.md`
 **Status:** Draft
@@ -40,6 +40,7 @@ T03 -> T04
 Phase 2
 T05 -> T06
 T06 -> T07
+T06 -> T09
 T03 -> T08
 T08 -> T09
 
@@ -119,11 +120,11 @@ T19 -> T20
 
 ### T05: Documentar contrato único de cache
 
-**What:** Validar que o contrato cache-aside dos dois GETs está integralmente na demo e registrar as configurações que Terraform fornece ao mesmo binário.
+**What:** Validar que o contrato cache-aside de `GET /events/{id}` está integralmente na demo e registrar as configurações que Terraform fornece ao mesmo binário.
 **Where:** `docs/architecture/cache-runtime-contract.md`
 **Depends on:** T01
 **Requirement:** SCALE-01
-**Done when:** Documento lista chaves, TTL, invalidações, timeout, circuito, fallback e variáveis de runtime; não cria adaptador ou modelo de leitura exclusivo da alta carga.
+**Done when:** Documento lista chave de evento, TTL, invalidações, timeout, circuito, fallback e variáveis de runtime; registra que consulta de reserva não usa cache.
 **Tests:** review gate only
 **Gate:** Build
 **Commit:** `docs: record shared cache runtime contract`
@@ -163,14 +164,14 @@ T19 -> T20
 
 ### T09: Adicionar RDS Proxy
 
-**What:** Provisionar endpoints RDS Proxy read-write e read-only e rotear pools de consultas, comandos e worker sem alterar o cliente JDBC.
-**Where:** `infra/modules/database-proxy/`
-**Depends on:** T08
+**What:** Provisionar endpoints RDS Proxy read-write e read-only e implementar o adaptador que roteia disponibilidade para leitura eventual e reserva para leitura autoritativa.
+**Where:** `infra/modules/database-proxy/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/`
+**Depends on:** T06, T08
 **Requirement:** SCALE-02
 **Done when:** Disponibilidade pode usar read-only; consulta de reserva, comandos e worker usam read-write; limites são separados por serviço e nenhuma capacidade é declarada sem teste remoto.
-**Tests:** terraform test, incluído
-**Gate:** Infra
-**Commit:** `infra: add database proxy connection control`
+**Tests:** integration contra dois datasources + terraform test
+**Gate:** Full + Infra
+**Commit:** `feat(persistence): route high-load query datasources`
 
 ## Phase 3: Purchase and Availability Scaling
 
@@ -302,7 +303,7 @@ T19 -> T20
 | Phase | Tasks | Dependency status |
 | --- | --- | --- |
 | Baseline | T01-T04 | Baseline precede política, parâmetros e métricas. Match. |
-| Read | T05-T09 | Contrato precede runtime; runtime precede Valkey; Aurora precede proxy. Não há código exclusivo de alta carga. Match. |
+| Read | T05-T09 | Contrato precede runtime; runtime precede Valkey; Aurora e configuração precedem proxy e adaptador de roteamento. Match. |
 | Purchase/HA | T10-T15 | Proxy precede autoscaling; Valkey, API e worker precedem HA; limites documentados precedem validação estática. Match. |
 | Validation | T16-T20 | Validação estática precede planos de carga; planos precedem runbook e verificação documental. Match. |
 

@@ -67,12 +67,12 @@ A aplicação será um monólito modular empacotado uma vez. A mesma imagem inic
 - **Local:** `src/main/java/.../adapter/out/messaging/`
 - **Dependências:** AWS SDK for Java.
 
-### Integração de cache
+### Integração de cache de disponibilidade
 
-- **Responsabilidade:** Aplicar cache-aside aos dois GETs e invalidar chaves depois de commits que alterem reserva ou disponibilidade.
+- **Responsabilidade:** Aplicar cache-aside à consulta de evento e invalidar sua disponibilidade depois de commits que alterem o estoque.
 - **Local:** `src/main/java/.../adapter/out/cache/`
-- **Dependências:** Cliente Valkey/Redis configurado por endpoint, TLS e limites de runtime.
-- **Contrato:** `event-availability:{id}` e `reservation:{id}` expiram em no máximo um segundo. Cache não autoriza comandos e sua falha consulta PostgreSQL com proteção definida no ADR 0005.
+- **Dependências:** Cliente Valkey/Redis configurado por endpoint e porta. A demo usa os limites fixos do contrato abaixo; a arquitetura futura pode externalizá-los como configuração operacional.
+- **Contrato:** `event-availability:{id}` expira em no máximo um segundo. Cache não autoriza comandos e sua falha consulta PostgreSQL com proteção definida no ADR 0005. A consulta de reserva não usa cache e retorna o evento somente como `{id, name}`.
 
 ### Integração de e-mail
 
@@ -215,7 +215,7 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 | Mensagem duplicada | Consumidor | Capacidade devolvida duas vezes | Transição condicional de estado. |
 | E-mail indisponível | Notificação | Cliente não recebe referência da reserva | Retry, DLQ e alarme; falha não altera a reserva. |
 | E-mail lento bloqueia expiração | Worker | Estoque permanece retido além do prazo saudável | Filas, listeners, executores, timeouts e métricas separados; capacidade de expiração não é emprestada ao envio de e-mail. |
-| Dados pessoais em logs/cache | Cliente e reserva | Exposição de nome ou e-mail | Resposta de reserva privada, cache dentro da VPC, logs mascarados e payload mínimo. |
+| Dados pessoais em respostas, logs ou mensagens | Cliente e reserva | Exposição de nome ou e-mail | Resposta de reserva privada, logs mascarados, payload mínimo e nenhum dado de reserva no cache. |
 | Abuso do endpoint | Borda | Aumento de custo e saturação | IAM/SigV4, allowlist, throttling por método, WAF e tetos de capacidade; ADR 0012. |
 | Single-AZ | RDS demo | Indisponibilidade zonal | Aceito na demo; alta carga usa Multi-AZ. |
 | NAT único | Rede demo | Ponto único de saída | Aceito na demo; alta carga usa NAT por AZ. |

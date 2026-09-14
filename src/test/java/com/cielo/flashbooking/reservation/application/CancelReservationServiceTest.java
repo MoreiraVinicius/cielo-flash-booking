@@ -24,7 +24,7 @@ class CancelReservationServiceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-09T12:00:00Z"), ZoneOffset.UTC);
 
     @Test
-    void cancel_whenReservationIsPending_returnsCapacityOnceAndPublishesInvalidations() {
+    void cancel_whenReservationIsPending_returnsCapacityOnceAndInvalidatesEventCache() {
         UUID reservationId = UUID.randomUUID();
         UUID eventId = UUID.randomUUID();
         ReservationWriter writer = mock(ReservationWriter.class);
@@ -41,7 +41,6 @@ class CancelReservationServiceTest {
 
         verify(inventory).increment(eventId, 3);
         verify(publisher).publishEvent(new EventAvailabilityChanged(eventId));
-        verify(publisher).publishEvent(new ReservationChanged(reservationId));
     }
 
     @Test
@@ -84,7 +83,7 @@ class CancelReservationServiceTest {
     private ReservationDetails cancelledReservation(UUID reservationId, UUID eventId) {
         return new ReservationDetails(
                 reservationId,
-                new ReservationDetails.Event(eventId, "Reservation event", 10, 10),
+                new ReservationDetails.Event(eventId, "Reservation event"),
                 new ReservationDetails.Customer(UUID.randomUUID(), "Ana", "ana@example.com"),
                 3,
                 ReservationStatus.CANCELLED,

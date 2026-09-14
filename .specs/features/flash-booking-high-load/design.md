@@ -44,17 +44,18 @@ flowchart LR
     WorkerAuto --> Workers
 ```
 
-O diagrama representa a mesma imagem e o mesmo binário da demo. Não há serviço Java exclusivo da alta carga. Terraform altera somente quantidade de tasks, endpoints, topologia, limites e políticas de escala.
+O diagrama representa uma única imagem Java compartilhada pelos três modos da arquitetura high-load. Ela evolui da demo sem bifurcar domínio ou contratos, mas inclui os adaptadores de conexão exigidos pelos endpoints read-only e read-write.
 
 ## Caminhos de escala independentes
 
 ### Consultas
 
-1. O mesmo cache-aside Valkey da demo atende os dois GETs com TTL máximo de um segundo.
+1. O mesmo cache-aside Valkey da demo atende somente `GET /events/{id}` com TTL máximo de um segundo.
 2. `GET /events/{id}` usa o endpoint read-only do RDS Proxy em cache miss; atraso de réplica é aceitável porque disponibilidade é eventual.
-3. `GET /reservations/{id}` usa o endpoint read-write para evitar `404` transitório logo após a criação.
-4. O serviço escala por requisições, p95, CPU e hit rate, sem aumentar o serviço de comandos.
-5. Com cache indisponível, o limite de cinco fallbacks simultâneos por task protege o PostgreSQL; excedentes recebem `503`.
+3. `GET /reservations/{id}` não usa cache e usa o endpoint read-write para evitar `404` transitório logo após a criação.
+4. Um adaptador de persistência da Query API seleciona o datasource pelo caso de uso; controllers e domínio não conhecem o roteamento.
+5. O serviço escala por requisições, p95 e CPU, além do hit rate específico da consulta de evento, sem aumentar o serviço de comandos.
+6. Com o cache de evento indisponível, o limite de cinco fallbacks simultâneos por task protege o PostgreSQL; excedentes recebem `503`.
 
 ### Comandos
 
@@ -95,7 +96,7 @@ O diagrama representa a mesma imagem e o mesmo binário da demo. Não há servi�
 - Substituir RDS por Aurora Serverless e inserir RDS Proxy.
 - Evoluir Valkey para grupo de replicação Multi-AZ e habilitar múltiplas tasks e autoscaling independente.
 - Criar serviços e target groups distintos para `query-api` e `command-api`, apontando para a mesma imagem imutável.
-- Criar endpoints RDS Proxy read-only e read-write; somente configurações de conexão variam.
+- Criar endpoints RDS Proxy read-only e read-write e um adaptador de roteamento na Query API; regras de negócio e contratos não variam.
 - Usar NAT por AZ e recursos Multi-AZ.
 - Manter estados Terraform separados entre demo e high-load.
 
@@ -105,8 +106,8 @@ O diagrama representa a mesma imagem e o mesmo binário da demo. Não há servi�
 | --- | --- | --- |
 | Oversell em reservas concorrentes | Mais reservas aceitas que a capacidade | Decremento condicional no writer e criação da reserva na mesma transação. O cache nunca participa da decisão. Constraint impede `available < 0`. |
 | Estoque inflado por cancelamento/expiração concorrentes | Ingressos podem ser vendidos duas vezes depois de uma devolução duplicada | Somente uma transição condicional saindo de `PENDING` autoriza o incremento; os demais concorrentes afetam zero linhas. Constraint também impede `available > capacity`. |
-| Falha do cache | Rajada retorna ao banco e compete com comandos | Timeout de 100 ms, circuito após 5 falhas em 10 s e no máximo 5 fallbacks simultâneos por task; excesso de leitura recebe `503`, preservando comandos. |
-| Cache desatualizado | Usuário vê disponibilidade antiga ou estado terminal anterior | TTL máximo de um segundo e invalidação pós-commit; o comando sempre revalida no writer, portanto inconsistência visual não vira oversell. |
+| Falha do cache de evento | Rajada de disponibilidade retorna ao banco e compete com comandos | Timeout de 100 ms, circuito após 5 falhas em 10 s e no máximo 5 fallbacks simultâneos por task; excesso de leitura recebe `503`, preservando comandos. |
+| Cache desatualizado | Usuário vê disponibilidade antiga | TTL máximo de um segundo e invalidação pós-commit; o comando sempre revalida no writer, portanto inconsistência visual não vira oversell. |
 | Réplica Aurora atrasada | Consulta de evento mostra valor antigo ou reserva recém-criada parece ausente | Disponibilidade aceita consistência eventual; consulta de reserva usa endpoint read-write para leitura após escrita. |
 | Escala do ECS supera banco | Mais conexões e lock waits sem maior vazão | RDS Proxy controla conexões; o máximo do serviço de comandos vem do benchmark e não pode ultrapassar a capacidade validada do writer. |
 | Linha quente de evento | p95/p99 de reserva cresce mesmo com mais tasks | Medir lock waits por evento, aplicar admissão e pré-escala; considerar mudança de modelo somente por nova ADR quando o SLO falhar após tuning. |
@@ -129,4 +130,4 @@ O diagrama representa a mesma imagem e o mesmo binário da demo. Não há servi�
 
 ## Modelagem de dados
 
-A arquitetura usa exatamente a [mesma modelagem da demo](../../../docs/data-model.md). Aurora não recebe tabelas, índices, migrations ou regras exclusivas. A separação entre leitura e comando é operacional: ambos consultam as mesmas entidades `Customer`, `Event` e `Reservation`; somente o endpoint de conexão e o número de tasks variam.
+A arquitetura usa exatamente a [mesma modelagem da demo](../../../docs/data-model.md). Aurora não recebe tabelas, índices, migrations ou regras exclusivas. A separação entre leitura e comando é operacional: os mesmos modelos usam datasources distintos por caso de uso, selecionados dentro do adaptador de persistência.

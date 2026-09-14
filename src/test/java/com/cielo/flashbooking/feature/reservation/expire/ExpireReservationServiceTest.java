@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;
-import com.cielo.flashbooking.reservation.application.ReservationChanged;
 import com.cielo.flashbooking.reservation.application.ReservationWriter;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class ExpireReservationServiceTest {
 
     @Test
-    void expire_whenPostgresqlMarksPendingReservationExpired_returnsCapacityAndInvalidatesCaches() {
+    void expire_whenPostgresqlMarksPendingReservationExpired_returnsCapacityAndInvalidatesEventCache() {
         UUID reservationId = UUID.randomUUID();
         UUID eventId = UUID.randomUUID();
         ReservationWriter writer = mock(ReservationWriter.class);
@@ -32,7 +31,6 @@ class ExpireReservationServiceTest {
 
         verify(inventory).increment(eventId, 3);
         verify(publisher).publishEvent(new EventAvailabilityChanged(eventId));
-        verify(publisher).publishEvent(new ReservationChanged(reservationId));
     }
 
     @Test

@@ -2,7 +2,6 @@ package com.cielo.flashbooking.feature.reservation.expire;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;
-import com.cielo.flashbooking.reservation.application.ReservationChanged;
 import com.cielo.flashbooking.reservation.application.ReservationWriter;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,7 +36,6 @@ public class ExpireReservationService {
             throw new IllegalStateException("could not return expired reservation capacity");
         }
         eventPublisher.publishEvent(new EventAvailabilityChanged(release.eventId()));
-        eventPublisher.publishEvent(new ReservationChanged(reservationId));
         return true;
     }
 }

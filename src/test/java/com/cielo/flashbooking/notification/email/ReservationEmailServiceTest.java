@@ -87,7 +87,7 @@ class ReservationEmailServiceTest {
     private ReservationDetails reservation(UUID reservationId) {
         return new ReservationDetails(
                 reservationId,
-                new ReservationDetails.Event(UUID.randomUUID(), "Test event", 10, 8),
+                new ReservationDetails.Event(UUID.randomUUID(), "Test event"),
                 new ReservationDetails.Customer(UUID.randomUUID(), "Test customer", "customer@example.com"),
                 2,
                 ReservationStatus.PENDING,

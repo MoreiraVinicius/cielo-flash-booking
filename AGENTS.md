@@ -1,5 +1,11 @@
 # Spring skill routing
 
+## Specification source of truth
+
+Treat `.specs/` as the authoritative description of the current version 1 system. Every change to behavior, architecture, contracts, infrastructure, or verification must update the affected spec, context, design, tasks, validation, and project decisions in the same work.
+
+Write specification artifacts as the system is intended to exist now, not as a changelog or migration narrative. Git owns the history. Keep `.specs/` complete enough that another engineer or agent can reconstruct the project and its verification strategy without relying on prior conversations.
+
 Apply the repository decisions in `.specs/STATE.md` before any external skill. `java-spring-engineering` remains the baseline for all Java and Spring changes.
 
 Use each external Spring Boot 3 skill only for its bounded concern:

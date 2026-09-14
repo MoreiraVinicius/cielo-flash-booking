@@ -144,7 +144,7 @@ Corpo mínimo de criação de reserva:
 }
 ```
 
-A consulta da reserva retorna `customer`, `eventId`, `quantity`, `status`, `expiresAt` e `closureReason`. Ela não retorna campos internos de idempotência, outbox ou entrega de notificação.
+A consulta da reserva retorna `customer`, `event: {id, name}`, `quantity`, `status`, `expiresAt` e `closureReason`. Capacidade total e disponibilidade atual pertencem a `GET /events/{id}` e não são duplicadas na resposta da reserva. A consulta não usa cache e não retorna campos internos de idempotência, outbox ou entrega de notificação.
 
 ## Proteção de dados
 

@@ -31,7 +31,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Liberação após vencimento | Até expiresAt + 5 segundos com banco e processamento saudáveis | Limita estoque temporariamente bloqueado; ADR 0003. | yes |
 | Encerramento | Persistir código e descrição do motivo em CANCELLED e EXPIRED | O catálogo e o formato de consulta estão definidos no ADR 0006. | yes |
 | Banco | RDS PostgreSQL 16 Single-AZ | Econômico e suficiente para a demo. | yes |
-| Cache | ElastiCache for Valkey compartilhado | Cacheia os dois GETs por no máximo um segundo; ADR 0005. | yes |
+| Cache | ElastiCache for Valkey compartilhado | Cacheia somente a disponibilidade consultada por `GET /events/{id}` por no máximo um segundo; ADR 0005. | yes |
 | Autenticação da API | API Gateway REST com IAM/SigV4, principals e CIDRs permitidos | Autentica antes dos containers e evita senha compartilhada; ADR 0012. | yes |
 | Serviços HTTP | `query-api` e `command-api` separados, usando a mesma imagem | Permite escala independente sem duplicar domínio; ADR 0013. | yes |
 | Cliente da reserva | `Customer` ligado por chave estrangeira | Permite consulta e notificação sem criar endpoint de cadastro; ADR 0010. | yes |
@@ -67,8 +67,8 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 1. WHEN capacity is sufficient and the customer is valid THEN the system SHALL create or reuse the customer, decrement availability, and create a `PENDING` reservation linked to that customer and event in one transaction.
 2. IF capacity is insufficient THEN the system SHALL return `409` without changing inventory, customer, or reservation.
 3. WHILE multiple instances contend for the same event, the system SHALL keep availability between zero and total capacity.
-4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, quantity, expiry, event, customer, and closure reason.
-5. WHEN `GET /reservations/{id}` finds a valid cache entry THEN the system SHALL return the reservation without querying PostgreSQL; on a cache miss, the system SHALL query PostgreSQL and populate the cache for at most one second.
+4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, quantity, expiry, customer, closure reason, and the event reference containing only `id` and `name`.
+5. WHEN `GET /reservations/{id}` is called THEN the system SHALL query PostgreSQL directly and SHALL NOT depend on Valkey availability.
 6. IF the customer's name or email is invalid THEN the system SHALL return `400` without reserving capacity.
 
 **Teste independente:** Disparar reservas concorrentes acima da capacidade por ao menos dois processos de comandos e comprovar que a soma aceita não ultrapassa a capacidade.
@@ -85,7 +85,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 4. IF asynchronous processing fails THEN the system SHALL apply bounded retries and route an exhausted failure to a DLQ.
 5. WHEN a reservation transitions to `CANCELLED` or `EXPIRED` THEN the system SHALL persist the closure-reason code and description in the same transaction as the status and capacity return.
 6. WHILE the current instant is earlier than `expiresAt`, the system SHALL prevent early reservation expiry.
-7. WHEN cancellation or expiry commits its transaction THEN the system SHALL invalidate the cache entries for the reservation and affected event.
+7. WHEN cancellation or expiry commits its transaction THEN the system SHALL invalidate the cache entry for the affected event.
 8. WHEN `GET /reservations/{id}` returns a terminal reservation THEN the system SHALL return a `closureReason` object with `code` and `description`; for `PENDING`, that object SHALL be null.
 
 **Teste independente:** Cancelar e expirar reservas com duplicidade de mensagens e conferir o inventário final.
@@ -156,7 +156,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - SE cancelamento e expiração concorrerem, ENTÃO o sistema DEVE liberar capacidade uma vez.
 - SE a publicação no SQS atrasar, ENTÃO o reconciliador DEVE expirar a reserva pelo horário persistido.
 - SE o banco estiver indisponível, ENTÃO o sistema DEVE falhar sem confirmar reserva.
-- SE o cache falhar, ENTÃO o sistema DEVE consultar PostgreSQL com timeout de cache de 100 ms, no máximo 5 fallbacks simultâneos por task e circuito aberto após 5 falhas em 10 segundos.
+- SE o cache de evento falhar, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL com timeout de cache de 100 ms, no máximo 5 fallbacks simultâneos por task e circuito aberto após 5 falhas em 10 segundos.
 - SE o SQS entregar uma mensagem duplicada, ENTÃO o consumidor DEVE produzir o mesmo estado final.
 - SE o envio de e-mail for duplicado após resposta ambígua do provedor, ENTÃO a reserva DEVE permanecer inalterada e a ocorrência DEVE ser observável.
 - SE cancelamento ou expiração vencer a corrida, ENTÃO a operação concorrente DEVE afetar zero linhas e não incrementar capacidade novamente.
@@ -182,7 +182,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] Cancelamento e expiração devolvem capacidade uma vez.
 - [x] Expiração saudável conclui devolução até expiresAt + 5 segundos, inclusive pelo reconciliador na ausência de mensagem.
 - [x] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
-- [x] Os dois GET usam cache Valkey com TTL máximo de um segundo e invalidação pós-commit.
+- [x] `GET /events/{id}` usa cache Valkey com TTL máximo de um segundo e invalidação pós-commit; `GET /reservations/{id}` consulta PostgreSQL sem depender do cache.
 - [x] Toda reserva possui cliente ligado por chave estrangeira e envia notificação assíncrona sem prometer compra.
 - [x] Consultas e comandos executam em serviços separados usando a mesma imagem e as mesmas regras de negócio.
 - [x] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.

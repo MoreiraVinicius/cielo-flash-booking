@@ -1,10 +1,10 @@
 # Especificação da arquitetura de alta carga
 
-## Problema
+## Problem Statement
 
 A demo funcional não deve receber toda a complexidade de produção antecipadamente. A evolução precisa absorver picos voláteis de consultas e reservas por mecanismos independentes, mantendo ausência de oversell, as mesmas regras Java e operação observável.
 
-## Objetivos
+## Goals
 
 O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md), e o prazo de liberação de cinco segundos em operação saudável do [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md). A infraestrutura desta feature não será provisionada nem testada remotamente nesta entrega, conforme [ADR 0001](../../../docs/adr/0001-demo-publicada-alta-carga-sem-provisionamento.md); critérios operacionais abaixo são metas sem comprovação remota, a reconciliar nas tasks.
 
@@ -13,7 +13,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 - [ ] Remover pontos únicos de falha da demo.
 - [ ] Definir gatilhos mensuráveis para evoluções posteriores.
 
-## Fora do escopo
+## Out of Scope
 
 | Item | Motivo |
 | --- | --- |
@@ -23,22 +23,22 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | Multi-region active-active | Complexidade sem requisito de RTO/RPO correspondente. |
 | CI/CD | Não será avaliada. |
 
-## Premissas e decisões
+## Assumptions & Open Questions
 
 | Tema | Decisão | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
 | Pré-requisito | Demo com validação PASS | Evolução depende de baseline confiável. | yes |
 | Banco | Aurora PostgreSQL Serverless | Escala por ACU e preserva JDBC, schema e binário da demo; ADR 0004. | yes |
-| Cache | ElastiCache for Valkey Multi-AZ | Mantém o contrato da demo; só a topologia e capacidade mudam por Terraform; ADR 0005. | yes |
+| Cache | ElastiCache for Valkey Multi-AZ | Mantém o cache exclusivo de disponibilidade de eventos; só a topologia e capacidade mudam por Terraform; ADR 0005. | yes |
 | Compute | ECS Fargate | Escala horizontal sem Kubernetes. | yes |
-| Serviços | `query-api`, `command-api` e `worker` com a mesma imagem da demo | Escala independente sem regras ou releases divergentes; ADR 0013. | yes |
+| Serviços | `query-api`, `command-api` e `worker` construídos da mesma base Java | Escala independente sem duplicar regras; adaptadores operacionais da evolução permanecem no mesmo repositório e artefato; ADR 0013. | yes |
 | Segurança | API Gateway REST único, IAM/SigV4, WAF e throttling | Protege antes dos containers e preserva o mesmo contrato da demo; ADR 0012. | yes |
 | Notificação | Mesmo outbox, filas e SES da demo | Carga só altera quantidade de workers e parâmetros; ADR 0011. | yes |
 | Gatilhos | SLO e percentual do envelope medido | TPS absoluto é volátil e específico do ambiente. | yes |
 
-**Questões abertas:** nenhuma. SLOs, capacidade máxima e limites de custo são valores inicialmente provisórios, a substituir pelo baseline da demo antes de qualquer `apply`; a ausência de medição não autoriza promover a arquitetura.
+**Open questions:** none. SLOs, capacidade máxima e limites de custo são valores inicialmente provisórios, a substituir pelo baseline da demo antes de qualquer `apply`; a ausência de medição não autoriza promover a arquitetura.
 
-## Histórias de usuário
+## User Stories
 
 ### P1: Absorver picos de leitura
 
@@ -46,11 +46,12 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 **Critérios de aceite:**
 
-1. QUANDO qualquer GET encontrar uma entrada válida no Valkey, ENTÃO o serviço de consultas DEVE responder sem consultar PostgreSQL.
-2. SE Valkey estiver indisponível, ENTÃO o serviço de consultas DEVE consultar PostgreSQL dentro dos limites de timeout, circuito e fallback definidos no ADR 0005, sem consumir o pool reservado aos comandos.
+1. QUANDO `GET /events/{id}` encontrar uma entrada válida no Valkey, ENTÃO o serviço de consultas DEVE responder sem consultar PostgreSQL.
+2. SE Valkey estiver indisponível, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL dentro dos limites de timeout, circuito e fallback definidos no ADR 0005, sem consumir o pool reservado aos comandos.
 3. ENQUANTO a disponibilidade for servida por cache, o sistema DEVE tratá-la como eventual e nunca usá-la para autorizar uma reserva.
 4. QUANDO uma reserva, expiração ou cancelamento alterar capacidade, ENTÃO o sistema DEVE invalidar a chave de disponibilidade após o commit.
-5. QUANDO a carga de GET crescer, ENTÃO somente o serviço `query-api` DEVE escalar pelas métricas de requisições, p95, CPU e hit rate.
+5. QUANDO `GET /reservations/{id}` for chamado, ENTÃO a Query API DEVE consultar o caminho read-write do PostgreSQL diretamente, sem depender do Valkey.
+6. QUANDO a carga de GET crescer, ENTÃO somente o serviço `query-api` DEVE escalar pelas métricas de requisições, p95, CPU e hit rate de eventos.
 
 **Teste independente futuro:** Aplicar pico de GET e medir cache hit, carga do writer e defasagem máxima. Nesta entrega, revisar o plano, as variáveis Terraform e testes com provider mockado; não executar carga remota.
 
@@ -101,23 +102,23 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 **Critérios de aceite:**
 
-1. O ambiente de alta carga DEVE usar a mesma imagem, controllers, módulos de domínio, schema, migrations, eventos e contratos HTTP da demo.
+1. O ambiente de alta carga DEVE preservar controllers, módulos de domínio, schema, migrations, eventos e contratos HTTP da demo em uma única imagem compartilhada pelos três modos.
 2. SE uma alteração de capacidade exigir mudança nas regras Java, ENTÃO ela DEVE ser tratada como nova decisão de produto e não como execução desta arquitetura.
-3. QUANDO Terraform alterar Aurora, Valkey, endpoints ou número de tasks, ENTÃO a aplicação DEVE receber apenas configuração de runtime compatível com o mesmo binário.
+3. QUANDO a topologia exigir endpoints read-only e read-write, ENTÃO a evolução DEVE implementar um adaptador explícito de roteamento sem alterar regras de negócio ou contratos HTTP.
 4. A autenticação IAM, a notificação por e-mail e a ligação entre cliente, reserva e evento DEVEM permanecer idênticas nas duas arquiteturas.
 
-**Teste independente:** Comparar digest da imagem, migrations e contratos entre os ambientes; somente task definitions, endpoints e parâmetros Terraform podem diferir.
+**Teste independente futuro:** Verificar que uma única imagem atende os três modos, que eventos e reservas usam os endpoints definidos e que domínio, migrations e contratos permanecem compartilhados.
 
-## Casos-limite
+## Edge Cases
 
 - SE o cache servir valor desatualizado, ENTÃO a reserva DEVE continuar validando no writer.
 - SE uma rajada ocorrer antes da pré-escala, ENTÃO o target tracking DEVE escalar o serviço afetado e o API Gateway DEVE aplicar controle de admissão.
-- SE Valkey perder dados, ENTÃO os dois GETs DEVEM reconstruir suas entradas a partir da fonte de verdade.
+- SE Valkey perder dados, ENTÃO `GET /events/{id}` DEVE reconstruir sua entrada a partir da fonte de verdade; `GET /reservations/{id}` DEVE permanecer independente do cache.
 - SE uma zona de disponibilidade falhar, ENTÃO recursos distribuídos DEVEM continuar atendendo conforme o SLO.
 - SE a réplica atrasar, ENTÃO a consulta de disponibilidade pode refletir consistência eventual, mas a consulta de reserva DEVE usar o caminho read-write.
 - SE o SES falhar, ENTÃO o worker DEVE preservar a reserva e isolar a mensagem na fila de notificação.
 
-## Rastreabilidade de requisitos
+## Requirement Traceability
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
@@ -129,11 +130,11 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 **Cobertura:** 5 requisitos, 5 mapeados ao design, nenhum sem mapeamento.
 
-## Critérios de sucesso
+## Success Criteria
 
 - [ ] Picos de leitura não escalam a carga do writer na mesma proporção.
 - [ ] Picos de reserva escalam somente o serviço de comandos, sem oversell.
 - [ ] Picos de consulta escalam somente o serviço de consultas.
-- [ ] Demo e alta carga usam exatamente o mesmo código e regras de negócio.
+- [ ] A evolução high-load preserva o mesmo domínio, contratos e regras de negócio, com adaptadores operacionais explícitos para sua topologia.
 - [ ] Falha de task ou AZ possui recuperação documentada e validada estaticamente nesta entrega; o teste remoto fica explicitamente pendente.
 - [ ] Cada evolução tem gatilho, custo, rollback e limite conhecido.

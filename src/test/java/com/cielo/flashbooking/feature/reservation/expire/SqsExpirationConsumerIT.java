@@ -61,7 +61,6 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("DELETE FROM customer");
         jdbcTemplate.update("DELETE FROM event");
         redisTemplate.delete(redisTemplate.keys("event-availability:*"));
-        redisTemplate.delete(redisTemplate.keys("reservation:*"));
         sqsClient = SqsClient.builder()
                 .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.SQS))
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
@@ -81,7 +80,6 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         Instant expiresAt = databaseNow().minusMillis(10);
         UUID reservationId = insertPendingReservation(eventId, 3, expiresAt);
         redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
-        redisTemplate.opsForValue().set("reservation:" + reservationId, "stale");
         send(reservationId);
 
         consumer().poll();
@@ -95,7 +93,6 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
                 .isEqualTo("Prazo da reserva encerrado");
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
-        assertThat(redisTemplate.hasKey("reservation:" + reservationId)).isFalse();
         assertThat(sqsClient.receiveMessage(request -> request.queueUrl(queueUrl)).messages()).isEmpty();
     }
 

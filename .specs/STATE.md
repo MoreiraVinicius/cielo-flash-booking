@@ -32,12 +32,12 @@
 - **Decision:** O inventário e as reservas usarão PostgreSQL com atualização condicional atômica.
 - **Rationale:** A estratégia garante ausência de oversell com um modelo simples e auditável.
 
-### AD-006 - Demo publicada e alta carga entregue sem provisionamento remoto
+### AD-006 - Demo publicada e alta carga mantida como desenho de evolução
 
 - **Status:** active
-- **Decision:** Demonstrar a demo na AWS e entregar também o código da alta carga, sem aplicar o Terraform nem testar remotamente a alta carga.
-- **Reason:** Há poucas horas disponíveis, US$100 em créditos AWS e a demo ficará ligada por no máximo 1h30, conforme a restrição operacional informada.
-- **Trade-off:** Não haverá evidência de funcionamento da infraestrutura, desempenho ou failover da alta carga na AWS.
+- **Decision:** Demonstrar a demo na AWS e manter a alta carga somente como arquitetura-alvo documentada, sem código, Terraform ou validação executável próprios nesta versão.
+- **Reason:** A evolução deve nascer de gargalos medidos na demo; antecipar implementação Multi-AZ e autoscaling criaria custo e complexidade sem evidência.
+- **Trade-off:** Capacidade, desempenho, failover e custo da alta carga permanecem hipóteses de desenho até uma futura implementação autorizada.
 - **Scope:** Entrega, publicação e critérios de validação das duas features.
 - **ADR:** `docs/adr/0001-demo-publicada-alta-carga-sem-provisionamento.md`
 
@@ -67,12 +67,12 @@
 - **Scope:** Persistência das duas arquiteturas.
 - **ADR:** [ADR 0004](../docs/adr/0004-postgresql-como-fonte-autoritativa.md).
 
-### AD-010 - Cache Valkey compartilhado desde a demo
+### AD-010 - Cache Valkey para disponibilidade do evento
 
 - **Status:** active
-- **Decision:** Cachear os dois GETs em ElastiCache for Valkey com o mesmo binário Java; alterar topologia e capacidade apenas por Terraform.
-- **Reason:** Reduz picos de leitura, mantém comportamento entre ambientes e permite escalar sem alterar código.
-- **Trade-off:** Leituras podem estar defasadas por até um segundo; cache indisponível pressiona o PostgreSQL até o limite de fallback.
+- **Decision:** Cachear somente `GET /events/{id}` em ElastiCache for Valkey; `GET /reservations/{id}` consulta PostgreSQL e expõe o evento apenas como `{id, name}`.
+- **Reason:** Disponibilidade de evento concentra leituras repetidas em flash sales. Reservas são consultas por identidade, mudam de estado e contêm dados pessoais; cacheá-las para reutilizar dados do evento mistura responsabilidades.
+- **Trade-off:** A disponibilidade exibida pode estar defasada por até um segundo. Consultas de reserva continuam consumindo o banco e não dependem do Valkey.
 - **Scope:** Consultas, ECS e infraestrutura das duas arquiteturas.
 - **ADR:** [ADR 0005](../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
 

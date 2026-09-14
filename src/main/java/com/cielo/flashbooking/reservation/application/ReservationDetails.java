@@ -25,7 +25,7 @@ public record ReservationDetails(
         Objects.requireNonNull(expiresAt, "expiresAt must not be null");
     }
 
-    public record Event(UUID id, String name, int capacity, int available) {
+    public record Event(UUID id, String name) {
 
         public Event {
             Objects.requireNonNull(id, "id must not be null");

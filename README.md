@@ -58,7 +58,7 @@ Os comandos mutáveis exigem `Idempotency-Key`. Erros usam `application/problem+
 | `POST` | `/events` | Command API | Cria um evento com capacidade positiva |
 | `GET` | `/events/{id}` | Query API | Consulta capacidade total e disponível |
 | `POST` | `/events/{id}/reservations` | Command API | Cria cliente e reserva `PENDING` sem exceder estoque |
-| `GET` | `/reservations/{id}` | Query API | Consulta dados, validade, estado e motivo terminal |
+| `GET` | `/reservations/{id}` | Query API | Consulta a reserva e referencia o evento por `id` e `name` |
 | `DELETE` | `/reservations/{id}` | Command API | Cancela uma reserva pendente e devolve capacidade uma vez |
 
 A coleção [Postman para a demo AWS](postman/README.md) contém as cinco chamadas e o fluxo IAM/SigV4, mas o endpoint é deliberadamente temporário e não está ativo.
@@ -73,7 +73,7 @@ O caminho síncrono é curto e autoritativo:
 2. uma transação PostgreSQL tenta decrementar `available` somente se ainda houver quantidade suficiente;
 3. o vencedor persiste cliente, reserva `PENDING` e eventos no outbox;
 4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
-5. somente depois do commit o cache afetado é invalidado.
+5. somente depois do commit o cache de disponibilidade do evento é invalidado.
 
 O caminho assíncrono começa **depois** da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
 
@@ -97,9 +97,9 @@ A IA ajudou a estruturar especificações, alternativas, tarefas, testes, infrae
 
 ![Comparação entre a demo validada e a arquitetura-alvo high-load](docs/images/flash-booking-architecture-evolution.svg)
 
-As duas arquiteturas iniciam **a mesma imagem Java** em três modos:
+A aplicação inicia **uma única imagem Java** em três modos. A arquitetura high-load futura preserva esses modos e as regras de negócio, mas pode acrescentar adaptadores operacionais para sua topologia:
 
-- `query-api`: atende os dois GETs e usa cache-aside;
+- `query-api`: atende os dois GETs; somente a disponibilidade de evento usa cache-aside;
 - `command-api`: cria eventos, reserva e cancela com transações autoritativas;
 - `worker`: publica outbox, expira/reconcilia reservas e envia notificações.
 
@@ -144,7 +144,7 @@ Dados, proveniência e procedimento de reprodução: [performance/demo/README.md
 | Oversell e corrida terminal | Update/transição condicional, constraints e transação única | Linhas afetadas, disponibilidade e testes concorrentes |
 | Retry de comando | Idempotência PostgreSQL por 24 h, ligada a operação/alvo/hash | Repetição igual, conflito `409` e registro persistido |
 | Mensagem perdida ou duplicada | Transactional outbox, consumidor idempotente, retry limitado e DLQ por fluxo | Backlog, idade da mensagem, DLQ e logs correlacionados |
-| Cache lento ou indisponível | Timeout de 100 ms, bulkhead de 5 fallbacks/task e circuito após 5 falhas em 10 s | Hits/misses, fallback, circuito e pressão no PostgreSQL |
+| Cache de evento lento ou indisponível | Timeout de 100 ms, bulkhead de 5 fallbacks/task e circuito após 5 falhas em 10 s | Hits/misses, fallback, circuito e pressão no PostgreSQL |
 | Expiração atrasada | SQS com atraso + reconciliador usando o relógio UTC do banco | Idade da fila e conclusão até `expiresAt + 5s` em condição saudável |
 | Falha de e-mail | Notificação desacoplada, retry e DLQ; estoque não é revertido | Estado de entrega, aceite do SES e DLQ de notificação |
 | Abuso na borda | IAM/SigV4, resource policy, allowlist, WAF e throttling de melhor esforço | `403`, logs do API Gateway/WAF e distribuição de respostas |

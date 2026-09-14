@@ -128,16 +128,16 @@
   <text x="395" y="626" class="component-kicker">«COMPONENT · APPLICATION»</text>
   <text x="395" y="649" class="component-title">Casos de consulta</text>
   <text x="395" y="671" class="component-text">GetEventService · GetReservationService</text>
-  <text x="395" y="689" class="small">Cache-aside; PostgreSQL é a fonte de verdade</text>
+  <text x="395" y="689" class="small">Cache no evento; reserva lê PostgreSQL</text>
   <path d="M620 695 V716" class="internal-flow"/>
 
   <rect x="375" y="717" width="490" height="142" rx="7" class="component"/>
   <text x="395" y="740" class="component-kicker">«COMPONENT · ADAPTERS»</text>
   <text x="395" y="763" class="component-title">Cache e persistência</text>
-  <text x="395" y="786" class="component-text">RedisEventAvailabilityCache · RedisReservationCache</text>
+  <text x="395" y="786" class="component-text">RedisEventAvailabilityCache</text>
   <text x="395" y="808" class="component-text">EventPersistenceAdapter</text>
   <text x="395" y="830" class="component-text">JdbcReservationPersistenceAdapter</text>
-  <text x="395" y="850" class="small">Portas: Event/Reservation Cache e Reader</text>
+  <text x="395" y="850" class="small">Portas: EventAvailabilityCache e Readers JDBC</text>
 
   <rect x="375" y="878" width="490" height="32" rx="16" class="runtime"/>
   <text x="620" y="899" text-anchor="middle" class="runtime-text">Demo · 1 ECS task</text>
@@ -167,7 +167,7 @@
   <text x="995" y="777" class="component-title">JDBC e invalidação pós-commit</text>
   <text x="995" y="800" class="component-text">JdbcIdempotencyStore · JdbcInventoryOperations</text>
   <text x="995" y="822" class="component-text">Event / ReservationPersistenceAdapter</text>
-  <text x="995" y="844" class="small">EventAvailabilityChanged · ReservationChanged</text>
+  <text x="995" y="844" class="small">EventAvailabilityChanged</text>
 
   <rect x="975" y="878" width="490" height="32" rx="16" class="runtime"/>
   <text x="1220" y="899" text-anchor="middle" class="runtime-text">Demo · 1 ECS task</text>
@@ -228,7 +228,7 @@
   <path d="M339 1110 H651 Q660 1110 660 1119 V1158 H330 V1119 Q330 1110 339 1110 Z" class="external-head"/>
   <text x="352" y="1130" class="external-kicker">«EXTERNAL SYSTEM · CACHE»</text>
   <text x="352" y="1152" class="external-title">Valkey · Single-AZ</text>
-  <text x="352" y="1183" class="external-text">query-api: GET / PUT no cache-aside</text>
+  <text x="352" y="1183" class="external-text">query-api: cache-aside de disponibilidade</text>
   <text x="352" y="1206" class="external-text">command-api: evict best-effort AFTER_COMMIT</text>
   <text x="352" y="1234" class="small">Falha não substitui a fonte de verdade.</text>
 
@@ -275,10 +275,10 @@
   <text x="90" y="1343" class="band-title">Padrões de resiliência implementados</text>
 
   <rect x="90" y="1362" width="630" height="122" rx="8" class="pattern"/>
-  <text x="112" y="1390" class="pattern-title">Leitura degradável</text>
+  <text x="112" y="1390" class="pattern-title">Disponibilidade degradável</text>
   <text x="112" y="1417" class="pattern-text">Cache-aside · timeout Valkey de 100 ms · fallback PostgreSQL</text>
   <text x="112" y="1442" class="pattern-text">Circuito: 5 falhas / 10 s · bulkhead: 5 fallbacks concorrentes</text>
-  <text x="112" y="1467" class="small">Excesso de fallback retorna 503; cache não derruba o health check.</text>
+  <text x="112" y="1467" class="small">Reserva lê PostgreSQL; excesso de fallback de evento retorna 503.</text>
 
   <rect x="785" y="1362" width="630" height="122" rx="8" class="pattern"/>
   <text x="807" y="1390" class="pattern-title">Consistência do comando</text>

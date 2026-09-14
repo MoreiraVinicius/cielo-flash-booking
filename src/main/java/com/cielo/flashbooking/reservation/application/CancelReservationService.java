@@ -46,7 +46,6 @@ public class CancelReservationService {
         ReservationDetails reservation = reservationReader.findById(reservationId)
                 .orElseThrow(() -> new IllegalStateException("cancelled reservation disappeared"));
         eventPublisher.publishEvent(new EventAvailabilityChanged(release.eventId()));
-        eventPublisher.publishEvent(new ReservationChanged(reservationId));
         return reservation;
     }
 }

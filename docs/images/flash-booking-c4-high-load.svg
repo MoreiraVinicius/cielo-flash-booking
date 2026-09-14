@@ -133,11 +133,11 @@
   <rect x="430" y="627" width="360" height="68" rx="6" class="component"/>
   <text x="446" y="651" class="component-title">«Component» Query use cases</text>
   <text x="446" y="672" class="component-text">GetEventService • GetReservationService</text>
-  <text x="446" y="690" class="small">cache-aside com fallback controlado</text>
+  <text x="446" y="690" class="small">cache no evento; reserva no writer</text>
   <rect x="430" y="707" width="360" height="68" rx="6" class="component"/>
   <text x="446" y="731" class="component-title">«Component» Cache adapters</text>
   <text x="446" y="752" class="component-text">RedisEventAvailabilityCache</text>
-  <text x="446" y="770" class="small">RedisReservationCache • Valkey</text>
+  <text x="446" y="770" class="small">Somente disponibilidade • Valkey</text>
   <rect x="430" y="787" width="360" height="70" rx="6" class="component"/>
   <text x="446" y="811" class="component-title">«Component» Read adapters</text>
   <text x="446" y="832" class="component-text">EventPersistenceAdapter</text>
@@ -207,7 +207,7 @@
   <rect x="400" y="1000" width="360" height="155" rx="9" class="external"/>
   <text x="420" y="1028" class="type">«External Software System»</text>
   <text x="420" y="1056" class="element-title">Valkey Multi-AZ</text>
-  <text x="420" y="1083" class="element-text">Disponibilidade e reservas por chave</text>
+  <text x="420" y="1083" class="element-text">Disponibilidade de eventos por chave</text>
   <text x="420" y="1107" class="small">TTL curto • compartilhado entre réplicas</text>
   <text x="420" y="1131" class="small">falha degrada para PostgreSQL sob limite</text>
 
@@ -251,11 +251,11 @@
   <text x="88" y="1361" class="small">A rejeição acontece antes do core privado.</text>
 
   <rect x="68" y="1395" width="640" height="165" rx="7" class="note"/>
-  <text x="88" y="1423" class="section-subtitle">Query • degradação limitada</text>
+  <text x="88" y="1423" class="section-subtitle">Evento • degradação limitada</text>
   <text x="88" y="1448" class="section-text">Cache-aside • timeout Valkey 100 ms • fallback PostgreSQL.</text>
   <text x="88" y="1472" class="section-text">Circuito: 5 falhas em 10 s • bulkhead: 5 fallbacks concorrentes.</text>
   <text x="88" y="1496" class="section-text">Ao exceder o limite de fallback, responde 503 sem amplificar carga.</text>
-  <text x="88" y="1525" class="small">A falha do cache não derruba o health check do container.</text>
+  <text x="88" y="1525" class="small">A consulta de reserva permanece independente do Valkey.</text>
 
   <rect x="735" y="1260" width="647" height="140" rx="7" class="note"/>
   <text x="755" y="1288" class="section-subtitle">Command • consistência transacional</text>

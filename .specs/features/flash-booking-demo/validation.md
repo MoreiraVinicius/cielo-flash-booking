@@ -1,6 +1,6 @@
 # Flash Booking Demo Validation
 
-**Date**: 2026-09-11
+**Date**: 2026-09-14
 **Spec**: `.specs/features/flash-booking-demo/spec.md`  
 **Diff range**: `37e45ca..2869392` (`2869392` adds Compose readiness handling)  
 **Verifier**: independent agent (author != verifier)
@@ -10,7 +10,7 @@
 
 **Result:** PASS
 
-The local implementation, tests, static infrastructure checks, and two behavior-level mutants are sound. Authorized remote validation closed the runtime, DLQ and delivery-SLO evidence gaps. API Gateway throttling is assessed by effective method settings and a recorded signed-burst outcome because its throttle limits are best-effort targets, not deterministic `429` admission.
+The local implementation, tests, static infrastructure checks, and two behavior-level mutants are sound. Authorized remote validation closed the runtime, DLQ and delivery-SLO evidence gaps. API Gateway throttling is assessed by effective method settings and a recorded signed-burst outcome because its throttle limits are best-effort targets, not deterministic `429` admission. The current v1 correction was compiled and passed all 38 unit tests on 2026-09-14. Its affected integration tests compile and specify the new contract, but were not re-executed because Docker was unavailable; no Terraform or AWS validation was requested for this code-only review.
 
 ## Task completion
 
@@ -31,8 +31,8 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 | Reserve-1 | One transaction creates/reuses customer, decrements, creates PENDING reservation | `ReservationControllerIT.java:74-102` — `201`, `PENDING`, available `7`, one customer/reservation | PASS |
 | Reserve-2 | Insufficient capacity is `409` with no effects | `ReservationControllerIT.java:164-171` — conflict, available `2`, zero customer/reservation/outbox | PASS |
 | Reserve-3 | Concurrent commands never oversell | `ReservationConcurrencyIT.java:81-86` — accepted `10`, available `0`, ten reservations | PASS |
-| Reserve-4 | GET returns reservation fields | `ReservationQueryControllerIT.java:66-75` — event, customer, quantity, status, expiry | PASS |
-| Reserve-5 | Reservation cache is cache-aside with <=1s TTL | `ReservationQueryControllerIT.java:78-83` — TTL `<=1_000`, cached second read | PASS |
+| Reserve-4 | GET returns reservation fields and event reference `{id, name}` without capacity/availability | `ReservationQueryControllerIT.java:63-75` — status, event identity/name, absence of capacity/availability, customer, quantity and expiry | PASS (compiled; runtime rerun pending Docker) |
+| Reserve-5 | Reservation query reads PostgreSQL directly and is independent of Valkey | `GetReservationServiceTest.java:42-51` — two calls reach the persistence port twice; `ReservationQueryControllerIT.java:96-105` — paused Valkey still returns `200` | PASS (unit); integration rerun pending Docker |
 | Reserve-6 | Invalid customer is `400` with no reservation | `ReservationControllerIT.java:115-122` — `400`, capacity unchanged, zero writes | PASS |
 | Expire-1 | Cancellation returns capacity exactly once | `ReservationQueryControllerIT.java:147-161` — repeated cancellation, status `CANCELLED`, capacity asserted | PASS |
 | Expire-2 | Due reservation expires and returns capacity by +5s | `SqsExpirationConsumerIT.java:89-96` — before `expiresAt + 5s`, `EXPIRED`, available `10` | PASS |
@@ -40,7 +40,7 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 | Expire-4 | Failed expiration retries then reaches DLQ | Remote 2026-09-10: malformed expiration payload logged five retries and then appeared in the expiration DLQ; `data-plane.tftest.hcl:25-27` asserts the configured redrive relationship | PASS |
 | Expire-5 | Terminal reason persists with status/capacity return | `SqsExpirationConsumerIT.java:90-96` — status, reason code/description, capacity | PASS |
 | Expire-6 | No early expiry | `SqsExpirationConsumerIT.java:110-114` — `PENDING`, null reason, available `7` | PASS |
-| Expire-7 | Terminal transition invalidates both caches | `SqsExpirationConsumerIT.java:97-98` — both cache keys absent | PASS |
+| Expire-7 | Terminal transition invalidates the event availability cache | `SqsExpirationConsumerIT.java:82-95` — event key is seeded and absent after expiration | PASS (compiled; runtime rerun pending Docker) |
 | Expire-8 | Terminal GET exposes reason; PENDING exposes null | `ReservationQueryControllerIT.java:91-94` — reason object; `:73-75` — PENDING has no reason | PASS |
 | Idempotency-1 | Same key/payload returns original result once | `IdempotencyControllerIT.java:91-93` — equal JSON and one event; `:136-140` parallel one-effect assertion | PASS |
 | Idempotency-2 | Different payload reuse is `409` | `IdempotencyControllerIT.java:110-113` — `isConflict()` and one event | PASS |
@@ -74,7 +74,8 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 - [x] Missing event has no partial effects: `ReservationControllerIT.java:143-153`.
 - [x] Cancel/expire duplicate races return capacity once: `ReservationConcurrencyIT.java:90-108`; `SqsExpirationConsumerIT.java:132-152`.
 - [x] Delayed SQS is repaired by reconciler: `ExpirationReconcilerIT.java:56-66`.
-- [x] Cache failure falls back with configured 100ms timeout: `EventControllerIT.java:154-169`; `ReservationQueryControllerIT.java:105-120`.
+- [x] Event cache failure falls back with configured 100ms timeout: `EventControllerIT.java:154-169`.
+- [x] Reservation query is independent of Valkey: `GetReservationServiceTest.java:42-51`; `ReservationQueryControllerIT.java:96-105`.
 - [x] Duplicate mail processing is idempotent: `SqsReservationCreatedConsumerIT.java:105-117`.
 - [x] Schema prevents invalid inventory, relation, terminal-reason and idempotency data: `InitialSchemaIT.java:44-102`.
 
@@ -93,6 +94,7 @@ Scratch used a detached temporary worktree at `2869392`; no `git stash` was used
 
 | Gate | Result |
 | --- | --- |
+| Current Java compile + unit suite | PASS on 2026-09-14 — fresh compilation of 77 production sources; 38 tests passed, 0 failed, 0 skipped. |
 | `validate_spec.py` | PASS — 0 errors, 0 warnings |
 | `validate_tasks.py` | PASS — 0 errors, 0 warnings |
 | `git diff --check 37e45ca..2c6723c` | PASS |
@@ -114,7 +116,7 @@ All five required routes have integration assertions: event creation/availabilit
 ## Summary
 
 **Overall**: PASS — 43/43 ACs pass under the revised, provider-accurate throttling criteria.
-**What works**: local command/query flows, transactional inventory/outbox, cache fallback/invalidation, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, CIDR admission, both DLQs, and the measured SES acceptance SLO.
+**What works**: local command/query flows, transactional inventory/outbox, event availability cache fallback/invalidation, direct PostgreSQL reservation queries, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, CIDR admission, both DLQs, and the measured SES acceptance SLO.
 **Next step**: none. A future requirement for deterministic `429` admission requires a separate architecture decision and implementation task.
 
 ## Independent verification

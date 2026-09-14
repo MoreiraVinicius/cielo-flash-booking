@@ -26,7 +26,7 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 - CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP do [ADR 0006](../../../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
 - Idempotência dos comandos é persistida por 24 horas no PostgreSQL conforme o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
 - A elegibilidade de expiração usa o relógio do PostgreSQL conforme o [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md).
-- Os dois GET usam ElastiCache for Valkey compartilhado, com TTL máximo de um segundo. O cache não autoriza reservas; ver [ADR 0005](../../../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
+- `GET /events/{id}` usa ElastiCache for Valkey compartilhado, com TTL máximo de um segundo. `GET /reservations/{id}` consulta PostgreSQL e retorna somente `{id, name}` como referência do evento. O cache não autoriza reservas; ver [ADR 0005](../../../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
 - Toda reserva pertence a um `Customer`. O Java trata o e-mail antes da busca e persiste somente a forma canônica na coluna `email`, conforme [ADR 0010](../../../docs/adr/0010-cliente-como-entidade-da-reserva.md) e [modelagem de dados](../../../docs/data-model.md).
 - Reserva criada emite `ReservationCreated` por outbox e envia e-mail assíncrono pelo SES; o texto não confirma compra, conforme [ADR 0011](../../../docs/adr/0011-notificacao-assincrona-de-reserva-por-email.md).
 

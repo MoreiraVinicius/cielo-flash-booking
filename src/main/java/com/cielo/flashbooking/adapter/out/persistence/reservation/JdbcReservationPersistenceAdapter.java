@@ -38,7 +38,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
         return jdbcTemplate.query("""
                 SELECT r.id AS reservation_id, r.quantity, r.status, r.expires_at,
                        r.closure_reason_code, r.closure_reason_description,
-                       e.id AS event_id, e.name AS event_name, e.capacity AS event_capacity, e.available AS event_available,
+                       e.id AS event_id, e.name AS event_name,
                        c.id AS customer_id, c.name AS customer_name, c.email AS customer_email
                 FROM reservation r
                 JOIN event e ON e.id = r.event_id
@@ -174,9 +174,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 resultSet.getObject("reservation_id", UUID.class),
                 new ReservationDetails.Event(
                         resultSet.getObject("event_id", UUID.class),
-                        resultSet.getString("event_name"),
-                        resultSet.getInt("event_capacity"),
-                        resultSet.getInt("event_available")),
+                        resultSet.getString("event_name")),
                 new ReservationDetails.Customer(
                         resultSet.getObject("customer_id", UUID.class),
                         resultSet.getString("customer_name"),

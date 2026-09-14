@@ -204,11 +204,11 @@ T28 -> T29
 ### T11: Implementar consulta de reserva
 
 **Status:** Complete
-**What:** Implementar `GET /reservations/{id}` com o mesmo contrato cache-aside Valkey.
+**What:** Implementar `GET /reservations/{id}` como leitura direta do PostgreSQL, sem cache, retornando o evento somente como `{id, name}`.
 **Where:** `src/main/java/com/cielo/flashbooking/reservation/controller/`
 **Depends on:** T10
 **Requirement:** DEMO-02
-**Done when:** Reserva existente retorna evento, cliente, estado, quantidade, expiração e motivo; inexistente retorna 404; hit evita PostgreSQL, falta de cache o preenche e falha de cache usa fallback protegido.
+**Done when:** Reserva existente retorna referência estável do evento, cliente, estado, quantidade, expiração e motivo; inexistente retorna 404; a rota permanece disponível quando Valkey falha e não expõe capacidade ou disponibilidade do evento.
 **Tests:** unit e integration, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(reservation): get reservation endpoint`

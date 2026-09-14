@@ -19,9 +19,7 @@ record ReservationDetailsResponse(
                 reservation.id(),
                 new EventResponse(
                         reservation.event().id(),
-                        reservation.event().name(),
-                        reservation.event().capacity(),
-                        reservation.event().available()),
+                        reservation.event().name()),
                 new CustomerResponse(
                         reservation.customer().id(),
                         reservation.customer().name(),
@@ -35,7 +33,7 @@ record ReservationDetailsResponse(
                                 reservation.closureReason().code(), reservation.closureReason().description()));
     }
 
-    record EventResponse(UUID id, String name, int capacity, int available) {
+    record EventResponse(UUID id, String name) {
     }
 
     record CustomerResponse(UUID id, String name, String email) {

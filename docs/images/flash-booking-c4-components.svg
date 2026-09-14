@@ -24,9 +24,9 @@
   <rect x="80" y="350" width="550" height="82" rx="7" class="component"/>
   <text x="100" y="379" class="componentTitle">Controllers HTTP</text><text x="100" y="405" class="componentText">EventController · ReservationQueryController</text>
   <rect x="80" y="472" width="550" height="104" rx="7" class="component"/>
-  <text x="100" y="501" class="componentTitle">Casos de consulta</text><text x="100" y="527" class="componentText">GetEventService · GetReservationService</text><text x="100" y="551" class="adapterText">cache-aside; PostgreSQL permanece como fonte de verdade</text>
+  <text x="100" y="501" class="componentTitle">Casos de consulta</text><text x="100" y="527" class="componentText">GetEventService · GetReservationService</text><text x="100" y="551" class="adapterText">cache no evento; reserva lê PostgreSQL</text>
   <rect x="80" y="625" width="255" height="150" rx="7" class="adapter"/>
-  <text x="100" y="654" class="adapterTitle">Adapter de cache</text><text x="100" y="680" class="adapterText">RedisEventAvailabilityCache</text><text x="100" y="702" class="adapterText">RedisReservationCache</text><text x="100" y="735" class="small">Portas: EventAvailabilityCache</text><text x="100" y="754" class="small">e ReservationCache</text>
+  <text x="100" y="654" class="adapterTitle">Adapter de cache</text><text x="100" y="680" class="adapterText">RedisEventAvailabilityCache</text><text x="100" y="702" class="adapterText">Somente disponibilidade</text><text x="100" y="735" class="small">Porta: EventAvailabilityCache</text><text x="100" y="754" class="small">Nenhum cache de reserva</text>
   <rect x="375" y="625" width="255" height="150" rx="7" class="adapter"/>
   <text x="395" y="654" class="adapterTitle">Adapters JDBC</text><text x="395" y="680" class="adapterText">EventPersistenceAdapter</text><text x="395" y="702" class="adapterText">JdbcReservationPersistenceAdapter</text><text x="395" y="735" class="small">Portas: EventReader</text><text x="395" y="754" class="small">e ReservationReader</text>
   <path d="M355 432 V472" class="flow"/>
@@ -46,7 +46,7 @@
   <rect x="725" y="625" width="255" height="150" rx="7" class="adapter"/>
   <text x="745" y="654" class="adapterTitle">Adapters JDBC</text><text x="745" y="680" class="adapterText">JdbcIdempotencyStore</text><text x="745" y="702" class="adapterText">Event / ReservationPersistenceAdapter</text><text x="745" y="724" class="adapterText">JdbcInventoryOperations</text><text x="745" y="752" class="small">TX inclui reserva + inventário + outbox</text>
   <rect x="1020" y="625" width="255" height="150" rx="7" class="adapter"/>
-  <text x="1040" y="654" class="adapterTitle">Invalidação pós-commit</text><text x="1040" y="680" class="adapterText">EventAvailabilityInvalidationListener</text><text x="1040" y="702" class="adapterText">ReservationCacheInvalidationListener</text><text x="1040" y="735" class="small">Eventos: EventAvailabilityChanged</text><text x="1040" y="754" class="small">e ReservationChanged</text>
+  <text x="1040" y="654" class="adapterTitle">Invalidação pós-commit</text><text x="1040" y="680" class="adapterText">EventAvailabilityInvalidationListener</text><text x="1040" y="702" class="adapterText">Após mudança de estoque</text><text x="1040" y="735" class="small">Evento: EventAvailabilityChanged</text><text x="1040" y="754" class="small">Sem chave de reserva</text>
   <path d="M1000 432 V450 H852 V472" class="flow"/><path d="M1000 450 H1147 V472" class="flow"/><circle cx="1000" cy="450" r="4" class="junction"/>
   <path d="M852 576 V625" class="flow"/><path d="M1147 576 V625" class="event"/>
   <rect x="725" y="815" width="550" height="54" rx="6" class="external"/><text x="1000" y="838" text-anchor="middle" class="externalTitle">Dependências externas</text><text x="1000" y="859" text-anchor="middle" class="externalText">PostgreSQL: transação + outbox • Valkey: evict best-effort após commit</text>
@@ -75,13 +75,13 @@
 
   <rect x="50" y="930" width="1900" height="88" rx="8" class="section"/>
   <text x="80" y="960" class="sectionHead">Contrato entre os três runtimes</text>
-  <text x="80" y="989" class="sectionText">command-api confirma a transação e grava o outbox; worker publica e consome eventos; query-api observa o estado confirmado pelo PostgreSQL e acelera leituras via Valkey.</text>
+  <text x="80" y="989" class="sectionText">command-api confirma a transação e grava o outbox; worker publica e consome eventos; query-api lê reservas no PostgreSQL e acelera disponibilidade via Valkey.</text>
   <line x1="80" y1="1003" x2="130" y2="1003" class="flow"/><text x="142" y="1008" class="small">síncrono</text><line x1="255" y1="1003" x2="305" y2="1003" class="async"/><text x="317" y="1008" class="small">SQS / evento</text><line x1="460" y1="1003" x2="510" y2="1003" class="event"/><text x="522" y="1008" class="small">após commit</text>
 
   <rect x="50" y="1050" width="1900" height="205" rx="8" class="section"/>
   <text x="80" y="1084" class="sectionHead">Padrões de resiliência implementados</text>
   <rect x="80" y="1105" width="570" height="118" rx="7" class="component"/>
-  <text x="100" y="1133" class="componentTitle">Leitura degradável</text><text x="100" y="1158" class="componentText">Cache-aside • timeouts Valkey 100 ms • fallback PostgreSQL</text><text x="100" y="1181" class="componentText">Circuito: 5 falhas / 10 s • bulkhead: 5 fallbacks • excesso → 503</text><text x="100" y="1204" class="small">A falha do cache não torna o target HTTP unhealthy.</text>
+  <text x="100" y="1133" class="componentTitle">Disponibilidade degradável</text><text x="100" y="1158" class="componentText">Cache-aside • timeout Valkey 100 ms • fallback PostgreSQL</text><text x="100" y="1181" class="componentText">Circuito: 5 falhas / 10 s • bulkhead: 5 fallbacks • excesso → 503</text><text x="100" y="1204" class="small">Consulta de reserva não depende do cache.</text>
   <rect x="715" y="1105" width="570" height="118" rx="7" class="component"/>
   <text x="735" y="1133" class="componentTitle">Consistência do comando</text><text x="735" y="1158" class="componentText">Idempotência persistente • update condicional contra oversell</text><text x="735" y="1181" class="componentText">Transação única: inventário + reserva + outbox</text><text x="735" y="1204" class="small">Invalidação de cache é best-effort e acontece AFTER_COMMIT.</text>
   <rect x="1350" y="1105" width="570" height="118" rx="7" class="component"/>

@@ -13,7 +13,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,9 +43,6 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private RedisProperties redisProperties;
-
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("DELETE FROM idempotency_record");
@@ -55,32 +51,27 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("DELETE FROM reservation");
         jdbcTemplate.update("DELETE FROM customer");
         jdbcTemplate.update("DELETE FROM event");
-        redisTemplate.delete(redisTemplate.keys("reservation:*"));
     }
 
     @Test
-    void get_whenReservationExists_returnsDetailsAndCacheHitAvoidsPostgresql() throws Exception {
+    void get_whenReservationExists_returnsDetailsAndStableEventReference() throws Exception {
         UUID reservationId = insertReservation("PENDING");
+        UUID eventId = jdbcTemplate.queryForObject(
+                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
 
         mockMvc.perform(get("/reservations/{id}", reservationId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(reservationId.toString()))
+                .andExpect(jsonPath("$.event.id").value(eventId.toString()))
                 .andExpect(jsonPath("$.event.name").value("Reservation event"))
-                .andExpect(jsonPath("$.event.available").value(7))
+                .andExpect(jsonPath("$.event.capacity").doesNotExist())
+                .andExpect(jsonPath("$.event.available").doesNotExist())
                 .andExpect(jsonPath("$.customer.name").value("Ana"))
                 .andExpect(jsonPath("$.customer.email").value("ana@example.com"))
                 .andExpect(jsonPath("$.quantity").value(3))
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.expiresAt").isNotEmpty())
                 .andExpect(jsonPath("$.closureReason").doesNotExist());
-
-        Long ttlMillis = redisTemplate.getExpire("reservation:" + reservationId, java.util.concurrent.TimeUnit.MILLISECONDS);
-        assertThat(ttlMillis).isNotNull().isPositive().isLessThanOrEqualTo(1_000L);
-
-        jdbcTemplate.update("DELETE FROM reservation WHERE id = ?", reservationId);
-        mockMvc.perform(get("/reservations/{id}", reservationId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customer.email").value("ana@example.com"));
     }
 
     @Test
@@ -102,9 +93,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
-    void get_whenValkeyIsUnavailable_fallsBackToPostgresqlWithinConfiguredTimeout() throws Exception {
+    void get_whenValkeyIsUnavailable_readsReservationDirectlyFromPostgresql() throws Exception {
         UUID reservationId = insertReservation("PENDING");
-        assertThat(redisProperties.getTimeout()).isEqualTo(Duration.ofMillis(100));
         String containerId = VALKEY.getContainerId();
         VALKEY.getDockerClient().pauseContainerCmd(containerId).exec();
 
@@ -121,11 +111,10 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
-    void cancel_whenReservationIsPending_returnsAuditableTerminalStateAndInvalidatesCaches() throws Exception {
+    void cancel_whenReservationIsPending_returnsAuditableTerminalStateAndInvalidatesEventCache() throws Exception {
         UUID reservationId = insertReservation("PENDING");
         UUID eventId = jdbcTemplate.queryForObject(
                 "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
-        redisTemplate.opsForValue().set("reservation:" + reservationId, "stale");
         redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
 
         mockMvc.perform(delete("/reservations/{id}", reservationId)
@@ -139,7 +128,6 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
                 .isEqualTo(10);
         assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("CANCELLED_BY_REQUEST");
-        assertThat(redisTemplate.hasKey("reservation:" + reservationId)).isFalse();
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
     }
 

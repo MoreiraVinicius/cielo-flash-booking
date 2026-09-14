@@ -4,7 +4,7 @@
 
 ## Limite da feature
 
-Evoluir a infraestrutura AWS de uma demo validada para Multi-AZ, mantendo o mesmo código Java, controllers, schema Flyway, endpoints, domínio, autenticação, notificação e contratos de cache.
+Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A evolução preserva domínio, contratos HTTP, schema Flyway, autenticação e notificação, mas pode acrescentar adaptadores operacionais exigidos pela nova topologia.
 
 ## Decisões de implementação
 
@@ -16,13 +16,13 @@ Evoluir a infraestrutura AWS de uma demo validada para Multi-AZ, mantendo o mesm
 
 ### Alta carga
 
-- Os dois GET continuam usando o mesmo cache-aside Valkey da demo, com TTL máximo de um segundo.
+- Somente `GET /events/{id}` usa o mesmo cache-aside Valkey da demo, com TTL máximo de um segundo.
 - Escritas continuarão no PostgreSQL com consistência forte.
-- Aurora PostgreSQL Serverless e RDS Proxy substituem o RDS Single-AZ sem mudar o binário Java.
+- Aurora PostgreSQL Serverless e RDS Proxy substituem o RDS Single-AZ. A Query API terá conexões explícitas para leitura eventual de eventos e leitura autoritativa de reservas.
 - ECS continuará sendo usado; EKS não é requisito de escala.
 - Eventos com horário conhecido usarão pré-escala programada além de target tracking.
 - `query-api` e `command-api` serão serviços ECS separados, mas apontarão para a mesma imagem; ADR 0013.
-- O serviço de consultas usará Valkey e, para disponibilidade, endpoint read-only do RDS Proxy. Consulta de reserva usa read-write para evitar leitura ausente logo após criação.
+- O serviço de consultas usará Valkey e o endpoint read-only do RDS Proxy para disponibilidade. Consulta de reserva não usa cache e usa o endpoint read-write para evitar leitura ausente logo após criação.
 - Autenticação IAM/SigV4, API Gateway REST único, WAF e notificação SES permanecem iguais à demo; somente limites e quantidade de tasks variam por Terraform.
 
 ### Limite explícito
@@ -35,7 +35,7 @@ Evoluir a infraestrutura AWS de uma demo validada para Multi-AZ, mantendo o mesm
 
 - Tipo de nó, shards, réplicas, ACUs e máximo de tasks, sempre parametrizados no Terraform.
 - Métricas de target tracking escolhidas a partir do benchmark.
-- Nenhuma mudança de código Java, controller, regra de negócio, schema ou evento exclusiva da arquitetura alta.
+- Adaptadores de infraestrutura podem evoluir para suportar a topologia. Controllers, regras de negócio, schema e eventos permanecem compartilhados com a demo.
 
 ## Ideias adiadas
 

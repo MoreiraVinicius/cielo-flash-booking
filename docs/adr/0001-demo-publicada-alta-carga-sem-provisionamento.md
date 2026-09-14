@@ -1,4 +1,4 @@
-# Publicar a demo e entregar alta carga sem provisionamento remoto
+# Publicar a demo e documentar a evolução de alta carga
 
 - Estado: aceita
 - Referências: [enunciado](../../Case%20BackEnd%201.md), [estado do projeto](../../.specs/STATE.md).
@@ -11,18 +11,18 @@ A entrega ocorre hoje, com poucas horas disponíveis. O enunciado de referência
 ## Alternativas consideradas
 
 1. Executar e demonstrar ambas as arquiteturas na AWS. Permite verificar a infraestrutura de alta carga, mas adiciona gasto e tempo de operação.
-2. Entregar somente a demo e documentar alta carga. Reduz trabalho, mas não atende ao desejo de entregar também o código da segunda arquitetura.
-3. Publicar a demo e entregar o código da alta carga sem provisioná-la. Escolhida pelo usuário para limitar gasto, preservando o escopo de código desejado.
+2. Entregar a demo e documentar a alta carga como evolução orientada por evidência. Escolhida para manter o desenho revisável sem antecipar uma segunda implementação.
+3. Publicar a demo e implementar também a infraestrutura de alta carga sem provisioná-la. Rejeitada porque código não executado criaria uma falsa sensação de entrega e aumentaria a superfície de manutenção.
 
 ## Decisão
 
-Entregar e demonstrar a demo na AWS. Entregar o código de aplicação e infraestrutura da alta carga, sem aplicar seu Terraform nem executar testes remotos dessa arquitetura. A demo é a única arquitetura autorizada no escopo de publicação, mediante o fluxo de autorização de operações externas.
+Entregar e demonstrar a demo na AWS. Manter a alta carga como arquitetura-alvo, com requisitos, decisões, riscos e tarefas futuras, sem código ou infraestrutura próprios nesta versão. A demo é a única arquitetura implementada e autorizada para publicação.
 
 ## Consequências e limites de evidência
 
 A alta carga não terá comprovação de implantação, failover, desempenho, migração ou recuperação na AWS. Nenhum relatório deverá apresentar essas propriedades como verificadas. Testes locais e validação estática, quando executados, deverão ser identificados separadamente dos testes remotos não realizados.
 
-O prazo é um risco para a entrega de todo o código pretendido. Não há redução automática desse escopo: qualquer corte necessário deverá ser explicitado ao usuário, preservando a prioridade da demo funcional.
+Uma futura implementação da alta carga deve começar pelos gargalos medidos e atualizar as especificações antes de adicionar topologia ou código.
 
 A janela de operação foi limitada pelo usuário a 1h30. A estimativa e o procedimento de encerramento estão em [docs/cost-estimate.md](../cost-estimate.md); antes de qualquer provisionamento ainda é obrigatório recalcular os valores para a conta e confirmar quais serviços são cobertos pelos créditos.
 
