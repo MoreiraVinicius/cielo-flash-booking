@@ -38,7 +38,7 @@
   <rect x="435" y="285" width="710" height="80" rx="7" class="gray"/>
   <text x="455" y="313" class="cardTitle">Application Load Balancer interno</text><text x="455" y="338" class="cardText">health checks em /actuator/health • target groups por serviço • roteamento por caminho/método</text>
   <rect x="435" y="405" width="710" height="120" rx="7" class="card"/>
-  <text x="460" y="435" class="cardTitle">Query API — 2..N tasks Multi-AZ</text><text x="460" y="461" class="cardText">GET /events/{id} • GET /reservations/{id}</text><text x="460" y="486" class="cardText">cache-aside; fallback PostgreSQL protegido por circuito e bulkhead</text>
+  <text x="460" y="435" class="cardTitle">Query API — 2..N tasks Multi-AZ</text><text x="460" y="461" class="cardText">GET /events/{id} • GET /reservations/{id}</text><text x="460" y="486" class="cardText">evento: cache-aside • reserva: PostgreSQL read-write direto</text>
   <rect x="915" y="430" width="200" height="60" rx="6" class="badge"/><text x="1015" y="454" text-anchor="middle" class="badgeText">Escala por leitura</text><text x="1015" y="475" text-anchor="middle" class="small">RPS · latência · CPU</text>
   <rect x="435" y="565" width="710" height="120" rx="7" class="card"/>
   <text x="460" y="595" class="cardTitle">Command API — 2..N tasks Multi-AZ</text><text x="460" y="621" class="cardText">POST /events • POST /events/{id}/reservations • DELETE /reservations/{id}</text><text x="460" y="646" class="cardText">idempotência persistente • update condicional • transação + outbox</text>
@@ -57,7 +57,7 @@
   <rect x="1270" y="405" width="630" height="112" rx="7" class="card"/>
   <text x="1295" y="435" class="cardTitle">ElastiCache for Valkey — Multi-AZ</text><text x="1295" y="461" class="cardText">Primary + réplica com failover • criptografia • cache nunca autoriza reserva</text><text x="1295" y="486" class="small">TTL curto + invalidação após commit</text>
   <rect x="1270" y="565" width="630" height="148" rx="7" class="card"/>
-  <text x="1295" y="595" class="cardTitle">RDS Proxy + Aurora PostgreSQL</text><text x="1295" y="621" class="cardText">read-only para consultas • read-write para comandos e worker</text><text x="1295" y="645" class="cardText">writer + reader Multi-AZ • ACUs e conexões limitadas</text><text x="1295" y="669" class="cardText">fonte de verdade: inventário, reservas, idempotência e outbox</text><text x="1295" y="693" class="small">lock waits e saturação orientam controle de admissão</text>
+  <text x="1295" y="595" class="cardTitle">RDS Proxy + Aurora PostgreSQL</text><text x="1295" y="621" class="cardText">read-only para evento • read-write para reservas, comandos e worker</text><text x="1295" y="645" class="cardText">writer + reader Multi-AZ • ACUs e conexões limitadas</text><text x="1295" y="669" class="cardText">fonte de verdade: inventário, reservas, idempotência e outbox</text><text x="1295" y="693" class="small">lock waits e saturação orientam controle de admissão</text>
   <rect x="1270" y="745" width="390" height="148" rx="7" class="card"/>
   <text x="1295" y="775" class="cardTitle">Amazon SQS — filas + DLQs</text>
   <rect x="1290" y="795" width="165" height="76" rx="6" class="gray"/><text x="1372" y="819" text-anchor="middle" class="cardTitle">Expiration + DLQ</text><text x="1372" y="842" text-anchor="middle" class="cardText">redrive 5x</text><text x="1372" y="861" text-anchor="middle" class="small">14 dias</text>
@@ -67,7 +67,8 @@
 
   <!-- Service to data paths: distinct lanes -->
   <path d="M1145 445 H1270" class="sync"/><text x="1160" y="437" class="label">cache-aside</text>
-  <path d="M1145 485 H1190 V595 H1270" class="sync"/><text x="1155" y="477" class="label">read-only</text>
+  <path d="M1145 485 H1190 V595 H1270" class="sync"/><text x="1155" y="477" class="label">evento/read-only</text>
+  <path d="M1145 510 H1205 V645 H1270" class="sync"/><text x="1155" y="530" class="label">reserva/read-write</text>
   <path d="M1145 605 H1175 V505 H1270" class="event"/><text x="1184" y="497" class="label">evict pós-commit</text>
   <path d="M1145 645 H1270" class="sync"/><text x="1160" y="637" class="label">read-write</text>
   <path d="M1145 755 H1180 V685 H1270" class="sync"/><text x="1152" y="746" class="label">outbox/reconciliação</text>
@@ -78,7 +79,7 @@
   <rect x="55" y="985" width="1120" height="345" rx="9" class="section"/>
   <text x="80" y="1018" class="sectionTitle">Resiliência em camadas</text>
   <text x="80" y="1051" class="sectionText">Edge</text><text x="220" y="1051" class="sectionText">WAF + throttling por rota + rejeição antecipada de excesso</text>
-  <text x="80" y="1083" class="sectionText">Query</text><text x="220" y="1083" class="sectionText">cache-aside • timeout 100 ms • circuito 5 falhas/10 s • bulkhead 5 • fallback ou 503</text>
+  <text x="80" y="1083" class="sectionText">Query</text><text x="220" y="1083" class="sectionText">evento: cache-aside, circuito e bulkhead • reserva: read-write direto, sem Valkey</text>
   <text x="80" y="1115" class="sectionText">Command</text><text x="220" y="1115" class="sectionText">idempotência persistente • update condicional • transação + transactional outbox</text>
   <text x="80" y="1147" class="sectionText">Worker</text><text x="220" y="1147" class="sectionText">at-least-once • retry por polling • DLQs • deduplicação • reconciliador de expiração</text>
   <text x="80" y="1179" class="sectionText">Runtime</text><text x="220" y="1179" class="sectionText">timeouts AWS 3 s • deployment circuit breaker + rollback • escala limitada pela capacidade do banco</text>

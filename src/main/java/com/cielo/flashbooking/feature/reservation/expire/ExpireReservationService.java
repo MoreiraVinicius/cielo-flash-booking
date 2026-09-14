@@ -27,11 +27,11 @@ public class ExpireReservationService {
     @Transactional
     public boolean expire(UUID reservationId) {
         return reservationWriter.expirePending(reservationId)
-                .map(release -> expireAndReturn(reservationId, release))
+                .map(this::expireAndReturn)
                 .orElse(false);
     }
 
-    private boolean expireAndReturn(UUID reservationId, ReservationWriter.CapacityRelease release) {
+    private boolean expireAndReturn(ReservationWriter.CapacityRelease release) {
         if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
             throw new IllegalStateException("could not return expired reservation capacity");
         }

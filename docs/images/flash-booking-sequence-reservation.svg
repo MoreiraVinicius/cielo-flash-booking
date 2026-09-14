@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2350" viewBox="0 0 2000 2350" role="img" aria-labelledby="title desc">
   <title id="title">Flash Booking — sequência de reserva, processamento e consulta</title>
-  <desc id="desc">Quatro capítulos mostram criação síncrona, outbox e notificação, expiração e consulta cache-aside, incluindo falhas e retries.</desc>
+  <desc id="desc">Quatro capítulos mostram criação síncrona, outbox e notificação, expiração e consulta cache-aside da disponibilidade do evento, incluindo falhas e retries.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#45637f"/></marker>
     <marker id="asyncArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#276fb8"/></marker>
@@ -82,27 +82,27 @@
 
   <!-- D: query -->
   <rect x="40" y="1750" width="1920" height="475" rx="8" class="panel"/>
-  <rect x="41" y="1751" width="430" height="38" class="panelHead"/><text x="58" y="1777" class="panelTitle">4. Consulta cache-aside e degradação</text>
+  <rect x="41" y="1751" width="540" height="38" class="panelHead"/><text x="58" y="1777" class="panelTitle">4. Disponibilidade do evento: cache-aside e degradação</text>
   <g>
     <rect x="75" y="1810" width="200" height="58" rx="6" class="external"/><text x="175" y="1834" text-anchor="middle" class="partTitle">Cliente</text><text x="175" y="1854" text-anchor="middle" class="partSub">HTTP</text>
-    <rect x="390" y="1810" width="250" height="58" rx="6" class="participant"/><text x="515" y="1834" text-anchor="middle" class="partTitle">ReservationQueryController</text><text x="515" y="1854" text-anchor="middle" class="partSub">query-api</text>
-    <rect x="775" y="1810" width="245" height="58" rx="6" class="participant"/><text x="897" y="1834" text-anchor="middle" class="partTitle">GetReservationService</text><text x="897" y="1854" text-anchor="middle" class="partSub">query-api</text>
+    <rect x="390" y="1810" width="250" height="58" rx="6" class="participant"/><text x="515" y="1834" text-anchor="middle" class="partTitle">EventQueryController</text><text x="515" y="1854" text-anchor="middle" class="partSub">query-api</text>
+    <rect x="775" y="1810" width="245" height="58" rx="6" class="participant"/><text x="897" y="1834" text-anchor="middle" class="partTitle">GetEventService</text><text x="897" y="1854" text-anchor="middle" class="partSub">query-api</text>
     <rect x="1160" y="1810" width="210" height="58" rx="6" class="external"/><text x="1265" y="1834" text-anchor="middle" class="partTitle">Valkey</text><text x="1265" y="1854" text-anchor="middle" class="partSub">timeout 100 ms</text>
     <rect x="1570" y="1810" width="245" height="58" rx="6" class="external"/><text x="1692" y="1834" text-anchor="middle" class="partTitle">PostgreSQL</text><text x="1692" y="1854" text-anchor="middle" class="partSub">fonte autoritativa</text>
   </g>
   <g class="life"><line x1="175" y1="1868" x2="175" y2="2198"/><line x1="515" y1="1868" x2="515" y2="2198"/><line x1="897" y1="1868" x2="897" y2="2198"/><line x1="1265" y1="1868" x2="1265" y2="2198"/><line x1="1692" y1="1868" x2="1692" y2="2198"/></g>
-  <path d="M175 1905 H507" class="sync"/><text x="260" y="1896" class="msg">GET /reservations/{id}</text>
+  <path d="M175 1905 H507" class="sync"/><text x="260" y="1896" class="msg">GET /events/{id}</text>
   <path d="M515 1942 H889" class="sync"/><text x="630" y="1933" class="msg">get(id)</text>
   <path d="M897 1979 H1257" class="sync"/><text x="990" y="1970" class="msg">cache.findById</text>
   <rect x="760" y="1995" width="1080" height="188" rx="5" class="alt"/><rect x="761" y="1996" width="135" height="24" class="altLabel"/><text x="774" y="2013" class="altTitle">cache hit</text>
-  <path d="M1265 2040 H905" class="reply"/><text x="1010" y="2031" class="msg">ReservationDetails</text>
+  <path d="M1265 2040 H905" class="reply"/><text x="1010" y="2031" class="msg">Event</text>
   <line x1="761" y1="2055" x2="1839" y2="2055" class="divider"/><text x="774" y="2076" class="altTitle">cache miss</text>
-  <path d="M897 2098 H1684" class="sync"/><text x="1110" y="2089" class="msg">ReservationReader.findById</text>
-  <path d="M1692 2120 H905" class="reply"/><text x="1260" y="2111" class="small">ReservationDetails</text>
+  <path d="M897 2098 H1684" class="sync"/><text x="1110" y="2089" class="msg">EventReader.findById</text>
+  <path d="M1692 2120 H905" class="reply"/><text x="1260" y="2111" class="small">Event com capacidade atual</text>
   <path d="M897 2142 H1257" class="sync"/><text x="990" y="2133" class="small">cache.put(TTL 1 s)</text>
   <line x1="761" y1="2154" x2="1839" y2="2154" class="divider"/><text x="774" y="2175" class="altTitle">cache falha</text>
   <text x="920" y="2175" class="small">circuito 5 falhas/10 s → fallback PostgreSQL limitado por Semaphore(5); sem permissão → 503</text>
-  <path d="M515 2205 H183" class="reply"/><text x="320" y="2196" class="msg">200 OK ou 503 controlado</text>
+  <path d="M515 2205 H183" class="reply"/><text x="295" y="2196" class="msg">200/404 ou 503 controlado</text>
 
   <rect x="40" y="2260" width="1920" height="62" rx="7" class="obs"/>
   <text x="65" y="2285" class="obsTitle">Observabilidade transversal</text>
