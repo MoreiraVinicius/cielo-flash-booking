@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="780" viewBox="0 0 1600 780" role="img" aria-labelledby="title desc">
+  <title id="title">Como o Flash Booking impede oversell no último ingresso</title>
+  <desc id="desc">Duas reservas concorrentes disputam um único ingresso. O PostgreSQL executa um decremento condicional; uma transação cria a reserva e a outra recebe conflito sem efeito. Reservas pendentes podem ser canceladas ou expirar e devolvem a capacidade uma única vez.</desc>
+  <defs>
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#17324d" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#47718f"/>
+    </marker>
+    <style>
+      .sans { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 18px; font-weight: 750; letter-spacing: 2px; }
+      .title { font-size: 42px; font-weight: 760; }
+      .subtitle { font-size: 21px; }
+      .panel-title { font-size: 24px; font-weight: 730; }
+      .body { font-size: 18px; }
+      .strong { font-size: 20px; font-weight: 720; }
+      .code { font-family: Consolas, "SFMono-Regular", monospace; font-size: 17px; }
+      .small { font-size: 16px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="780" rx="30" fill="#f4f7fa"/>
+  <g class="sans">
+    <text x="64" y="58" class="eyebrow" fill="#1168bd">INVARIANTE CENTRAL</text>
+    <text x="64" y="108" class="title" fill="#17324d">O último ingresso é decidido no banco — uma vez</text>
+    <text x="64" y="145" class="subtitle" fill="#557086">Cache acelera leitura; somente a transação PostgreSQL autoriza uma reserva.</text>
+  </g>
+
+  <g class="sans" filter="url(#card-shadow)">
+    <rect x="64" y="190" width="386" height="344" rx="22" fill="#ffffff"/>
+    <rect x="64" y="190" width="386" height="64" rx="22" fill="#dcecff"/>
+    <path d="M64 232 H450 V254 H64 Z" fill="#dcecff"/>
+    <circle cx="102" cy="222" r="17" fill="#1168bd"/>
+    <text x="134" y="230" class="panel-title" fill="#17324d">1 · Duas requisições</text>
+
+    <rect x="94" y="282" width="326" height="88" rx="16" fill="#eff6ff" stroke="#8fc3ee"/>
+    <circle cx="130" cy="326" r="22" fill="#2f80ed"/>
+    <text x="123" y="333" class="strong" fill="#ffffff">A</text>
+    <text x="170" y="318" class="strong" fill="#17324d">Reserva 1 ingresso</text>
+    <text x="170" y="346" class="body" fill="#557086">Idempotency-Key A</text>
+
+    <rect x="94" y="390" width="326" height="88" rx="16" fill="#eff6ff" stroke="#8fc3ee"/>
+    <circle cx="130" cy="434" r="22" fill="#2f80ed"/>
+    <text x="123" y="441" class="strong" fill="#ffffff">B</text>
+    <text x="170" y="426" class="strong" fill="#17324d">Reserva 1 ingresso</text>
+    <text x="170" y="454" class="body" fill="#557086">Idempotency-Key B</text>
+
+    <rect x="510" y="190" width="580" height="344" rx="22" fill="#ffffff"/>
+    <rect x="510" y="190" width="580" height="64" rx="22" fill="#dcecff"/>
+    <path d="M510 232 H1090 V254 H510 Z" fill="#dcecff"/>
+    <circle cx="548" cy="222" r="17" fill="#1168bd"/>
+    <text x="580" y="230" class="panel-title" fill="#17324d">2 · Uma operação atômica</text>
+
+    <ellipse cx="800" cy="303" rx="86" ry="25" fill="#b8dcff" stroke="#1168bd" stroke-width="3"/>
+    <path d="M714 303 V365 C714 379 752 390 800 390 C848 390 886 379 886 365 V303" fill="#dcecff" stroke="#1168bd" stroke-width="3"/>
+    <ellipse cx="800" cy="365" rx="86" ry="25" fill="#cce5fb" stroke="#1168bd" stroke-width="3"/>
+    <rect x="720" y="319" width="160" height="42" rx="12" fill="#ffffff" opacity="0.9"/>
+    <text x="742" y="347" class="strong" fill="#17324d">available = 1</text>
+
+    <rect x="550" y="414" width="500" height="80" rx="14" fill="#102a43"/>
+    <text x="576" y="444" class="code" fill="#a9d3f5">UPDATE event SET available = available - 1</text>
+    <text x="576" y="474" class="code" fill="#ffffff">WHERE id = ? AND available &gt;= 1;</text>
+
+    <rect x="1150" y="190" width="386" height="344" rx="22" fill="#ffffff"/>
+    <rect x="1150" y="190" width="386" height="64" rx="22" fill="#dcecff"/>
+    <path d="M1150 232 H1536 V254 H1150 Z" fill="#dcecff"/>
+    <circle cx="1188" cy="222" r="17" fill="#1168bd"/>
+    <text x="1220" y="230" class="panel-title" fill="#17324d">3 · Dois resultados</text>
+
+    <rect x="1180" y="282" width="326" height="92" rx="16" fill="#e8f7f1" stroke="#56a98e"/>
+    <circle cx="1218" cy="328" r="20" fill="#26866a"/>
+    <path d="M1208 328 l7 7 14-16" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1254" y="320" class="strong" fill="#17483c">1 linha afetada</text>
+    <text x="1254" y="348" class="body" fill="#356557">201 · PENDING + outbox</text>
+
+    <rect x="1180" y="394" width="326" height="92" rx="16" fill="#fff0ef" stroke="#d9837c"/>
+    <circle cx="1218" cy="440" r="20" fill="#bc4b45"/>
+    <path d="M1210 432 l16 16 M1226 432 l-16 16" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+    <text x="1254" y="432" class="strong" fill="#7f302c">0 linhas afetadas</text>
+    <text x="1254" y="460" class="body" fill="#7f514e">409 · nenhum efeito parcial</text>
+  </g>
+
+  <path d="M450 362 H502" fill="none" stroke="#47718f" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1090 362 H1142" fill="none" stroke="#47718f" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g class="sans" transform="translate(64 580)">
+    <rect width="1472" height="170" rx="22" fill="#17324d"/>
+    <text x="30" y="34" class="eyebrow" fill="#a9d3f5">CICLO DA RESERVA TEMPORÁRIA</text>
+
+    <rect x="30" y="77" width="180" height="54" rx="27" fill="#2f80ed"/>
+    <text x="71" y="111" class="strong" fill="#ffffff">PENDING</text>
+
+    <path d="M220 104 H266 M266 104 V77 H312 M266 104 V131 H312" fill="none" stroke="#9fc8f3" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="320" y="54" width="220" height="46" rx="23" fill="#526f87"/>
+    <text x="342" y="85" class="strong" fill="#ffffff">cancelar · CANCELLED</text>
+    <rect x="320" y="108" width="220" height="46" rx="23" fill="#526f87"/>
+    <text x="345" y="139" class="strong" fill="#ffffff">expiresAt · EXPIRED</text>
+
+    <rect x="580" y="70" width="390" height="75" rx="16" fill="#e8f7f1"/>
+    <text x="610" y="100" class="strong" fill="#17483c">Ambos devolvem capacidade uma vez</text>
+    <text x="610" y="127" class="small" fill="#356557">somente uma transição vence a corrida</text>
+
+    <rect x="996" y="70" width="446" height="75" rx="16" fill="#fff5d9"/>
+    <text x="1023" y="100" class="strong" fill="#674b13">Sem pagamento ou compra confirmada</text>
+    <text x="1023" y="127" class="small" fill="#765c27">o domínio entregue termina na reserva temporária</text>
+  </g>
+</svg>

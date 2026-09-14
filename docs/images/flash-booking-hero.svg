@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="560" viewBox="0 0 1600 560" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking</title>
+  <desc id="desc">Identidade visual original do case técnico de backend para reserva temporária de ingressos. A demo está validada; a arquitetura de alta carga permanece como alvo planejado.</desc>
+  <defs>
+    <linearGradient id="hero-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e2a43"/>
+      <stop offset="0.7" stop-color="#174c73"/>
+      <stop offset="1" stop-color="#1168bd"/>
+    </linearGradient>
+    <linearGradient id="ticket-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8f4ff"/>
+      <stop offset="1" stop-color="#b8dcff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#06131e" flood-opacity="0.3"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 20px; font-weight: 700; letter-spacing: 2.4px; }
+      .title { font-size: 72px; font-weight: 780; letter-spacing: -1.5px; }
+      .subtitle { font-size: 28px; font-weight: 430; }
+      .badge { font-size: 19px; font-weight: 650; }
+      .small { font-size: 16px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="560" rx="36" fill="url(#hero-bg)"/>
+  <circle cx="1460" cy="88" r="230" fill="#ffffff" opacity="0.05"/>
+  <circle cx="1350" cy="570" r="300" fill="#35b5a4" opacity="0.08"/>
+  <path d="M0 470 C320 410 480 530 800 472 S1260 410 1600 480 L1600 560 L0 560 Z" fill="#071d30" opacity="0.24"/>
+
+  <g transform="translate(92 88)" filter="url(#shadow)">
+    <path d="M42 16 H326 C326 52 350 76 386 76 V302 C350 302 326 326 326 362 H42 C42 326 18 302 -18 302 V76 C18 76 42 52 42 16 Z" fill="url(#ticket-bg)" stroke="#ffffff" stroke-width="5"/>
+    <line x1="292" y1="38" x2="292" y2="340" stroke="#6ea9d7" stroke-width="4" stroke-dasharray="13 13"/>
+    <path d="M183 62 L115 202 H178 L144 318 L264 156 H200 L246 62 Z" fill="#f2b84b" stroke="#8d6512" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="335" cy="130" r="21" fill="#1168bd"/>
+    <path d="M335 117 V131 L345 139" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="335" cy="246" r="21" fill="#35b5a4"/>
+    <path d="M325 246 l7 7 14-16" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="sans" transform="translate(560 0)">
+    <text x="0" y="112" class="eyebrow" fill="#a9d3f5">CASE TÉCNICO INDEPENDENTE · CONTEXTO CIELO</text>
+    <text x="0" y="196" class="title" fill="#ffffff">Flash Booking</text>
+    <text x="0" y="242" class="subtitle" fill="#d9e8f5">Reserva temporária de ingressos para flash sales.</text>
+    <text x="0" y="281" class="subtitle" fill="#d9e8f5">Consistência primeiro; escala guiada por evidência.</text>
+
+    <g transform="translate(0 330)">
+      <rect width="260" height="58" rx="18" fill="#e9f7f2"/>
+      <circle cx="31" cy="29" r="10" fill="#26866a"/>
+      <text x="54" y="36" class="badge" fill="#17483c">Demo · 43/43 PASS</text>
+
+      <rect x="278" width="196" height="58" rx="18" fill="#e8f4ff"/>
+      <path d="M306 20 l7 7 14-16" fill="none" stroke="#1168bd" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="340" y="36" class="badge" fill="#174c73">94 testes</text>
+
+      <rect x="492" width="390" height="58" rx="18" fill="#fff5d9"/>
+      <path d="M520 20 L532 40 H508 Z" fill="#b47a08"/>
+      <text x="550" y="36" class="badge" fill="#674b13">High-load · arquitetura-alvo</text>
+    </g>
+
+    <text x="0" y="446" class="small" fill="#b9cedf">Java 21 · Spring Boot 3 · PostgreSQL · Valkey · SQS · AWS</text>
+    <text x="0" y="482" class="small" fill="#8fb1cc">Projeto de avaliação; não é um produto ou identidade visual oficial da Cielo.</text>
+  </g>
+</svg>

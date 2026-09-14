@@ -93,7 +93,7 @@ T06 -> T07
 
 ### T04: Criar identidade e invariante do produto
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar um hero original do projeto e uma explicação visual do último ingresso, reserva temporária e oversell zero.
 **Where:** `docs/images/flash-booking-hero.svg`, `docs/images/flash-booking-last-ticket.svg`
 **Depends on:** T03
@@ -102,6 +102,7 @@ T06 -> T07
 **Tests:** XML, render e inspeção visual em resolução de README
 **Gate:** Visual
 **Commit:** `docs(visual): explain flash booking invariant`
+**Result:** Hero original e visual do último ingresso renderizados e inspecionados; a arte separa reserva de pagamento e mostra resultados concorrentes `201`/`409`, outbox e devolução única por estados terminais alternativos.
 
 ### T05: Visualizar o processo e a evolução arquitetural
 
