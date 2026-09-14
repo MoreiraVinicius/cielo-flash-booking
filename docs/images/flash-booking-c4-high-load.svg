@@ -1,0 +1,303 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1700" viewBox="0 0 2200 1700" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — C4 Model high-load</title>
+  <desc id="desc">Diagrama C4 em azul e cinza com a pessoa Cliente, o sistema Flash Booking, os containers query-api, command-api e worker, componentes internos, sistemas externos, resiliência e observabilidade.</desc>
+  <defs>
+    <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#49677f"/>
+    </marker>
+    <marker id="arrow-read" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#2e73b8"/>
+    </marker>
+    <marker id="arrow-async" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#356c9d"/>
+    </marker>
+    <marker id="arrow-async-start" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
+      <path d="M10 0 L0 5 L10 10 Z" fill="#356c9d"/>
+    </marker>
+    <marker id="arrow-event" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#70869a"/>
+    </marker>
+    <style>
+      .background{fill:#f5f7fa}
+      .page-title{font:700 34px Arial,sans-serif;fill:#17324d}
+      .page-subtitle{font:16px Arial,sans-serif;fill:#607284}
+      .system-boundary{fill:#ffffff;stroke:#6d8194;stroke-width:2}
+      .system-header{fill:#e5ebf1}
+      .boundary-title{font:700 21px Arial,sans-serif;fill:#17324d}
+      .boundary-subtitle{font:14px Arial,sans-serif;fill:#586f83}
+      .person{fill:#dfe9f3;stroke:#617f9a;stroke-width:2}
+      .infra{fill:#eef1f4;stroke:#7c8f9f;stroke-width:1.7}
+      .container{fill:#ffffff;stroke:#2d70b3;stroke-width:2}
+      .container-header{fill:#dcebf8}
+      .component{fill:#edf4fa;stroke:#7ea6c9;stroke-width:1.3}
+      .external{fill:#edf1f4;stroke:#778b9e;stroke-width:1.8}
+      .external-accent{fill:#e4eef7;stroke:#7297b8;stroke-width:1.3}
+      .section{fill:#ffffff;stroke:#98a9b8;stroke-width:1.6}
+      .note{fill:#eef2f5;stroke:#9aabb8;stroke-width:1.3}
+      .target-note{fill:#f1f4f7;stroke:#6e8395;stroke-width:1.5;stroke-dasharray:6 4}
+      .badge{fill:#f6f9fc;stroke:#83a7c7;stroke-width:1.1}
+      .type{font:12px Arial,sans-serif;fill:#526b80}
+      .element-title{font:700 18px Arial,sans-serif;fill:#17324d}
+      .element-text{font:14px Arial,sans-serif;fill:#385268}
+      .component-title{font:700 14px Arial,sans-serif;fill:#1d4668}
+      .component-text{font:13px Arial,sans-serif;fill:#425a6e}
+      .small{font:12px Arial,sans-serif;fill:#5d7284}
+      .section-title{font:700 19px Arial,sans-serif;fill:#17324d}
+      .section-subtitle{font:700 14px Arial,sans-serif;fill:#31536f}
+      .section-text{font:13px Arial,sans-serif;fill:#3f586d}
+      .flow-label{font:12px Arial,sans-serif;fill:#3d566b}
+      .read-label{font:700 12px Arial,sans-serif;fill:#255f92}
+      .sync{fill:none;stroke:#49677f;stroke-width:2.2;marker-end:url(#arrow-sync)}
+      .read{fill:none;stroke:#2e73b8;stroke-width:2.2;marker-end:url(#arrow-read)}
+      .async{fill:none;stroke:#356c9d;stroke-width:2.2;stroke-dasharray:8 6;marker-end:url(#arrow-async)}
+      .async-both{fill:none;stroke:#356c9d;stroke-width:2.2;stroke-dasharray:8 6;marker-start:url(#arrow-async-start);marker-end:url(#arrow-async)}
+      .event{fill:none;stroke:#70869a;stroke-width:2;stroke-dasharray:3 5;marker-end:url(#arrow-event)}
+      .telemetry{fill:none;stroke:#7d8f9f;stroke-width:1.8;stroke-dasharray:4 5;marker-end:url(#arrow-event)}
+      .junction{fill:#49677f}
+    </style>
+  </defs>
+
+  <rect width="2200" height="1700" class="background"/>
+  <text x="48" y="58" class="page-title">Flash Booking — C4 Model • High-load</text>
+  <text x="48" y="88" class="page-subtitle">Containers Java escalados de forma independente; leitura, escrita e trabalho assíncrono mantêm contratos e responsabilidades distintos.</text>
+  <rect x="1835" y="27" width="315" height="58" rx="8" class="badge"/>
+  <text x="1992" y="51" text-anchor="middle" class="component-title">Arquitetura-alvo</text>
+  <text x="1992" y="72" text-anchor="middle" class="small">mínimo 2 tasks por serviço • Multi-AZ</text>
+
+  <!-- Relationships are behind elements to keep all labels readable. -->
+  <path d="M320 274 H410" class="sync"/>
+  <path d="M950 275 H1040" class="sync"/>
+  <path d="M1375 335 V392 H610 V435" class="read"/>
+  <path d="M1375 392 H1065 V435" class="sync"/>
+  <circle cx="1375" cy="392" r="4" class="junction"/>
+  <text x="630" y="383" class="read-label">GET /events/{id} • GET /reservations/{id}</text>
+  <text x="1080" y="383" class="flow-label">POST /events • POST reserva • DELETE reserva</text>
+
+  <path d="M500 885 V1000" class="read"/>
+  <text x="510" y="965" class="read-label">cache-aside</text>
+  <path d="M700 885 V920 H900 V1000" class="read"/>
+  <path d="M950 885 V960 H760 V1000" class="event"/>
+  <text x="768" y="954" class="flow-label">evict AFTER_COMMIT</text>
+  <path d="M1130 885 V1000" class="sync"/>
+  <path d="M1380 885 V950 H1190 V1000" class="sync"/>
+  <text x="1200" y="965" class="flow-label">worker → writer</text>
+  <path d="M1515 885 V1000" class="async-both"/>
+  <text x="1528" y="965" class="flow-label">publica / consome</text>
+  <path d="M1660 885 V925 H1965 V1000" class="sync"/>
+  <text x="1785" y="954" class="flow-label">envia e-mail</text>
+  <path d="M1710 364 H1790" class="telemetry"/>
+
+  <!-- Person -->
+  <rect x="40" y="190" width="280" height="175" rx="10" class="person"/>
+  <text x="180" y="222" text-anchor="middle" class="type">«Person»</text>
+  <text x="180" y="252" text-anchor="middle" class="element-title">Cliente</text>
+  <text x="180" y="282" text-anchor="middle" class="element-text">Pessoa ou integração</text>
+  <text x="180" y="305" text-anchor="middle" class="element-text">que consulta eventos e</text>
+  <text x="180" y="328" text-anchor="middle" class="element-text">gerencia reservas</text>
+  <text x="180" y="350" text-anchor="middle" class="small">HTTPS • IAM/SigV4</text>
+
+  <!-- Flash Booking software system -->
+  <rect x="370" y="115" width="1380" height="825" rx="12" class="system-boundary"/>
+  <path d="M382 116 H1738 Q1749 116 1749 127 V184 H371 V127 Q371 116 382 116 Z" class="system-header"/>
+  <text x="398" y="145" class="boundary-title">«Software System» Flash Booking</text>
+  <text x="398" y="170" class="boundary-subtitle">Mesmo artefato Java 21 / Spring Boot 3, executado em três modos com escala e permissões independentes.</text>
+
+  <!-- Infrastructure entry containers -->
+  <rect x="410" y="215" width="540" height="120" rx="8" class="infra"/>
+  <text x="435" y="242" class="type">«Infrastructure Container»</text>
+  <text x="435" y="268" class="element-title">WAF + API Gateway REST</text>
+  <text x="435" y="294" class="element-text">Único ponto público • autenticação IAM/SigV4</text>
+  <text x="435" y="317" class="small">resource policy • proteção por IP • throttling por rota</text>
+
+  <rect x="1040" y="215" width="670" height="120" rx="8" class="infra"/>
+  <text x="1065" y="242" class="type">«Infrastructure Container»</text>
+  <text x="1065" y="268" class="element-title">Application Load Balancer interno</text>
+  <text x="1065" y="294" class="element-text">Target groups separados por método e caminho</text>
+  <text x="1065" y="317" class="small">/actuator/health apenas para health checks internos</text>
+
+  <rect x="1470" y="344" width="240" height="40" rx="6" class="infra"/>
+  <text x="1590" y="369" text-anchor="middle" class="small">todos os runtimes • telemetry</text>
+
+  <!-- query-api container -->
+  <rect x="410" y="435" width="400" height="450" rx="10" class="container"/>
+  <path d="M420 436 H800 Q809 436 809 445 V535 H411 V445 Q411 436 420 436 Z" class="container-header"/>
+  <text x="430" y="463" class="type">«Container • Spring Boot»</text>
+  <text x="430" y="489" class="element-title">query-api</text>
+  <text x="430" y="512" class="element-text">Caminho somente leitura</text>
+  <rect x="610" y="493" width="178" height="30" rx="15" class="badge"/>
+  <text x="699" y="513" text-anchor="middle" class="small">2..N tasks • Multi-AZ</text>
+
+  <rect x="430" y="555" width="360" height="60" rx="6" class="component"/>
+  <text x="446" y="579" class="component-title">«Component» HTTP queries</text>
+  <text x="446" y="600" class="component-text">EventController • ReservationQueryController</text>
+  <rect x="430" y="627" width="360" height="68" rx="6" class="component"/>
+  <text x="446" y="651" class="component-title">«Component» Query use cases</text>
+  <text x="446" y="672" class="component-text">GetEventService • GetReservationService</text>
+  <text x="446" y="690" class="small">cache-aside com fallback controlado</text>
+  <rect x="430" y="707" width="360" height="68" rx="6" class="component"/>
+  <text x="446" y="731" class="component-title">«Component» Cache adapters</text>
+  <text x="446" y="752" class="component-text">RedisEventAvailabilityCache</text>
+  <text x="446" y="770" class="small">RedisReservationCache • Valkey</text>
+  <rect x="430" y="787" width="360" height="70" rx="6" class="component"/>
+  <text x="446" y="811" class="component-title">«Component» Read adapters</text>
+  <text x="446" y="832" class="component-text">EventPersistenceAdapter</text>
+  <text x="446" y="851" class="small">JdbcReservationPersistenceAdapter • reader endpoint</text>
+
+  <!-- command-api container -->
+  <rect x="865" y="435" width="400" height="450" rx="10" class="container"/>
+  <path d="M875 436 H1255 Q1264 436 1264 445 V535 H866 V445 Q866 436 875 436 Z" class="container-header"/>
+  <text x="885" y="463" class="type">«Container • Spring Boot»</text>
+  <text x="885" y="489" class="element-title">command-api</text>
+  <text x="885" y="512" class="element-text">Caminho transacional de escrita</text>
+  <rect x="1065" y="493" width="178" height="30" rx="15" class="badge"/>
+  <text x="1154" y="513" text-anchor="middle" class="small">2..N tasks • Multi-AZ</text>
+
+  <rect x="885" y="555" width="360" height="60" rx="6" class="component"/>
+  <text x="901" y="579" class="component-title">«Component» HTTP commands</text>
+  <text x="901" y="600" class="component-text">Event / Reservation / CancellationController</text>
+  <rect x="885" y="627" width="360" height="68" rx="6" class="component"/>
+  <text x="901" y="651" class="component-title">«Component» Idempotency</text>
+  <text x="901" y="672" class="component-text">PersistentIdempotencyService</text>
+  <text x="901" y="690" class="small">JdbcIdempotencyStore • resultado durável por 24 h</text>
+  <rect x="885" y="707" width="360" height="68" rx="6" class="component"/>
+  <text x="901" y="731" class="component-title">«Component» Command use cases</text>
+  <text x="901" y="752" class="component-text">CreateEvent • CreateReservation</text>
+  <text x="901" y="770" class="small">CancelReservation • update condicional de inventário</text>
+  <rect x="885" y="787" width="360" height="70" rx="6" class="component"/>
+  <text x="901" y="811" class="component-title">«Component» Persistence + events</text>
+  <text x="901" y="832" class="component-text">JDBC adapters • transactional outbox</text>
+  <text x="901" y="851" class="small">invalidação de cache AFTER_COMMIT</text>
+
+  <!-- worker container -->
+  <rect x="1320" y="435" width="390" height="450" rx="10" class="container"/>
+  <path d="M1330 436 H1700 Q1709 436 1709 445 V535 H1321 V445 Q1321 436 1330 436 Z" class="container-header"/>
+  <text x="1340" y="463" class="type">«Container • Spring Boot»</text>
+  <text x="1340" y="489" class="element-title">worker</text>
+  <text x="1340" y="512" class="element-text">Outbox, expiração e notificação</text>
+  <rect x="1515" y="493" width="174" height="30" rx="15" class="badge"/>
+  <text x="1602" y="513" text-anchor="middle" class="small">2..N tasks • Multi-AZ</text>
+
+  <rect x="1340" y="555" width="350" height="60" rx="6" class="component"/>
+  <text x="1356" y="579" class="component-title">«Component» Outbox publisher</text>
+  <text x="1356" y="600" class="component-text">OutboxSqsPublisher • polling periódico</text>
+  <rect x="1340" y="627" width="350" height="68" rx="6" class="component"/>
+  <text x="1356" y="651" class="component-title">«Component» Expiration path</text>
+  <text x="1356" y="672" class="component-text">SqsExpirationConsumer • ExpireReservationService</text>
+  <text x="1356" y="690" class="small">ExpirationReconciler • relógio autoritativo no banco</text>
+  <rect x="1340" y="707" width="350" height="68" rx="6" class="component"/>
+  <text x="1356" y="731" class="component-title">«Component» Notification path</text>
+  <text x="1356" y="752" class="component-text">SqsReservationCreatedConsumer</text>
+  <text x="1356" y="770" class="small">ReservationEmailService • scheduler dedicado</text>
+  <rect x="1340" y="787" width="350" height="70" rx="6" class="component"/>
+  <text x="1356" y="811" class="component-title">«Component» Boundary adapters</text>
+  <text x="1356" y="832" class="component-text">JdbcOutbox / DeliveryStore • SQS • SES</text>
+  <text x="1356" y="851" class="small">concorrência e escala próprias do worker</text>
+
+  <!-- CloudWatch is deliberately outside the product boundary. -->
+  <rect x="1790" y="285" width="350" height="160" rx="9" class="external"/>
+  <text x="1815" y="313" class="type">«External Software System»</text>
+  <text x="1815" y="341" class="element-title">Amazon CloudWatch</text>
+  <text x="1815" y="369" class="element-text">Logs por runtime • Container Insights</text>
+  <text x="1815" y="393" class="element-text">métricas API/WAF • alarmes atuais</text>
+  <text x="1815" y="419" class="small">5xx • throttling • unhealthy targets</text>
+
+  <!-- External systems and explicit data paths -->
+  <text x="40" y="986" class="section-title">Sistemas externos e caminhos de dados</text>
+
+  <rect x="400" y="1000" width="360" height="155" rx="9" class="external"/>
+  <text x="420" y="1028" class="type">«External Software System»</text>
+  <text x="420" y="1056" class="element-title">Valkey Multi-AZ</text>
+  <text x="420" y="1083" class="element-text">Disponibilidade e reservas por chave</text>
+  <text x="420" y="1107" class="small">TTL curto • compartilhado entre réplicas</text>
+  <text x="420" y="1131" class="small">falha degrada para PostgreSQL sob limite</text>
+
+  <rect x="810" y="1000" width="430" height="155" rx="9" class="external"/>
+  <text x="830" y="1028" class="type">«External Software System»</text>
+  <text x="830" y="1056" class="element-title">Aurora PostgreSQL + RDS Proxy</text>
+  <rect x="830" y="1080" width="185" height="42" rx="5" class="external-accent"/>
+  <text x="922" y="1098" text-anchor="middle" class="component-title">read-only endpoint</text>
+  <text x="922" y="1115" text-anchor="middle" class="small">query → readers</text>
+  <rect x="1030" y="1080" width="190" height="42" rx="5" class="external-accent"/>
+  <text x="1125" y="1098" text-anchor="middle" class="component-title">read-write endpoint</text>
+  <text x="1125" y="1115" text-anchor="middle" class="small">command / worker → writer</text>
+  <text x="830" y="1144" class="small">fonte de verdade • schema e transações compartilhados</text>
+
+  <rect x="1290" y="1000" width="450" height="155" rx="9" class="external"/>
+  <text x="1310" y="1028" class="type">«External Software System»</text>
+  <text x="1310" y="1056" class="element-title">Amazon SQS</text>
+  <rect x="1310" y="1074" width="195" height="57" rx="5" class="external-accent"/>
+  <text x="1407" y="1096" text-anchor="middle" class="component-title">Expiration Queue</text>
+  <text x="1407" y="1117" text-anchor="middle" class="small">DLQ própria • redrive 5x</text>
+  <rect x="1520" y="1074" width="200" height="57" rx="5" class="external-accent"/>
+  <text x="1620" y="1096" text-anchor="middle" class="component-title">Notification Queue</text>
+  <text x="1620" y="1117" text-anchor="middle" class="small">DLQ própria • redrive 5x</text>
+  <text x="1310" y="1147" class="small">entrega at-least-once • filas e falhas isoladas</text>
+
+  <rect x="1790" y="1000" width="350" height="155" rx="9" class="external"/>
+  <text x="1810" y="1028" class="type">«External Software System»</text>
+  <text x="1810" y="1056" class="element-title">Amazon SES</text>
+  <text x="1810" y="1083" class="element-text">Aceita o e-mail de reserva temporária</text>
+  <text x="1810" y="1107" class="small">timeout do adapter: 3 s</text>
+  <text x="1810" y="1131" class="small">falha não reverte a reserva confirmada</text>
+
+  <!-- Resilience -->
+  <rect x="40" y="1205" width="1370" height="385" rx="10" class="section"/>
+  <text x="68" y="1238" class="section-title">Padrões de resiliência implementados</text>
+
+  <rect x="68" y="1260" width="640" height="120" rx="7" class="note"/>
+  <text x="88" y="1288" class="section-subtitle">Edge • contenção antecipada</text>
+  <text x="88" y="1313" class="section-text">IAM/SigV4 + resource policy + WAF reduzem tráfego inválido.</text>
+  <text x="88" y="1337" class="section-text">Throttling por rota protege containers e dependências sob rajadas.</text>
+  <text x="88" y="1361" class="small">A rejeição acontece antes do core privado.</text>
+
+  <rect x="68" y="1395" width="640" height="165" rx="7" class="note"/>
+  <text x="88" y="1423" class="section-subtitle">Query • degradação limitada</text>
+  <text x="88" y="1448" class="section-text">Cache-aside • timeout Valkey 100 ms • fallback PostgreSQL.</text>
+  <text x="88" y="1472" class="section-text">Circuito: 5 falhas em 10 s • bulkhead: 5 fallbacks concorrentes.</text>
+  <text x="88" y="1496" class="section-text">Ao exceder o limite de fallback, responde 503 sem amplificar carga.</text>
+  <text x="88" y="1525" class="small">A falha do cache não derruba o health check do container.</text>
+
+  <rect x="735" y="1260" width="647" height="140" rx="7" class="note"/>
+  <text x="755" y="1288" class="section-subtitle">Command • consistência transacional</text>
+  <text x="755" y="1313" class="section-text">Idempotência persistente + atualização condicional evitam efeito repetido</text>
+  <text x="755" y="1337" class="section-text">e oversell. Inventário, reserva e outbox são gravados na mesma transação.</text>
+  <text x="755" y="1361" class="small">A invalidação do cache é best-effort e ocorre somente após commit.</text>
+  <text x="755" y="1383" class="small">A escala horizontal respeita o envelope de conexões e locks do writer.</text>
+
+  <rect x="735" y="1415" width="647" height="145" rx="7" class="note"/>
+  <text x="755" y="1443" class="section-subtitle">Worker • recuperação assíncrona</text>
+  <text x="755" y="1468" class="section-text">Outbox + entrega at-least-once + retry SQS + DLQs após 5 recebimentos.</text>
+  <text x="755" y="1492" class="section-text">Expiração idempotente, deduplicação conhecida de e-mail e reconciliador</text>
+  <text x="755" y="1516" class="section-text">a cada 1 s recuperam mensagens atrasadas sem acoplar SES à reserva.</text>
+  <text x="755" y="1540" class="small">Expiration e Notification usam consumidores e agendamentos separados.</text>
+
+  <!-- Observability, with current and required target instrumentation separated. -->
+  <rect x="1440" y="1205" width="710" height="385" rx="10" class="section"/>
+  <text x="1468" y="1238" class="section-title">Observabilidade</text>
+  <rect x="1468" y="1260" width="654" height="145" rx="7" class="note"/>
+  <text x="1488" y="1288" class="section-subtitle">Implementado atualmente</text>
+  <text x="1488" y="1313" class="section-text">• X-Correlation-ID no HTTP e outboxEventId no assíncrono</text>
+  <text x="1488" y="1337" class="section-text">• Logs separados + access log JSON + Container Insights</text>
+  <text x="1488" y="1361" class="section-text">• /actuator/health + health checks do ALB + métricas API/WAF</text>
+  <text x="1488" y="1385" class="section-text">• Alarmes: API 5xx, throttling e targets unhealthy</text>
+
+  <rect x="1468" y="1420" width="654" height="140" rx="7" class="target-note"/>
+  <text x="1488" y="1448" class="section-subtitle">Requerido para operar high-load • ainda não instrumentado</text>
+  <text x="1488" y="1473" class="section-text">• p95/p99 por rota • cache hit rate • estado do circuito</text>
+  <text x="1488" y="1497" class="section-text">• backlog, idade da mensagem e DLQ por fila</text>
+  <text x="1488" y="1521" class="section-text">• conexões do banco, lock waits e saturação do writer</text>
+  <text x="1488" y="1545" class="small">Esses sinais devem orientar escala e controle de admissão.</text>
+
+  <!-- Legend -->
+  <line x1="48" y1="1640" x2="108" y2="1640" class="read"/>
+  <text x="122" y="1645" class="small">leitura / cache</text>
+  <line x1="260" y1="1640" x2="320" y2="1640" class="sync"/>
+  <text x="334" y="1645" class="small">chamada síncrona / escrita</text>
+  <line x1="545" y1="1640" x2="605" y2="1640" class="async"/>
+  <text x="619" y="1645" class="small">SQS assíncrono</text>
+  <line x1="805" y1="1640" x2="865" y2="1640" class="event"/>
+  <text x="879" y="1645" class="small">evento após commit</text>
+  <line x1="1070" y1="1640" x2="1130" y2="1640" class="telemetry"/>
+  <text x="1144" y="1645" class="small">telemetria</text>
+  <text x="2150" y="1645" text-anchor="end" class="small">C4: Person → Software System → Containers → Components → External Systems</text>
+</svg>

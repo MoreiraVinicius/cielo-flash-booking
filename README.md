@@ -20,23 +20,22 @@ A mesma imagem inicia em serviços separados de consultas, comandos e worker. Is
 Os planos são independentes e sequenciais:
 
 1. [Arquitetura demo](.specs/features/flash-booking-demo/design.md): econômica, completa e operável por uma pessoa.
-   
-<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/11a4876b-c114-4184-8090-03e04fa03de4" />
-
 
 2. [Arquitetura de alta carga](.specs/features/flash-booking-high-load/design.md): Multi-AZ, consultas e reservas escaladas separadamente.
 
 ## Diagramas de arquitetura
 
-### Demo
+### C4 Model — Demo
 
-![Diagrama da arquitetura AWS demo](docs/images/flash-booking-aws-demo-v5.png)
+![C4 Model da arquitetura demo](docs/images/flash-booking-c4-demo.svg)
 
-### Arquitetura-alvo high-load
+Esta vista apresenta o sistema, seus containers Java e as dependências AWS da demo, mantendo explícitos os limites de capacidade, resiliência e observabilidade desse ambiente econômico.
 
-![Diagrama da arquitetura AWS high-load](docs/images/flash-booking-aws-high-load-v2.svg)
+### C4 Model — Arquitetura-alvo high-load
 
-O diagrama high-load é a topologia-alvo. Ela permanece sem provisionamento e validação remota nesta entrega.
+![C4 Model da arquitetura high-load](docs/images/flash-booking-c4-high-load.svg)
+
+Esta vista mostra a evolução Multi-AZ, o escalonamento independente das três aplicações e os caminhos separados de leitura e escrita. A topologia high-load permanece sem provisionamento e validação remota nesta entrega.
 
 ### C4 Model — componentes Java
 
