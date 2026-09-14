@@ -146,10 +146,10 @@
 ## Handoff
 
 - **Feature**: `readme-visual-storytelling`
-- **Phase / Task**: Phase 3 / T07 - complete; independent verification pending
-- **Completed**: T01--T07. README, evidência de carga, harness multiprocesso e cinco novos SVGs foram implementados em commits atômicos.
-- **In-progress**: Executar o Verifier independente e versionar `validation.md`.
-- **Next step**: Rodar o sensor de discriminação, validar o estado final e commitar o relatório independente.
+- **Phase / Task**: Phase 3 / T07 - complete; independent verification passed
+- **Completed**: T01--T07. README, evidência de carga, harness multiprocesso e cinco novos SVGs foram implementados; o Verifier independente aprovou 9/9 critérios e matou 1/1 mutação do sensor.
+- **In-progress**: Nenhum.
+- **Next step**: Nenhum para esta feature. Uma execução futura do baseline pode substituir o snapshot histórico quando o Docker estiver saudável.
 - **Blockers**: Nenhum para a documentação. O backend do Docker Desktop está indisponível, então o baseline histórico single-endpoint foi preservado e rotulado; nenhuma nova métrica foi alegada.
-- **Uncommitted files**: Nenhum conhecido após o commit de fechamento de T07.
+- **Uncommitted files**: Nenhum conhecido após o commit do relatório independente.
 - **Branch**: `main`
