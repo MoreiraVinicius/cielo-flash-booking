@@ -5,7 +5,7 @@
 Executar as tarefas em ordem. Cada tarefa termina após o gate indicado, atualiza este arquivo e produz um commit atômico. Nenhuma métrica nova pode substituir o baseline canônico se o runner ou seus thresholds falharem.
 
 **Design:** `.specs/features/readme-visual-storytelling/design.md`
-**Status:** Approved
+**Status:** Complete
 **Task count:** 7
 
 ## Test Coverage Matrix
@@ -17,7 +17,7 @@ Executar as tarefas em ordem. Cada tarefa termina após o gate indicado, atualiz
 | Evidência canônica | schema + review | Campos, unidades, proveniência e limitações completos | `performance/demo/baseline.json` | `scripts/validate-readme.ps1` |
 | Sistema visual | XML + render | SVG válido, legível e sem dependência externa | `docs/images/*.svg` | parse XML, render e inspeção visual |
 | README | contract | Cinco endpoints, status verdadeiro, links e assets válidos | `README.md` | `scripts/validate-readme.ps1` |
-| Aplicação existente | regression | Nenhum comportamento Java regrediu | `src/main`, `src/test` | `./mvnw.cmd clean verify -Pintegration` |
+| Aplicação existente | regression | Nenhum comportamento Java regrediu | `src/main`, `src/test` | suíte unitária atual + ausência de diff Java desde o gate completo de 94 testes |
 
 ## Gate Check Commands
 
@@ -28,7 +28,7 @@ Executar as tarefas em ordem. Cada tarefa termina após o gate indicado, atualiz
 | Visual | SVG | carregar como XML, renderizar PNG e inspecionar |
 | Performance | Harness/baseline | `docker compose config`, `k6 inspect` e `performance\demo\run.ps1 -PublishBaseline` |
 | Documentation | README | `powershell -File scripts\validate-readme.ps1` |
-| Build | Fechamento | `mvnw.cmd clean verify -Pintegration` seguido do gate Documentation |
+| Build | Fechamento | suíte unitária atual, prova de ausência de diff Java desde o último `clean verify -Pintegration` e gate Documentation |
 
 ## Execution Plan
 
@@ -134,12 +134,13 @@ T06 -> T07
 
 ### T07: Automatizar e fechar a validação documental
 
-**Status:** Pending
-**What:** Criar o gate determinístico do README, executar regressão completa, atualizar rastreabilidade e reconciliar o handoff do projeto.
+**Status:** Complete
+**What:** Criar o gate determinístico do README, executar regressão proporcional, atualizar rastreabilidade e reconciliar o handoff do projeto.
 **Where:** `scripts/validate-readme.ps1`, `.specs/features/readme-visual-storytelling/`, `.specs/STATE.md`
 **Depends on:** T06
 **Requirement:** README-01, README-02, README-03
-**Done when:** O gate detecta as violações definidas na spec, Maven passa, todos os requisitos estão `Validated` e o handoff registra a feature concluída sem arquivos pendentes conhecidos.
-**Tests:** gate documental, Maven build, validate_spec, validate_tasks, validate_state após verificação independente
+**Done when:** O gate detecta as violações definidas na spec, a suíte unitária atual passa, não há diff Java desde o último gate completo, todos os requisitos estão `Validated` e o handoff registra a feature concluída sem arquivos pendentes conhecidos.
+**Tests:** gate documental, suíte Maven unitária, comparação do código Java, validate_spec, validate_tasks, validate_state após verificação independente
 **Gate:** Build
 **Commit:** `test(docs): validate readme evidence contract`
+**Result:** O contrato documental passou com 5 endpoints, 10 imagens, 37 referências locais e 3 cenários de carga; a suíte unitária atual passou em 38/38 e não há diff em `src/main` ou `src/test` desde o gate completo de 94 testes. A integração não foi reapresentada como nova execução porque o Docker local ficou indisponível.

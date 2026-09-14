@@ -6,10 +6,10 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 
 ## Goals
 
-- [ ] Explicar o produto, a regra de não vender além da capacidade e os cinco endpoints em leitura rápida.
-- [ ] Separar visualmente a demo validada da arquitetura high-load planejada.
-- [ ] Tornar rastreáveis o desenvolvimento orientado por especificação, os testes e o baseline de carga.
-- [ ] Organizar resiliência, segurança e observabilidade sem alegações acima da evidência disponível.
+- [x] Explicar o produto, a regra de não vender além da capacidade e os cinco endpoints em leitura rápida.
+- [x] Separar visualmente a demo validada da arquitetura high-load planejada.
+- [x] Tornar rastreáveis o desenvolvimento orientado por especificação, os testes e o baseline de carga.
+- [x] Organizar resiliência, segurança e observabilidade sem alegações acima da evidência disponível.
 
 ## Out of Scope
 
@@ -85,16 +85,16 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
-| README-01 | Entender o produto rapidamente | Specify | Approved |
-| README-02 | Distinguir entrega e evolução | Specify | Approved |
-| README-03 | Avaliar método e desempenho | Specify | Approved |
+| README-01 | Entender o produto rapidamente | Execute | Validated |
+| README-02 | Distinguir entrega e evolução | Execute | Validated |
+| README-03 | Avaliar método e desempenho | Execute | Validated |
 
 **Cobertura:** 3 requisitos, 9 critérios de aceitação, nenhum sem mapeamento.
 
 ## Success Criteria
 
-- [ ] O primeiro bloco do README responde o que é, o que foi entregue e qual é o limite do domínio.
-- [ ] A demo e a arquitetura high-load não podem ser confundidas visualmente ou textualmente.
-- [ ] Todas as imagens referenciadas existem, são SVGs válidos quando aplicável e têm descrição acessível.
-- [ ] O baseline publicado é local, reproduzível e não usa `TPS` como sinônimo de requisições HTTP por segundo.
-- [ ] O validador documental e os gates do projeto passam.
+- [x] O primeiro bloco do README responde o que é, o que foi entregue e qual é o limite do domínio.
+- [x] A demo e a arquitetura high-load não podem ser confundidas visualmente ou textualmente.
+- [x] Todas as imagens referenciadas existem, são SVGs válidos quando aplicável e têm descrição acessível.
+- [x] O baseline publicado é local, reproduzível e não usa `TPS` como sinônimo de requisições HTTP por segundo.
+- [x] O validador documental e os gates proporcionais do projeto passam.

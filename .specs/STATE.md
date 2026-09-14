@@ -145,11 +145,11 @@
 
 ## Handoff
 
-- **Feature**: `flash-booking-demo`
-- **Phase / Task**: Phase 5 / T29 - complete; provider-accurate throttling validation passed
-- **Completed**: T01--T29. A validação provider-accurate foi commitada em `67e8b4b`.
-- **In-progress**: Nenhum. T29 passou com a validação de throttling alinhada à semântica de melhor esforço do API Gateway. A demo foi destruída e o state foi verificado vazio.
-- **Next step**: Nenhum para a entrega atual. Se uma nova demonstração precisar ser aplicada, trate a identidade SES preexistente fora do state como decisão operacional antes do apply.
-- **Blockers**: Nenhum para a entrega validada. Uma nova aplicação pode exigir importar ou gerir condicionalmente a identidade SES existente fora do state. Docker Engine está saudável e Terraform é `1.16.1` com AWS provider `6.64.0`.
-- **Uncommitted files**: `README.md`, três diagramas em `docs/images/` e `docs/images/flash-booking-aws-high-load-v2.svg` são alterações externas a esta tarefa e não serão incluídos neste commit. `demo.tfvars` permanece ignorado e não contém credenciais commitadas.
+- **Feature**: `readme-visual-storytelling`
+- **Phase / Task**: Phase 3 / T07 - complete; independent verification pending
+- **Completed**: T01--T07. README, evidência de carga, harness multiprocesso e cinco novos SVGs foram implementados em commits atômicos.
+- **In-progress**: Executar o Verifier independente e versionar `validation.md`.
+- **Next step**: Rodar o sensor de discriminação, validar o estado final e commitar o relatório independente.
+- **Blockers**: Nenhum para a documentação. O backend do Docker Desktop está indisponível, então o baseline histórico single-endpoint foi preservado e rotulado; nenhuma nova métrica foi alegada.
+- **Uncommitted files**: Nenhum conhecido após o commit de fechamento de T07.
 - **Branch**: `main`
