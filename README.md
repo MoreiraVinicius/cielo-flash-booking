@@ -49,6 +49,12 @@ O diagrama apresenta os componentes implementados nos perfis `query-api`, `comma
 
 O fluxo separa a resposta síncrona do comando da publicação do outbox, das notificações, da expiração e da leitura cache-aside, incluindo retry, DLQ, reconciliação e fallback.
 
+## Idempotência
+
+Os comandos `POST /events`, `POST /events/{id}/reservations` e `DELETE /reservations/{id}` exigem `Idempotency-Key`. A primeira chamada grava no PostgreSQL a chave, o método, o alvo normalizado, o hash do payload, o status e o corpo da resposta. Um retry com o mesmo método, rota e corpo devolve o resultado já persistido, sem repetir o efeito de negócio. Reutilizar a mesma chave para um pedido diferente retorna `409`; enviá-la ausente retorna `400`, sem efeito. Falhas inesperadas `5xx` fazem rollback e podem ser tentadas novamente. O schema registra expiração em 24 horas para o registro de idempotência; a semântica completa está no [ADR 0007](docs/adr/0007-idempotencia-persistente-de-comandos.md).
+
+![Fluxo prático de idempotência](docs/images/flash-booking-idempotency.png)
+
 O índice consolidado está em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 A relação entre cliente, reserva e evento está em [docs/data-model.md](docs/data-model.md). A cobertura do case, com limites de evidência, está em [docs/case-requirements-evaluation.md](docs/case-requirements-evaluation.md).
