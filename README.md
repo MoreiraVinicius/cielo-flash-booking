@@ -210,5 +210,5 @@ Separa a transação síncrona da publicação e dos consumidores assíncronos, 
 | Modelo de dados | [Customer → Reservation → Event](docs/data-model.md) |
 | Decisões e trade-offs | [PostgreSQL autoritativo](docs/adr/0004-postgresql-como-fonte-autoritativa.md) · [cache](docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md) · [segurança](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md) · [serviços](docs/adr/0013-separar-servicos-de-consulta-e-comando.md) |
 | Operar ou apresentar a demo | [runbook](docs/demo-runbook.md) · [Postman](postman/README.md) · [custos](docs/cost-estimate.md) |
-| Perguntas de arquitetura | [perguntas e respostas](docs/perguntas-e-respostas.md) · [avaliação do case](docs/case-requirements-evaluation.md) |
+| Perguntas de arquitetura | [avaliação do case](docs/case-requirements-evaluation.md) · [PostgreSQL como fonte autoritativa](docs/adr/0004-postgresql-como-fonte-autoritativa.md) |
 | Carga local | [metodologia e limites](performance/demo/README.md) · [dados canônicos](performance/demo/baseline.json) |
