@@ -22,11 +22,11 @@
     <text class="small onDark" x="2" y="54">Alvo técnico; failover e escala ainda precisam de evidência.</text>
   </g>
 
-  <!-- VPC boundary -->
+  <!-- AWS Region boundary; the ribbon identifies the VPC-scoped resources -->
   <rect x="28" y="148" width="1544" height="642" rx="22" fill="#FFFFFF" stroke="#8CCDE7" stroke-width="2"/>
   <rect x="50" y="164" width="1500" height="42" rx="12" fill="#EAF8FE"/>
-  <text class="cardTitle" x="70" y="190">Amazon VPC · pelo menos 2 Availability Zones</text>
-  <text class="body" x="426" y="190">workloads privados · subnets de dados isoladas · rotas simétricas</text>
+  <text class="cardTitle" x="70" y="190">AWS Region</text>
+  <text class="body" x="178" y="190">VPC em pelo menos 2 AZs: ALB, ECS, Aurora e Valkey privados · serviços gerenciados regionais fora da VPC</text>
   <g transform="translate(1266 173)">
     <rect width="264" height="24" rx="12" fill="#DDF5FF"/>
     <circle cx="18" cy="12" r="6" fill="#00AEEF"/><circle cx="38" cy="12" r="6" fill="#204986"/>
@@ -90,8 +90,12 @@
   <text class="cardTitle" x="1016" y="353">RDS Proxy + Aurora</text><text class="body" x="1016" y="375">PostgreSQL Serverless v2</text><text class="small" x="1016" y="397">writer + reader Multi-AZ</text><text class="small" x="1016" y="417">pool e limite de conexões</text>
   <text class="cardTitle" x="782" y="499">Amazon SQS · isolamento por fluxo</text><text class="body" x="782" y="523">Expiration Queue + DLQ</text><text class="body" x="1002" y="523">Notification Queue + DLQ</text><text class="small" x="782" y="547">backlog e idade dirigem o autoscaling do worker</text><text class="small" x="782" y="566">redrive limitado · consumidores idempotentes</text>
   <text class="cardTitle" x="782" y="645">Amazon SES</text><text class="body" x="782" y="668">notificação desacoplada da reserva</text><text class="small" x="782" y="688">quota e falhas tratadas como sinais operacionais</text>
-  <path class="flow" d="M684 382 H760"/><path class="flow" d="M684 510 H718 V402 H994"/>
-  <path class="async" d="M684 650 H722 V526 H760"/><path class="async" d="M981 582 V616"/>
+  <path class="flow" d="M684 382 H760"/>
+  <path class="flow" d="M684 410 H704 V448 H1060 V436"/>
+  <path class="flow" d="M684 510 H716 V464 H1138 V436"/>
+  <path class="async" d="M684 622 H720 V514 H760"/>
+  <path class="async" d="M760 554 H742 V654 H684"/>
+  <path class="async" d="M684 682 H760"/>
 
   <!-- Operability cards -->
   <g filter="url(#shadow)">

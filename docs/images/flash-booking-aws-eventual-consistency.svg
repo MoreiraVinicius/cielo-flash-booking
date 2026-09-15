@@ -57,7 +57,7 @@
   </g>
   <text class="cardTitle" x="100" y="284">API Gateway REST</text>
   <text class="body" x="100" y="307">IAM / SigV4 + WAF</text>
-  <text class="small" x="100" y="326">POST /reservations</text>
+  <text class="small" x="90" y="326" style="font-size:10.5px">POST /events/{id}/reservations</text>
   <text class="cardTitle" x="332" y="284">Command API · ECS</text>
   <text class="body" x="332" y="307">valida e executa a regra</text>
   <text class="small" x="332" y="326">idempotência no escopo do evento</text>
@@ -95,19 +95,20 @@
   <text class="body" x="856" y="546">miss ou falha lê a fonte real</text>
   <text class="small" x="856" y="566">reserva também é lida aqui</text>
   <text class="cardTitle" x="1144" y="523">GET reserva</text>
-  <text class="body" x="1144" y="546">direto no RDS</text>
-  <text class="small" x="1144" y="566">sem Valkey</text>
+  <text class="body" x="1144" y="546" style="font-size:10px">GET /reservations/{id}</text>
+  <text class="small" x="1144" y="566">RDS direto · sem Valkey</text>
 
   <path class="lineCache" d="M316 526 H414"/>
   <text class="pill" x="336" y="514" fill="#008BC0">CONSULTA</text>
-  <path class="lineCache" d="M414 554 H348 V486 H958 V494"/>
-  <rect x="666" y="475" width="164" height="23" rx="11" fill="#E8F9FF"/>
-  <text class="pill" x="681" y="491" fill="#008BC0">MISS / FALHA → RDS</text>
+  <path class="lineCache" d="M414 554 H316"/>
+  <text class="pill" x="352" y="573" fill="#008BC0">HIT</text>
+  <path class="lineCache" d="M196 580 V592 H958 V580"/>
+  <rect x="532" y="579" width="254" height="24" rx="12" fill="#FFFFFF" stroke="#A8DFF2"/>
+  <text class="pill" x="548" y="596" fill="#008BC0">MISS / FALHA · QUERY API LÊ RDS</text>
   <path class="lineStrong" d="M1122 552 H1082"/>
   <path class="lineCache" d="M420 338 V367 H537 V494"/>
   <rect x="438" y="355" width="220" height="24" rx="12" fill="#E8F9FF"/>
   <text class="pill" x="452" y="372" fill="#008BC0">AFTER_COMMIT · EVICT BEST EFFORT</text>
-  <text class="small" x="686" y="603">Se a invalidação falhar, o TTL limita a janela; PostgreSQL continua correto.</text>
 
   <!-- Faixa 3: efeitos assíncronos -->
   <rect x="40" y="634" width="1270" height="310" rx="20" fill="#FFFFFF" stroke="#E9AAC6" filter="url(#shadow)"/>
@@ -125,9 +126,9 @@
     <rect x="1158" y="706" width="118" height="72" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
     <rect x="1158" y="798" width="118" height="72" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
   </g>
-  <text class="cardTitle" x="94" y="747">Transactional outbox</text>
+  <text class="cardTitle" x="94" y="747">Outbox no PostgreSQL</text>
   <text class="body" x="94" y="773">ReservationCreated</text>
-  <text class="body" x="94" y="795">ExpirationScheduled</text>
+  <text class="body" x="94" y="795" style="font-size:10.5px">ReservationExpirationScheduled</text>
   <text class="small" x="94" y="822">falha de publicação:</text>
   <text class="small" x="94" y="840">permanece PENDING</text>
   <text class="cardTitle" x="344" y="747">Worker · publisher</text>
@@ -136,10 +137,12 @@
   <text class="small" x="344" y="822">marca publicado somente</text>
   <text class="small" x="344" y="840">após aceite do SQS</text>
 
-  <text class="cardTitle" x="608" y="733">SQS · fila de expiração</text>
-  <text class="body" x="608" y="756">delay + DLQ · maxReceiveCount = 5</text>
-  <text class="cardTitle" x="608" y="825">SQS · fila de notificação</text>
-  <text class="body" x="608" y="848">redrive + DLQ · maxReceiveCount = 5</text>
+  <text class="cardTitle" x="608" y="730">SQS · fila de expiração</text>
+  <text class="small" x="608" y="750">ReservationExpirationScheduled</text>
+  <text class="small" x="608" y="767">delay + DLQ · maxReceiveCount = 5</text>
+  <text class="cardTitle" x="608" y="822">SQS · fila de notificação</text>
+  <text class="small" x="608" y="842">ReservationCreated</text>
+  <text class="small" x="608" y="859">redrive + DLQ · maxReceiveCount = 5</text>
   <text class="cardTitle" x="946" y="733">Consumer condicional</text>
   <text class="body" x="946" y="756">PENDING → EXPIRED</text>
   <text class="cardTitle" x="946" y="825">Consumer deduplicado</text>

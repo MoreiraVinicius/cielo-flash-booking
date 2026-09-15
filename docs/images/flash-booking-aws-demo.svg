@@ -23,11 +23,11 @@
     <text class="small onDark" x="2" y="54">Evidência histórica; não é ambiente ativo.</text>
   </g>
 
-  <!-- VPC boundary -->
+  <!-- AWS Region boundary; the ribbon identifies the VPC-scoped resources -->
   <rect x="28" y="148" width="1544" height="642" rx="22" fill="#FFFFFF" stroke="#8CCDE7" stroke-width="2"/>
   <rect x="50" y="164" width="1500" height="42" rx="12" fill="#EAF8FE"/>
-  <text class="cardTitle" x="70" y="190">Amazon VPC · 2 Availability Zones</text>
-  <text class="body" x="344" y="190">subnets públicas de entrada · privadas de aplicação · isoladas de dados</text>
+  <text class="cardTitle" x="70" y="190">AWS Region</text>
+  <text class="body" x="178" y="190">VPC em 2 AZs: ALB, ECS, RDS e Valkey privados · SQS, SES e controles são serviços regionais</text>
   <rect x="1280" y="173" width="250" height="24" rx="12" fill="#FFF2E0"/>
   <text class="pill" x="1296" y="189" fill="#A95C00">1 NAT GATEWAY · AZ A · LIMITAÇÃO DA DEMO</text>
 
@@ -88,8 +88,12 @@
   <text class="cardTitle" x="1016" y="353">Amazon RDS</text><text class="body" x="1016" y="375">PostgreSQL 16 · Single-AZ</text><text class="small" x="1016" y="397">db.t4g.micro · backups automáticos</text><text class="small" x="1016" y="414">credencial no Secrets Manager</text>
   <text class="cardTitle" x="782" y="495">Amazon SQS · filas independentes</text><text class="body" x="782" y="519">Expiration Queue + DLQ</text><text class="body" x="1002" y="519">Notification Queue + DLQ</text><text class="small" x="782" y="543">SSE · retenção 14 dias · redrive após 5 recebimentos</text><text class="small" x="782" y="562">at-least-once: consumidores condicionais ou deduplicados</text>
   <text class="cardTitle" x="782" y="639">Amazon SES</text><text class="body" x="782" y="662">identidade verificada · solicitação de envio de e-mail</text><text class="small" x="782" y="682">efeito assíncrono; não participa da resposta HTTP</text>
-  <path class="flow" d="M684 374 H760"/><path class="flow" d="M684 500 H718 V398 H994"/>
-  <path class="async" d="M684 637 H722 V522 H760"/><path class="async" d="M981 578 V610"/>
+  <path class="flow" d="M684 374 H760"/>
+  <path class="flow" d="M684 408 H704 V438 H1060 V424"/>
+  <path class="flow" d="M684 500 H716 V454 H1138 V424"/>
+  <path class="async" d="M684 618 H720 V512 H760"/>
+  <path class="async" d="M760 552 H742 V650 H684"/>
+  <path class="async" d="M684 678 H760"/>
 
   <!-- Operations cards -->
   <g filter="url(#shadow)">

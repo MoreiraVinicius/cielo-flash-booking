@@ -88,17 +88,17 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
-| AWSVIS-01 | Entender a fronteira de consistência | Execute | Implemented; final route review pending |
-| AWSVIS-02 | Entender os efeitos assíncronos | Execute | Implemented; final route review pending |
-| AWSVIS-03 | Comparar as escolhas AWS | Execute | Implemented; independent verification pending |
+| AWSVIS-01 | Entender a fronteira de consistência | Verify | Implemented; independent verification pending |
+| AWSVIS-02 | Entender os efeitos assíncronos | Verify | Implemented; independent verification pending |
+| AWSVIS-03 | Comparar as escolhas AWS | Verify | Implemented; independent verification pending |
 
 **Cobertura:** 3 requisitos, 10 critérios de aceitação, nenhum sem mapeamento.
 
 ## Success Criteria
 
-- [ ] Um leitor distingue estoque forte, disponibilidade eventual e efeitos assíncronos sem consultar outro documento.
-- [ ] As peças AWS da demo correspondem aos recursos existentes no Terraform.
-- [ ] A arquitetura high-load não é apresentada como implementada ou medida.
-- [ ] As três vistas usam texto SVG nativo e setas sem sobreposição.
-- [ ] O README e o gate documental referenciam somente imagens existentes e utilizadas.
+- [x] Um leitor distingue estoque forte, disponibilidade eventual e efeitos assíncronos sem consultar outro documento.
+- [x] As peças AWS da demo correspondem aos recursos existentes no Terraform.
+- [x] A arquitetura high-load não é apresentada como implementada ou medida.
+- [x] As três vistas usam texto SVG nativo e setas sem sobreposição.
+- [x] O README e o gate documental referenciam somente imagens existentes e utilizadas.
 - [ ] O Verifier independente aprova todos os critérios e mata ao menos uma mutação documental.

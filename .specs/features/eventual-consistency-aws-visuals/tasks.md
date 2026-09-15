@@ -117,12 +117,13 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07
 
 ### T07: Refinar rotas e fronteiras semânticas
 
-**Status:** Pending
+**Status:** Complete
 **What:** Mostrar as rotas HTTP e nomes de eventos completos, separar serviços regionais da VPC e encaminhar acessos ao banco, consumo SQS e solicitação SES sem cruzar cartões.
-**Where:** `docs/images/flash-booking-aws-eventual-consistency.svg`, `docs/images/flash-booking-aws-demo.svg`, `docs/images/flash-booking-aws-high-load.svg`, `scripts/validate-readme.ps1`, `.specs/features/eventual-consistency-aws-visuals/`, `.specs/STATE.md`
+**Where:** `README.md`, `docs/images/flash-booking-aws-eventual-consistency.svg`, `docs/images/flash-booking-aws-demo.svg`, `docs/images/flash-booking-aws-high-load.svg`, `scripts/validate-readme.ps1`, `.specs/features/eventual-consistency-aws-visuals/`, `.specs/STATE.md`
 **Depends on:** T06
 **Requirement:** AWSVIS-01, AWSVIS-02, AWSVIS-03
 **Done when:** Cache miss parte da Query API, o worker consome SQS e solicita SES, serviços regionais não aparecem dentro da VPC, as rotas/eventos estão completos e nenhum acesso ao RDS atravessa o Valkey.
 **Tests:** contrato dirigido das rotas, parse XML, três renders nativos e inspeção de endpoints das setas
 **Gate:** Visual + Documentation
 **Commit:** `fix(docs): clarify AWS boundaries and event routes`
+**Result:** Rotas e eventos completos; cache miss parte da Query API; worker liga SQS ao SES; VPC privada foi distinguida dos serviços regionais. Os três SVGs renderizaram sem recortes ou setas sobre cartões.

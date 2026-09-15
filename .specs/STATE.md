@@ -146,10 +146,10 @@
 ## Handoff
 
 - **Feature**: `eventual-consistency-aws-visuals`
-- **Phase / Task**: Execute / T06 complete; T07 pending
-- **Completed**: T01--T06. Três SVGs AWS integrados ao README, gate documental discriminante e quatro assets obsoletos removidos. Inventário: 13/13 imagens restantes usadas.
-- **In-progress**: T07: precisão das rotas HTTP, endpoints das setas e fronteiras regionais/VPC nos três SVGs.
-- **Next step**: Concluir T07, renderizar as vistas e executar Verifier independente com sensor isolado.
+- **Phase / Task**: Verify / T07 complete; independent verification pending
+- **Completed**: T01--T07. Três SVGs AWS integrados ao README, gate documental discriminante, rotas revisadas e quatro assets obsoletos removidos. Inventário: 13/13 imagens restantes usadas.
+- **In-progress**: Verifier independente da feature.
+- **Next step**: Executar revisão spec-anchored e sensor isolado; persistir `validation.md` e fechar rastreabilidade.
 - **Blockers**: Nenhum para a documentação; nenhuma infraestrutura será reaplicada.
 - **Uncommitted files**: Alterações Java, testes, README e `.tmp/` de trabalho paralelo preservadas e excluídas dos commits desta feature.
 - **Branch**: `main`

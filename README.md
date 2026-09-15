@@ -75,7 +75,7 @@ O caminho síncrono é curto e autoritativo:
 4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
 5. somente depois do commit o cache de disponibilidade do evento é invalidado.
 
-O caminho assíncrono começa **depois** da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
+O caminho assíncrono fica elegível **depois do commit** e não participa da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
 
 O prazo também prevalece no caminho síncrono. O PostgreSQL bloqueia a reserva e só então decide pelo próprio relógio: um `DELETE` antes de `expiresAt` retorna `CANCELLED`; em `expiresAt` ou depois retorna `EXPIRED`. A primeira transição devolve capacidade e invalida o cache; concorrentes apenas observam o estado terminal já persistido.
 
