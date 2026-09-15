@@ -6,7 +6,7 @@ Executar as tarefas em ordem. Cada tarefa atualiza este arquivo, passa pelo gate
 
 **Design:** `.specs/features/eventual-consistency-aws-visuals/design.md`
 **Status:** Approved
-**Task count:** 7
+**Task count:** 8
 
 ## Test Coverage Matrix
 
@@ -32,7 +32,7 @@ Executar as tarefas em ordem. Cada tarefa atualiza este arquivo, passa pelo gate
 ## Execution Plan
 
 ```text
-T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07
+T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 ```
 
 ## Task Breakdown
@@ -127,3 +127,16 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07
 **Gate:** Visual + Documentation
 **Commit:** `fix(docs): clarify AWS boundaries and event routes`
 **Result:** Rotas e eventos completos; cache miss parte da Query API; worker liga SQS ao SES; VPC privada foi distinguida dos serviços regionais. Os três SVGs renderizaram sem recortes ou setas sobre cartões.
+
+### T08: Cobrir todos os fatos do contrato visual
+
+**Status:** Complete
+**What:** Tornar o gate persistido suficiente para todos os conjuncts dos dez critérios e edge cases apontados pelo Verifier.
+**Where:** `docs/images/flash-booking-aws-eventual-consistency.svg`, `scripts/validate-readme.ps1`, `.specs/features/eventual-consistency-aws-visuals/`
+**Depends on:** T07
+**Requirement:** AWSVIS-01, AWSVIS-02, AWSVIS-03
+**Done when:** O gate afirma transação e ordenação, rotas diretas, autoridade do cache, publisher/consumers, recuperação, prazos, recursos demo e filas/status high-load sem reduzir as validações existentes.
+**Tests:** execução positiva, auditoria de assertivas por AC e sensores em cópias temporárias
+**Gate:** Documentation
+**Commit:** `test(docs): cover complete AWS visual contract`
+**Result:** Contrato expandido por AC com 13 rotas de seta e contagens mínimas. Gate positivo aprovado; 3/3 mutações de transação, worker→SES e DLQ high-load foram mortas em cópias temporárias, com status real idêntico antes/depois.

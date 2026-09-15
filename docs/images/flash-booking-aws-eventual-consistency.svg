@@ -143,10 +143,12 @@
   <text class="cardTitle" x="608" y="822">SQS · fila de notificação</text>
   <text class="small" x="608" y="842">ReservationCreated</text>
   <text class="small" x="608" y="859">redrive + DLQ · maxReceiveCount = 5</text>
-  <text class="cardTitle" x="946" y="733">Consumer condicional</text>
-  <text class="body" x="946" y="756">PENDING → EXPIRED</text>
-  <text class="cardTitle" x="946" y="825">Consumer deduplicado</text>
-  <text class="body" x="946" y="848">registro de entrega</text>
+  <text class="cardTitle" x="946" y="730">Worker consumer</text>
+  <text class="body" x="946" y="750">condicional e idempotente</text>
+  <text class="small" x="946" y="767">PENDING → EXPIRED</text>
+  <text class="cardTitle" x="946" y="822">Worker consumer</text>
+  <text class="body" x="946" y="842">deduplicado por registro</text>
+  <text class="small" x="946" y="859">solicita o SES</text>
   <text class="cardTitle" x="1180" y="733">PostgreSQL</text>
   <text class="body" x="1180" y="756">devolve vaga</text>
   <text class="cardTitle" x="1180" y="825">Amazon SES</text>
@@ -194,5 +196,5 @@
   <text class="small onDark" x="1376" y="870">Cache ou mensagem stale</text>
   <text class="small onDark" x="1376" y="889">não cria uma reserva.</text>
 
-  <text class="small" x="40" y="968">Escopo da consistência eventual: projeção de disponibilidade e efeitos pós-commit. Fonte de verdade: Amazon RDS for PostgreSQL.</text>
+  <text class="small" x="40" y="968">Falha assíncrona não altera a reserva PENDING nem o 201 já persistido. Fonte de verdade: Amazon RDS for PostgreSQL.</text>
 </svg>

@@ -88,9 +88,9 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
-| AWSVIS-01 | Entender a fronteira de consistência | Verify | Implemented; independent verification pending |
-| AWSVIS-02 | Entender os efeitos assíncronos | Verify | Implemented; independent verification pending |
-| AWSVIS-03 | Comparar as escolhas AWS | Verify | Implemented; independent verification pending |
+| AWSVIS-01 | Entender a fronteira de consistência | Verify | Verifier gap corrected; re-verification pending |
+| AWSVIS-02 | Entender os efeitos assíncronos | Verify | Verifier gap corrected; re-verification pending |
+| AWSVIS-03 | Comparar as escolhas AWS | Verify | Verifier gap corrected; re-verification pending |
 
 **Cobertura:** 3 requisitos, 10 critérios de aceitação, nenhum sem mapeamento.
 

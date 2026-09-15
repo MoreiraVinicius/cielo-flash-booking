@@ -181,21 +181,60 @@ $awsVisualContracts = @(
         ViewBox = '0 0 1600 980'
         Facts = @(
             'PostgreSQL · uma única transação',
+            'O comando termina no commit — antes da resposta HTTP',
+            'EFEITOS APÓS O COMMIT',
+            'Outbox no PostgreSQL',
+            'UPDATE estoque + INSERT reserva PENDING',
+            'UPSERT cliente + 2 eventos no outbox',
+            'commit atômico: tudo persiste ou nada persiste',
             '201 Created',
             'POST /events/{id}/reservations',
             'GET /events/{id}',
             'GET /reservations/{id}',
+            'Cache-aside somente no GET /events/{id}',
+            'RDS direto · sem Valkey',
             'TTL máximo: 1 segundo',
             'AFTER_COMMIT · EVICT BEST EFFORT',
             'MISS / FALHA · QUERY API LÊ RDS',
+            'cache nunca autoriza estoque',
             'ReservationCreated',
             'ReservationExpirationScheduled',
+            'poll a cada 1 segundo',
+            'falha de publicação:',
+            'permanece PENDING',
+            'Worker consumer',
+            'condicional e idempotente',
+            'deduplicado por registro',
+            'solicita o SES',
             'maxReceiveCount = 5',
             'Reconciliador',
+            '+ 5s',
+            'após expiresAt',
             '≤ 30s',
+            'SQS e SES não bloqueiam',
+            'Falha assíncrona não altera a reserva PENDING nem o 201 já persistido',
             'Sem oversell'
         )
-        Paths = @('M196 580 V592 H958 V580')
+        Paths = @(
+            'M258 297 H310',
+            'M530 297 H594',
+            'M996 297 H1074',
+            'M420 338 V367 H537 V494',
+            'M196 580 V592 H958 V580',
+            'M1122 552 H1082',
+            'M274 759 H322',
+            'M532 746 H586',
+            'M532 830 H586',
+            'M872 742 H924',
+            'M872 834 H924',
+            'M1108 742 H1158',
+            'M1108 834 H1158'
+        )
+        MinimumOccurrences = @(
+            @{ Text = 'maxReceiveCount = 5'; Count = 2 },
+            @{ Text = 'Worker consumer'; Count = 2 },
+            @{ Text = 'DLQ'; Count = 2 }
+        )
         ForbiddenFacts = @('POST /reservations', 'M414 554 H348 V486 H958 V494')
     },
     @{
@@ -210,18 +249,28 @@ $awsVisualContracts = @(
             'serviços regionais',
             '1 NAT GATEWAY',
             'AWS WAF + API Gateway',
+            'REST Regional',
             'VPC Link v2',
+            'Application Load Balancer interno',
             'Amazon ECS Fargate',
+            '1 task por serviço',
+            'Query API',
+            'Command API',
+            'Publisher + consumers',
             'PostgreSQL 16 · Single-AZ',
             'Valkey 7.2 · single-node',
             'Expiration Queue + DLQ',
             'Notification Queue + DLQ',
+            'Amazon SES',
             'Amazon CloudWatch',
             'AWS Secrets Manager',
             'AWS Budgets',
             'SECURITY GROUPS'
         )
         Paths = @('M684 408 H704 V438 H1060 V424', 'M684 500 H716 V454 H1138 V424', 'M760 552 H742 V650 H684', 'M684 678 H760')
+        MinimumOccurrences = @(
+            @{ Text = 'Queue + DLQ'; Count = 2 }
+        )
         ForbiddenFacts = @('Amazon VPC · 2 Availability Zones', 'M684 500 H718 V398 H994', 'M981 578 V610')
     },
     @{
@@ -234,6 +283,8 @@ $awsVisualContracts = @(
             'VPC em pelo menos 2 AZs',
             'serviços gerenciados regionais fora da VPC',
             'NAT GATEWAY POR AZ',
+            'Mesmos três modos Java',
+            'failover e escala ainda precisam de evidência',
             'tasks Multi-AZ · autoscaling independente',
             'QUERY · N TASKS',
             'COMMAND · N TASKS',
@@ -241,11 +292,17 @@ $awsVisualContracts = @(
             'Multi-AZ · primary + réplica',
             'RDS Proxy + Aurora',
             'PostgreSQL Serverless v2',
+            'Expiration Queue + DLQ',
+            'Notification Queue + DLQ',
             'CloudWatch + tracing',
             'Auto Scaling',
             'ALVO NÃO PROVISIONADO NEM MEDIDO'
         )
         Paths = @('M684 410 H704 V448 H1060 V436', 'M684 510 H716 V464 H1138 V436', 'M760 554 H742 V654 H684', 'M684 682 H760')
+        MinimumOccurrences = @(
+            @{ Text = 'Queue + DLQ'; Count = 2 },
+            @{ Text = 'N TASKS'; Count = 3 }
+        )
         ForbiddenFacts = @('Amazon VPC · pelo menos 2 Availability Zones', 'M684 510 H718 V402 H994', 'M981 582 V616')
     }
 )
@@ -269,6 +326,10 @@ foreach ($contract in $awsVisualContracts) {
     }
     foreach ($path in $contract.Paths) {
         Assert-Contains -Text $svgText -Expected $path -Context "$($contract.Name) routed-arrow contract"
+    }
+    foreach ($occurrence in $contract.MinimumOccurrences) {
+        $actualCount = [regex]::Matches($svgText, [regex]::Escape($occurrence.Text), [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count
+        Assert-Condition -Condition ($actualCount -ge $occurrence.Count) -Message "$($contract.Name) needs at least $($occurrence.Count) occurrences of '$($occurrence.Text)', found $actualCount"
     }
     foreach ($forbiddenFact in $contract.ForbiddenFacts) {
         Assert-Condition -Condition ($svgText.IndexOf($forbiddenFact, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) -Message "$($contract.Name) retains an obsolete or misleading fact: $forbiddenFact"
