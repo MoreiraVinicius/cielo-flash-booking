@@ -39,7 +39,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 
 ### T01: Explicar a fronteira de consistência
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar uma vista que separe transação autoritativa, disponibilidade em cache e efeitos assíncronos.
 **Where:** `docs/images/flash-booking-aws-eventual-consistency.svg`
 **Depends on:** none
@@ -48,6 +48,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 **Tests:** contrato de tokens derivado dos seis critérios e inspeção renderizada
 **Gate:** Visual
 **Commit:** `docs(visual): explain eventual consistency on AWS`
+**Result:** SVG XML válido, contrato de 13 fatos aprovado e render nativo inspecionado após correção de contraste.
 
 ### T02: Redesenhar a topologia AWS demo
 

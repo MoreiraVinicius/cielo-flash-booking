@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — consistência eventual na AWS</title>
+  <desc id="desc">Diagrama em três faixas. A criação de reserva confirma estoque, reserva e outbox em uma transação PostgreSQL antes da resposta HTTP 201. A disponibilidade de eventos usa Valkey como cache-aside com invalidação após commit e TTL máximo de um segundo. Depois do commit, o worker publica eventos do outbox em duas filas SQS, com consumidores idempotentes, filas de mensagens mortas, expiração, reconciliação e envio por SES.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8FCFF"/>
+      <stop offset="1" stop-color="#EEF7FC"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#061B4F"/>
+      <stop offset="1" stop-color="#204986"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#16375B" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowStrong" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#204986"/>
+    </marker>
+    <marker id="arrowCache" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#00AEEF"/>
+    </marker>
+    <marker id="arrowAsync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#D61F69"/>
+    </marker>
+    <style>
+      .title{font:700 34px Montserrat,'Segoe UI',Arial,sans-serif;fill:#fff}.subtitle{font:500 17px Montserrat,'Segoe UI',Arial,sans-serif;fill:#DDF5FF}.eyebrow{font:700 13px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:1.4px}.laneTitle{font:700 20px Montserrat,'Segoe UI',Arial,sans-serif;fill:#09285C}.laneNote{font:500 14px Montserrat,'Segoe UI',Arial,sans-serif;fill:#46617B}.cardTitle{font:700 16px Montserrat,'Segoe UI',Arial,sans-serif;fill:#102F5E}.body{font:500 13px Montserrat,'Segoe UI',Arial,sans-serif;fill:#29455F}.small{font:500 12px Montserrat,'Segoe UI',Arial,sans-serif;fill:#49627A}.onDark{fill:#DDF5FF!important}.onDarkTitle{fill:#FFFFFF!important}.pill{font:700 11px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:.35px}.metric{font:700 25px Montserrat,'Segoe UI',Arial,sans-serif;fill:#09285C}.metricLabel{font:600 13px Montserrat,'Segoe UI',Arial,sans-serif;fill:#385671}.lineStrong{fill:none;stroke:#204986;stroke-width:3;marker-end:url(#arrowStrong)}.lineCache{fill:none;stroke:#00AEEF;stroke-width:3;stroke-dasharray:9 7;marker-end:url(#arrowCache)}.lineAsync{fill:none;stroke:#D61F69;stroke-width:3;stroke-dasharray:10 7;marker-end:url(#arrowAsync)}
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="url(#page)"/>
+  <rect x="24" y="20" width="1552" height="108" rx="22" fill="url(#hero)"/>
+  <text class="eyebrow" x="56" y="50" fill="#63D5FF">CASE BACKEND · DISPONIBILIDADE EVENTUAL</text>
+  <text class="title" x="56" y="87">Onde o Flash Booking converge — e onde não pode divergir</text>
+  <text class="subtitle" x="56" y="114">PostgreSQL decide o estoque; Valkey acelera a leitura; outbox + SQS desacoplam efeitos após o commit.</text>
+
+  <g transform="translate(1120 44)">
+    <path d="M0 8 H52" stroke="#D7E6F5" stroke-width="3" marker-end="url(#arrowStrong)"/>
+    <text class="small onDark" x="66" y="13">síncrono / autoritativo</text>
+    <path d="M0 36 H52" stroke="#00AEEF" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#arrowCache)"/>
+    <text class="small onDark" x="66" y="41">convergência do cache</text>
+    <path d="M0 64 H52" stroke="#F45195" stroke-width="3" stroke-dasharray="10 7" marker-end="url(#arrowAsync)"/>
+    <text class="small onDark" x="66" y="69">efeito assíncrono</text>
+  </g>
+
+  <!-- Faixa 1: comando forte -->
+  <rect x="40" y="150" width="1270" height="220" rx="20" fill="#FFFFFF" stroke="#BCD4E7" filter="url(#shadow)"/>
+  <rect x="40" y="150" width="10" height="220" rx="5" fill="#204986"/>
+  <text class="eyebrow" x="72" y="180" fill="#204986">1 · CONSISTÊNCIA FORTE</text>
+  <text class="laneTitle" x="72" y="207">O comando termina no commit — antes da resposta HTTP</text>
+  <text class="laneNote" x="72" y="230">Não há reserva de estoque em cache, fila ou memória da aplicação.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="78" y="256" width="180" height="82" rx="14" fill="#F4F9FD" stroke="#91B6D3"/>
+    <rect x="310" y="256" width="220" height="82" rx="14" fill="#EEF9FE" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="594" y="248" width="402" height="100" rx="14" fill="#FFF8EA" stroke="#FF9900" stroke-width="2"/>
+    <rect x="1074" y="256" width="190" height="82" rx="14" fill="#EAF8F2" stroke="#3AA675" stroke-width="2"/>
+  </g>
+  <text class="cardTitle" x="100" y="284">API Gateway REST</text>
+  <text class="body" x="100" y="307">IAM / SigV4 + WAF</text>
+  <text class="small" x="100" y="326">POST /reservations</text>
+  <text class="cardTitle" x="332" y="284">Command API · ECS</text>
+  <text class="body" x="332" y="307">valida e executa a regra</text>
+  <text class="small" x="332" y="326">idempotência no escopo do evento</text>
+  <text class="cardTitle" x="616" y="276">PostgreSQL · uma única transação</text>
+  <text class="body" x="616" y="299">UPDATE estoque + INSERT reserva PENDING</text>
+  <text class="body" x="616" y="319">UPSERT cliente + 2 eventos no outbox</text>
+  <text class="small" x="616" y="339">commit atômico: tudo persiste ou nada persiste</text>
+  <text class="cardTitle" x="1096" y="284">201 Created</text>
+  <text class="body" x="1096" y="307">reserva PENDING</text>
+  <text class="small" x="1096" y="326">SQS e SES não bloqueiam</text>
+  <path class="lineStrong" d="M258 297 H310"/>
+  <path class="lineStrong" d="M530 297 H594"/>
+  <path class="lineStrong" d="M996 297 H1074"/>
+
+  <!-- Faixa 2: projeção eventual -->
+  <rect x="40" y="390" width="1270" height="224" rx="20" fill="#FFFFFF" stroke="#A8DFF2" filter="url(#shadow)"/>
+  <rect x="40" y="390" width="10" height="224" rx="5" fill="#00AEEF"/>
+  <text class="eyebrow" x="72" y="420" fill="#008BC0">2 · DISPONIBILIDADE EVENTUAL</text>
+  <text class="laneTitle" x="72" y="447">Cache-aside somente no GET /events/{id}</text>
+  <text class="laneNote" x="72" y="470">Uma leitura pode ficar momentaneamente antiga; o próximo comando ainda disputa estoque no PostgreSQL.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="78" y="494" width="238" height="86" rx="14" fill="#EEF9FE" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="414" y="494" width="246" height="86" rx="14" fill="#F3EEFF" stroke="#7B61E8" stroke-width="2"/>
+    <rect x="834" y="494" width="248" height="86" rx="14" fill="#FFF8EA" stroke="#FF9900" stroke-width="2"/>
+    <rect x="1122" y="494" width="150" height="86" rx="14" fill="#F4F9FD" stroke="#91B6D3"/>
+  </g>
+  <text class="cardTitle" x="100" y="523">Query API · ECS</text>
+  <text class="body" x="100" y="546">orquestra hit, miss e fallback</text>
+  <text class="small" x="100" y="566">cache nunca autoriza estoque</text>
+  <text class="cardTitle" x="436" y="523">Valkey 7.2 · single-node</text>
+  <text class="body" x="436" y="546">event-availability:{id}</text>
+  <text class="small" x="436" y="566">TTL máximo: 1 segundo</text>
+  <text class="cardTitle" x="856" y="523">PostgreSQL · autoridade</text>
+  <text class="body" x="856" y="546">miss ou falha lê a fonte real</text>
+  <text class="small" x="856" y="566">reserva também é lida aqui</text>
+  <text class="cardTitle" x="1144" y="523">GET reserva</text>
+  <text class="body" x="1144" y="546">direto no RDS</text>
+  <text class="small" x="1144" y="566">sem Valkey</text>
+
+  <path class="lineCache" d="M316 526 H414"/>
+  <text class="pill" x="336" y="514" fill="#008BC0">CONSULTA</text>
+  <path class="lineCache" d="M414 554 H348 V486 H958 V494"/>
+  <rect x="666" y="475" width="164" height="23" rx="11" fill="#E8F9FF"/>
+  <text class="pill" x="681" y="491" fill="#008BC0">MISS / FALHA → RDS</text>
+  <path class="lineStrong" d="M1122 552 H1082"/>
+  <path class="lineCache" d="M420 338 V367 H537 V494"/>
+  <rect x="438" y="355" width="220" height="24" rx="12" fill="#E8F9FF"/>
+  <text class="pill" x="452" y="372" fill="#008BC0">AFTER_COMMIT · EVICT BEST EFFORT</text>
+  <text class="small" x="686" y="603">Se a invalidação falhar, o TTL limita a janela; PostgreSQL continua correto.</text>
+
+  <!-- Faixa 3: efeitos assíncronos -->
+  <rect x="40" y="634" width="1270" height="310" rx="20" fill="#FFFFFF" stroke="#E9AAC6" filter="url(#shadow)"/>
+  <rect x="40" y="634" width="10" height="310" rx="5" fill="#D61F69"/>
+  <text class="eyebrow" x="72" y="664" fill="#B41759">3 · EFEITOS APÓS O COMMIT</text>
+  <text class="laneTitle" x="72" y="691">Outbox elimina o dual write; SQS permite repetição segura e recuperação</text>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="718" width="202" height="142" rx="14" fill="#FFF8EA" stroke="#FF9900" stroke-width="2"/>
+    <rect x="322" y="718" width="210" height="142" rx="14" fill="#FFF2F7" stroke="#D61F69" stroke-width="2"/>
+    <rect x="586" y="706" width="286" height="72" rx="14" fill="#FFF2F7" stroke="#D61F69"/>
+    <rect x="586" y="798" width="286" height="72" rx="14" fill="#FFF2F7" stroke="#D61F69"/>
+    <rect x="924" y="706" width="184" height="72" rx="14" fill="#F4F9FD" stroke="#91B6D3"/>
+    <rect x="924" y="798" width="184" height="72" rx="14" fill="#F4F9FD" stroke="#91B6D3"/>
+    <rect x="1158" y="706" width="118" height="72" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
+    <rect x="1158" y="798" width="118" height="72" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
+  </g>
+  <text class="cardTitle" x="94" y="747">Transactional outbox</text>
+  <text class="body" x="94" y="773">ReservationCreated</text>
+  <text class="body" x="94" y="795">ExpirationScheduled</text>
+  <text class="small" x="94" y="822">falha de publicação:</text>
+  <text class="small" x="94" y="840">permanece PENDING</text>
+  <text class="cardTitle" x="344" y="747">Worker · publisher</text>
+  <text class="body" x="344" y="773">poll a cada 1 segundo</text>
+  <text class="body" x="344" y="795">lote de até 100 eventos</text>
+  <text class="small" x="344" y="822">marca publicado somente</text>
+  <text class="small" x="344" y="840">após aceite do SQS</text>
+
+  <text class="cardTitle" x="608" y="733">SQS · fila de expiração</text>
+  <text class="body" x="608" y="756">delay + DLQ · maxReceiveCount = 5</text>
+  <text class="cardTitle" x="608" y="825">SQS · fila de notificação</text>
+  <text class="body" x="608" y="848">redrive + DLQ · maxReceiveCount = 5</text>
+  <text class="cardTitle" x="946" y="733">Consumer condicional</text>
+  <text class="body" x="946" y="756">PENDING → EXPIRED</text>
+  <text class="cardTitle" x="946" y="825">Consumer deduplicado</text>
+  <text class="body" x="946" y="848">registro de entrega</text>
+  <text class="cardTitle" x="1180" y="733">PostgreSQL</text>
+  <text class="body" x="1180" y="756">devolve vaga</text>
+  <text class="cardTitle" x="1180" y="825">Amazon SES</text>
+  <text class="body" x="1180" y="848">solicita e-mail</text>
+
+  <path class="lineAsync" d="M274 759 H322"/>
+  <path class="lineAsync" d="M532 746 H586"/>
+  <path class="lineAsync" d="M532 830 H586"/>
+  <path class="lineAsync" d="M872 742 H924"/>
+  <path class="lineAsync" d="M872 834 H924"/>
+  <path class="lineAsync" d="M1108 742 H1158"/>
+  <path class="lineAsync" d="M1108 834 H1158"/>
+  <rect x="322" y="882" width="786" height="38" rx="12" fill="#F7F9FB" stroke="#AAB9C6" stroke-dasharray="5 5"/>
+  <text class="body" x="344" y="906">Reconciliador usa o relógio do banco: recupera expirações atrasadas sem depender de uma única entrega SQS.</text>
+
+  <!-- Coluna de prazos e invariantes -->
+  <rect x="1332" y="150" width="228" height="794" rx="20" fill="#09285C" filter="url(#shadow)"/>
+  <text class="eyebrow" x="1356" y="184" fill="#63D5FF">LIMITES SAUDÁVEIS</text>
+  <text class="small onDark" x="1356" y="209">Convergência observável</text>
+
+  <rect x="1354" y="236" width="184" height="132" rx="16" fill="#FFFFFF"/>
+  <text class="metric" x="1376" y="280">≤ 1s</text>
+  <text class="metricLabel" x="1376" y="307">disponibilidade</text>
+  <text class="small" x="1376" y="330">TTL cobre falha de</text>
+  <text class="small" x="1376" y="349">invalidação do cache</text>
+
+  <rect x="1354" y="392" width="184" height="132" rx="16" fill="#FFFFFF"/>
+  <text class="metric" x="1376" y="436">+ 5s</text>
+  <text class="metricLabel" x="1376" y="463">após expiresAt</text>
+  <text class="small" x="1376" y="486">expiração saudável</text>
+  <text class="small" x="1376" y="505">com reconciliação</text>
+
+  <rect x="1354" y="548" width="184" height="132" rx="16" fill="#FFFFFF"/>
+  <text class="metric" x="1376" y="592">≤ 30s</text>
+  <text class="metricLabel" x="1376" y="619">requisição ao SES</text>
+  <text class="small" x="1376" y="642">não é garantia de</text>
+  <text class="small" x="1376" y="661">entrega na caixa postal</text>
+
+  <rect x="1354" y="704" width="184" height="194" rx="16" fill="#123B72" stroke="#4CAFE0"/>
+  <text class="eyebrow" x="1376" y="738" fill="#63D5FF">INVARIANTE</text>
+  <text class="cardTitle onDarkTitle" x="1376" y="770">Sem oversell</text>
+  <text class="small onDark" x="1376" y="798">O UPDATE condicional</text>
+  <text class="small onDark" x="1376" y="819">no PostgreSQL decide</text>
+  <text class="small onDark" x="1376" y="840">quem obtém a última vaga.</text>
+  <text class="small onDark" x="1376" y="870">Cache ou mensagem stale</text>
+  <text class="small onDark" x="1376" y="889">não cria uma reserva.</text>
+
+  <text class="small" x="40" y="968">Escopo da consistência eventual: projeção de disponibilidade e efeitos pós-commit. Fonte de verdade: Amazon RDS for PostgreSQL.</text>
+</svg>
