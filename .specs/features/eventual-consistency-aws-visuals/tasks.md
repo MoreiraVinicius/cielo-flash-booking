@@ -91,7 +91,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 
 ### T05: Validar o contrato das novas vistas
 
-**Status:** Pending
+**Status:** Complete
 **What:** Fazer o gate rejeitar fatos ausentes, status high-load incorreto, SVG inválido e detalhe desbalanceado, sem confundir menção no próprio validador com uso documental.
 **Where:** `scripts/validate-readme.ps1`
 **Depends on:** T04
@@ -100,6 +100,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 **Tests:** execução positiva e sensores em cópias temporárias
 **Gate:** Documentation
 **Commit:** `test(docs): validate AWS consistency visuals`
+**Result:** Gate positivo aprovado com 13 imagens e 6 details; sensores em cópias temporárias mataram alterações do TTL e do status high-load (exit 1 em ambos).
 
 ### T06: Remover assets obsoletos e fechar rastreabilidade
 

@@ -1,3 +1,8 @@
+param(
+    [string]$ReadmePath,
+    [string]$AwsVisualDirectory
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -36,7 +41,8 @@ function Resolve-RepositoryTarget {
         [string]$Target
     )
 
-    $withoutFragment = ($Target -split '#', 2)[0]
+    $cleanTarget = $Target.Trim('<', '>')
+    $withoutFragment = ($cleanTarget -split '#', 2)[0]
     $decoded = [uri]::UnescapeDataString($withoutFragment)
     $fullPath = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot $decoded))
     $insideRepository = $fullPath.StartsWith($RepositoryRoot, [System.StringComparison]::OrdinalIgnoreCase)
@@ -45,8 +51,19 @@ function Resolve-RepositoryTarget {
 }
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$readmePath = Join-Path $repositoryRoot 'README.md'
+$readmePath = if ([string]::IsNullOrWhiteSpace($ReadmePath)) {
+    Join-Path $repositoryRoot 'README.md'
+} else {
+    [IO.Path]::GetFullPath($ReadmePath)
+}
+Assert-Condition -Condition (Test-Path -LiteralPath $readmePath -PathType Leaf) -Message "README path does not exist: $readmePath"
 $readme = Get-Content -LiteralPath $readmePath -Raw
+$awsVisualRoot = if ([string]::IsNullOrWhiteSpace($AwsVisualDirectory)) {
+    Join-Path $repositoryRoot 'docs\images'
+} else {
+    [IO.Path]::GetFullPath($AwsVisualDirectory)
+}
+Assert-Condition -Condition (Test-Path -LiteralPath $awsVisualRoot -PathType Container) -Message "AWS visual directory does not exist: $awsVisualRoot"
 
 # Product scope and evidence must stay explicit.
 foreach ($requiredTruth in @(
@@ -81,7 +98,7 @@ Assert-Condition -Condition ($localReferences.Count -ge 30) -Message 'expected t
 
 # Images require useful alt text; SVGs must be valid standalone XML.
 $imageMatches = [regex]::Matches($readme, '!\[([^\]]*)\]\(([^)]+)\)')
-Assert-Condition -Condition ($imageMatches.Count -ge 10) -Message 'expected at least ten explanatory images'
+Assert-Condition -Condition ($imageMatches.Count -ge 13) -Message 'expected at least thirteen explanatory images'
 foreach ($match in $imageMatches) {
     $alt = $match.Groups[1].Value
     $target = $match.Groups[2].Value
@@ -104,6 +121,9 @@ foreach ($requiredAsset in @(
     'flash-booking-spec-driven.svg',
     'flash-booking-architecture-evolution.svg',
     'flash-booking-performance.svg',
+    'flash-booking-aws-eventual-consistency.svg',
+    'flash-booking-aws-demo.svg',
+    'flash-booking-aws-high-load.svg',
     'flash-booking-c4-demo.svg',
     'flash-booking-c4-high-load.svg',
     'flash-booking-c4-components.svg',
@@ -123,7 +143,89 @@ foreach ($obsoleteAsset in @(
 
 $detailsOpen = [regex]::Matches($readme, '<details>').Count
 $detailsClose = [regex]::Matches($readme, '</details>').Count
-Assert-Condition -Condition ($detailsOpen -eq 4 -and $detailsClose -eq 4) -Message "expected four balanced deep dives, found $detailsOpen/$detailsClose"
+Assert-Condition -Condition ($detailsOpen -eq 6 -and $detailsClose -eq 6) -Message "expected six balanced deep dives, found $detailsOpen/$detailsClose"
+
+# The AWS views have an explicit truth contract and must remain native, accessible SVGs.
+$awsVisualContracts = @(
+    @{
+        Name = 'flash-booking-aws-eventual-consistency.svg'
+        ViewBox = '0 0 1600 980'
+        Facts = @(
+            'PostgreSQL · uma única transação',
+            '201 Created',
+            'GET /events/{id}',
+            'GET reserva',
+            'TTL máximo: 1 segundo',
+            'AFTER_COMMIT · EVICT BEST EFFORT',
+            'ReservationCreated',
+            'ExpirationScheduled',
+            'maxReceiveCount = 5',
+            'Reconciliador',
+            '≤ 30s',
+            'Sem oversell'
+        )
+    },
+    @{
+        Name = 'flash-booking-aws-demo.svg'
+        ViewBox = '0 0 1600 900'
+        Facts = @(
+            'APLICADA',
+            'VALIDADA',
+            'DESTRUÍDA',
+            'Amazon VPC · 2 Availability Zones',
+            '1 NAT GATEWAY',
+            'AWS WAF + API Gateway',
+            'VPC Link v2',
+            'Amazon ECS Fargate',
+            'PostgreSQL 16 · Single-AZ',
+            'Valkey 7.2 · single-node',
+            'Expiration Queue + DLQ',
+            'Notification Queue + DLQ',
+            'Amazon CloudWatch',
+            'AWS Secrets Manager',
+            'AWS Budgets',
+            'SECURITY GROUPS'
+        )
+    },
+    @{
+        Name = 'flash-booking-aws-high-load.svg'
+        ViewBox = '0 0 1600 900'
+        Facts = @(
+            'NÃO PROVISIONADA',
+            'SEM CAPACIDADE MEDIDA',
+            'NAT GATEWAY POR AZ',
+            'tasks Multi-AZ · autoscaling independente',
+            'QUERY · N TASKS',
+            'COMMAND · N TASKS',
+            'WORKER · N TASKS',
+            'Multi-AZ · primary + réplica',
+            'RDS Proxy + Aurora',
+            'PostgreSQL Serverless v2',
+            'CloudWatch + tracing',
+            'Auto Scaling',
+            'ALVO NÃO PROVISIONADO NEM MEDIDO'
+        )
+    }
+)
+
+foreach ($contract in $awsVisualContracts) {
+    $svgPath = Join-Path $awsVisualRoot $contract.Name
+    $svgText = Get-Content -LiteralPath $svgPath -Raw
+    [xml]$svgXml = $svgText
+    $svgRoot = $svgXml.DocumentElement
+    Assert-Condition -Condition ($svgRoot.GetAttribute('viewBox') -eq $contract.ViewBox) -Message "$($contract.Name) has an unexpected canvas"
+    Assert-Condition -Condition ($svgRoot.GetAttribute('role') -eq 'img') -Message "$($contract.Name) is missing role=img"
+    Assert-Condition -Condition (-not [string]::IsNullOrWhiteSpace($svgRoot.GetAttribute('aria-labelledby'))) -Message "$($contract.Name) is missing an accessible label reference"
+    $titleNode = $svgRoot.SelectSingleNode("*[local-name()='title']")
+    $descriptionNode = $svgRoot.SelectSingleNode("*[local-name()='desc']")
+    Assert-Condition -Condition ($null -ne $titleNode -and -not [string]::IsNullOrWhiteSpace($titleNode.InnerText)) -Message "$($contract.Name) is missing a native title"
+    Assert-Condition -Condition ($null -ne $descriptionNode -and -not [string]::IsNullOrWhiteSpace($descriptionNode.InnerText)) -Message "$($contract.Name) is missing a native description"
+    Assert-Condition -Condition ($svgText -notmatch '(?i)<foreignObject|<image\b') -Message "$($contract.Name) contains raster or foreignObject content"
+    Assert-Condition -Condition ($svgText -notmatch '(?i)terraform') -Message "$($contract.Name) contains implementation-tool noise"
+    foreach ($fact in $contract.Facts) {
+        Assert-Contains -Text $svgText -Expected $fact -Context "$($contract.Name) truth contract"
+    }
+}
 
 # The public contract is exactly the five routes from the case.
 $endpointMatches = [regex]::Matches($readme, '(?m)^\| `(POST|GET|DELETE)` \| `([^`]+)` \|')
