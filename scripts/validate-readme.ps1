@@ -139,6 +139,35 @@ foreach ($obsoleteAsset in @(
     'flash-booking-aws-high-load-v2.svg'
 )) {
     Assert-Condition -Condition ($readme.IndexOf($obsoleteAsset, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) -Message "obsolete architecture asset is still referenced: $obsoleteAsset"
+    Assert-Condition -Condition (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot "docs\images\$obsoleteAsset"))) -Message "obsolete architecture asset still exists: $obsoleteAsset"
+}
+
+# A filename mentioned in a cleanup list is not usage: only Markdown links count.
+$imageRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'docs\images'))
+$documentFiles = @(Get-ChildItem -LiteralPath $repositoryRoot -Recurse -File -Filter '*.md' | Where-Object {
+    $_.FullName -notmatch '[\\/](\.git|target|\.tmp|\.codex|\.agents)[\\/]'
+})
+$referencedImages = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($document in $documentFiles) {
+    $documentText = Get-Content -LiteralPath $document.FullName -Raw
+    foreach ($reference in [regex]::Matches($documentText, '\]\(([^)]+)\)')) {
+        $target = $reference.Groups[1].Value.Trim('<', '>')
+        if ($target -match '^(https?://|mailto:|#|data:|[a-z]+://)') {
+            continue
+        }
+        $decoded = [uri]::UnescapeDataString(($target -split '#', 2)[0])
+        if ([string]::IsNullOrWhiteSpace($decoded)) {
+            continue
+        }
+        $resolved = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName $decoded))
+        if ($resolved.StartsWith(($imageRoot + [IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase)) {
+            $referencedImages.Add($resolved) | Out-Null
+        }
+    }
+}
+$imageInventory = @(Get-ChildItem -LiteralPath $imageRoot -File)
+foreach ($asset in $imageInventory) {
+    Assert-Condition -Condition ($referencedImages.Contains($asset.FullName)) -Message "image has no documentation link: $($asset.Name)"
 }
 
 $detailsOpen = [regex]::Matches($readme, '<details>').Count

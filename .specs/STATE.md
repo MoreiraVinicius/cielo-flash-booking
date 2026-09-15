@@ -145,11 +145,11 @@
 
 ## Handoff
 
-- **Feature**: `readme-visual-storytelling`
-- **Phase / Task**: Phase 3 / T07 - complete; independent verification passed
-- **Completed**: T01--T07. README, evidência de carga, harness multiprocesso e cinco novos SVGs foram implementados; o Verifier independente aprovou 9/9 critérios e matou 1/1 mutação do sensor.
-- **In-progress**: Nenhum.
-- **Next step**: Nenhum para esta feature. Uma execução futura do baseline pode substituir o snapshot histórico quando o Docker estiver saudável.
-- **Blockers**: Nenhum para a documentação. O backend do Docker Desktop está indisponível, então o baseline histórico single-endpoint foi preservado e rotulado; nenhuma nova métrica foi alegada.
-- **Uncommitted files**: Nenhum conhecido após o commit do relatório independente.
+- **Feature**: `eventual-consistency-aws-visuals`
+- **Phase / Task**: Execute / T06 complete; T07 pending
+- **Completed**: T01--T06. Três SVGs AWS integrados ao README, gate documental discriminante e quatro assets obsoletos removidos. Inventário: 13/13 imagens restantes usadas.
+- **In-progress**: T07: precisão das rotas HTTP, endpoints das setas e fronteiras regionais/VPC nos três SVGs.
+- **Next step**: Concluir T07, renderizar as vistas e executar Verifier independente com sensor isolado.
+- **Blockers**: Nenhum para a documentação; nenhuma infraestrutura será reaplicada.
+- **Uncommitted files**: Alterações Java, testes, README e `.tmp/` de trabalho paralelo preservadas e excluídas dos commits desta feature.
 - **Branch**: `main`
