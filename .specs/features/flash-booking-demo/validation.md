@@ -1,16 +1,16 @@
 # Flash Booking Demo Validation
 
-**Date**: 2026-09-14
+**Date**: 2026-09-15
 **Spec**: `.specs/features/flash-booking-demo/spec.md`  
-**Diff range**: `37e45ca..2869392` (`2869392` adds Compose readiness handling)  
+**Reviewed commits**: `db604d0` (contrato e documentação) e `2809840` (implementação e testes), inspecionados separadamente porque commits visuais estão intercalados
 **Verifier**: independent agent (author != verifier)
 **Throttling semantics**: [AWS documents throttles and quotas as best-effort targets](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html).
 
 ## Validation
 
-**Result:** PASS
+**Result:** PASS no escopo da regra de prazo de cancelamento
 
-The local implementation, tests, static infrastructure checks, and two behavior-level mutants are sound. Authorized remote validation closed the runtime, DLQ and delivery-SLO evidence gaps. API Gateway throttling is assessed by effective method settings and a recorded signed-burst outcome because its throttle limits are best-effort targets, not deterministic `429` admission. The current v1 correction was compiled and passed all 38 unit tests on 2026-09-14. Its affected integration tests compile and specify the new contract, but were not re-executed because Docker was unavailable; no Terraform or AWS validation was requested for this code-only review.
+A regra vigente de DEMO-03 passa nos testes unitários e nos quatro cenários PostgreSQL de `ReservationDeadlineIT`. O PostgreSQL descartável disponível era 17.5. O target oficial PostgreSQL 16/Testcontainers e o Full gate completo permanecem pendentes e não são alegados por esta verificação. As evidências anteriores dos demais critérios continuam registradas abaixo; este passe atualiza apenas o escopo dos commits `db604d0` e `2809840`.
 
 ## Task completion
 
@@ -34,7 +34,7 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 | Reserve-4 | GET returns reservation fields and event reference `{id, name}` without capacity/availability | `ReservationQueryControllerIT.java:63-75` — status, event identity/name, absence of capacity/availability, customer, quantity and expiry | PASS (compiled; runtime rerun pending Docker) |
 | Reserve-5 | Reservation query reads PostgreSQL directly and is independent of Valkey | `GetReservationServiceTest.java:42-51` — two calls reach the persistence port twice; `ReservationQueryControllerIT.java:96-105` — paused Valkey still returns `200` | PASS (unit); integration rerun pending Docker |
 | Reserve-6 | Invalid customer is `400` with no reservation | `ReservationControllerIT.java:115-122` — `400`, capacity unchanged, zero writes | PASS |
-| Expire-1 | Cancellation returns capacity exactly once | `ReservationQueryControllerIT.java:147-161` — repeated cancellation, status `CANCELLED`, capacity asserted | PASS |
+| Expire-1 | Antes do prazo, DELETE retorna `200`, `CANCELLED` e `CANCELLED_BY_REQUEST`; no prazo/depois, retorna `200`, `EXPIRED` e `RESERVATION_DEADLINE_REACHED`; a decisão ocorre após o lock e a capacidade volta uma vez | `ReservationDeadlineIT.java:106-113` — `status().isOk()`, `jsonPath("$.status").value("CANCELLED")` e código/descrição; `:121-138` — `isOk()`, `EXPIRED`, motivo, repetição e worker sem segundo efeito; `:146-157` — lock atravessa o prazo e `assertTerminalState(..., "EXPIRED", ...)`; `:213-226` — estado, motivo e `available == 10` | PASS |
 | Expire-2 | Due reservation expires and returns capacity by +5s | `SqsExpirationConsumerIT.java:89-96` — before `expiresAt + 5s`, `EXPIRED`, available `10` | PASS |
 | Expire-3 | Duplicate expiration has no second effect | `SqsExpirationConsumerIT.java:126-128` — `EXPIRED`, available `10`; `:149-152` concurrent duplicate check | PASS |
 | Expire-4 | Failed expiration retries then reaches DLQ | Remote 2026-09-10: malformed expiration payload logged five retries and then appeared in the expiration DLQ; `data-plane.tftest.hcl:25-27` asserts the configured redrive relationship | PASS |
@@ -66,13 +66,13 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 | Runtime-5 | No console resource creation | `demo-runbook.md:70` documents Terraform-only creation | PASS (reviewed contract; remote execution remains unobserved) |
 | Runtime-6 | 1h30 runbook directs destroy/verification | `demo-runbook.md:90-103` — destroy and state-list procedure | PASS |
 
-**Spec-anchored status**: 43/43 criteria pass. Local and static criteria cite executable evidence. AWS runtime criteria cite dated remote observations; none is treated as covered solely because a description exists.
+**Spec-anchored status**: PASS para a regra de prazo de Expire-1. Os demais critérios mantêm a evidência canônica anterior; não foram reexecutados neste passe.
 
 ## Edge cases
 
 - [x] Non-positive capacity/quantity: `EventControllerIT.java:103-120` and `ReservationControllerIT.java:106-122`.
 - [x] Missing event has no partial effects: `ReservationControllerIT.java:143-153`.
-- [x] Cancel/expire duplicate races return capacity once: `ReservationConcurrencyIT.java:90-108`; `SqsExpirationConsumerIT.java:132-152`.
+- [x] DELETE antes/depois do prazo, espera por lock e disputa com worker preservam o terminal correto e devolvem capacidade uma vez: `ReservationDeadlineIT.java:102-178`; assertions persistidas em `:212-226`.
 - [x] Delayed SQS is repaired by reconciler: `ExpirationReconcilerIT.java:56-66`.
 - [x] Event cache failure falls back with configured 100ms timeout: `EventControllerIT.java:154-169`.
 - [x] Reservation query is independent of Valkey: `GetReservationServiceTest.java:42-51`; `ReservationQueryControllerIT.java:96-105`.
@@ -81,22 +81,29 @@ T01--T29 are marked `Complete`. The demo teardown completed with Terraform state
 
 ## Discrimination sensor
 
-Scratch used a detached temporary worktree at `2869392`; no `git stash` was used. The real-tree porcelain baseline and post-cleanup state were identical: `README.md` modified and four pre-existing untracked documentation/instruction files.
+O sensor atual usou um worktree temporário detached em `56a75b5`; nenhum `git stash` foi usado. O porcelain real imediatamente antes e depois foi idêntico: `?? .tmp/`. Esse diretório preexistente contém o PostgreSQL descartável usado pelos testes.
 
 | Mutation | Location | Targeted test | Outcome |
 | --- | --- | --- | --- |
 | Replace `AWS_IAM` with `NONE` on POST `/events` | `infra/modules/edge-observability/main.tf:232` | `terraform test` edge module | **Killed**: assertion `edge-observability.tftest.hcl:57` failed, observing `authorization is "NONE"`. |
 | Change atomic decrement to increment | `JdbcInventoryOperations.java:23` | `ReservationConcurrencyIT` | **Killed**: test errored on PostgreSQL `event_check` after availability became `11` for capacity `10`; failure surfaces from `ReservationConcurrencyIT.java:76`. |
+| Trocar `clock_timestamp()` por `statement_timestamp()` na observação pós-lock | `JdbcReservationPersistenceAdapter.java:128` | `ReservationDeadlineIT.cancel_whenLockWaitCrossesDeadline_usesDatabaseTimeAfterTheLock` | **Killed**: `ReservationDeadlineIT.java:157` esperava `EXPIRED`; o mutante persistiu `CANCELLED`, observado pela assertion em `:215`. |
 
-**Sensor result**: 2/2 killed, 0 survived. Worktree was removed successfully.
+**Sensor result**: 1/1 mutante da regra de prazo morto, 0 sobreviveu; 3/3 no inventário desta tabela. O worktree foi removido.
 
 ## Gates
 
 | Gate | Result |
 | --- | --- |
-| Current Java compile + unit suite | PASS on 2026-09-14 — fresh compilation of 77 production sources; 38 tests passed, 0 failed, 0 skipped. |
+| Current unit suite | PASS em 2026-09-15 — 47 testes, 0 falhas, 0 erros, 0 ignorados, com Java 21.0.12.1. |
+| `ReservationDeadlineIT` no PostgreSQL descartável | PASS em PostgreSQL 17.5 — 4 testes, 0 falhas, 0 erros, 0 ignorados. |
+| Target oficial PostgreSQL 16/Testcontainers | PENDING — Docker está indisponível; este passe não alega execução no target oficial. |
+| Full gate `./mvnw clean verify -Pintegration` | PENDING — não executado; o passe atual rodou o gate unitário e somente os quatro ITs da regra de prazo. |
 | `validate_spec.py` | PASS — 0 errors, 0 warnings |
 | `validate_tasks.py` | PASS — 0 errors, 0 warnings |
+| `validate_state.py flash-booking-demo` | PASS — 0 errors. |
+| `scripts/validate-readme.ps1` | PASS — 5 endpoints, 13 images, 41 referências locais e 3 cenários de desempenho. |
+| `git diff --check db604d0^ db604d0` e `git diff --check 2809840^ 2809840` | PASS — commits avaliados explicitamente, sem usar range contínuo. |
 | `git diff --check 37e45ca..2c6723c` | PASS |
 | Maven Build (`clean verify -Pintegration`) | PASS before smoke-only commit `2869392`: 38 unit + 56 integration = 94 passed, 0 failed, 0 skipped. `2869392` changes only readiness logic in `scripts/compose-smoke.ps1`. |
 | Compose smoke at `2869392` | PASS from cold start: waits for query/command health, exercises endpoints and Mailpit, then tears down. |
@@ -107,7 +114,7 @@ Scratch used a detached temporary worktree at `2869392`; no `git stash` was used
 
 ## Case BackEnd 1 report
 
-All five required routes have integration assertions: event creation/availability in `EventControllerIT.java:74-149`, reservation creation in `ReservationControllerIT.java:64-171`, reservation query in `ReservationQueryControllerIT.java:62-101`, and cancellation in `ReservationQueryControllerIT.java:124-161`. Automated local evidence also covers concurrent API instances, oversell prevention, expiry, idempotency, explicit problem errors, Docker Compose, README/runbook, and PostgreSQL-backed integrity. AWS runtime behavior has dated remote evidence for authorization, CIDR admission, queues, e-mail delivery, resource creation and the effective throttling targets.
+All five required routes have integration assertions: event creation/availability in `EventControllerIT.java:74-149`, reservation creation in `ReservationControllerIT.java:64-171`, reservation query in `ReservationQueryControllerIT.java:62-101`, and cancellation in `ReservationDeadlineIT.java:102-178`. Automated local evidence also covers concurrent API instances, oversell prevention, expiry, idempotency, explicit problem errors, Docker Compose, README/runbook, and PostgreSQL-backed integrity. AWS runtime behavior has dated remote evidence for authorization, CIDR admission, queues, e-mail delivery, resource creation and the effective throttling targets.
 
 ## Fix plans
 
@@ -115,9 +122,40 @@ All five required routes have integration assertions: event creation/availabilit
 
 ## Summary
 
-**Overall**: PASS — 43/43 ACs pass under the revised, provider-accurate throttling criteria.
-**What works**: local command/query flows, transactional inventory/outbox, event availability cache fallback/invalidation, direct PostgreSQL reservation queries, idempotency, expiry/reconciliation, notification flow, remote Terraform runtime, IAM boundary, CIDR admission, both DLQs, and the measured SES acceptance SLO.
-**Next step**: none. A future requirement for deterministic `429` admission requires a separate architecture decision and implementation task.
+**Overall**: PASS no escopo da regra de prazo de cancelamento; esta execução não substitui um Full gate atual de toda a feature.
+**What works**: DELETE antes do prazo termina em CANCELLED; no prazo ou depois termina em EXPIRED; a decisão usa o relógio PostgreSQL após o lock; repetição e disputa com o worker devolvem capacidade uma vez.
+**Next step**: executar PostgreSQL 16 via Testcontainers e `./mvnw clean verify -Pintegration` quando Docker estiver disponível.
+
+## Verificação atual da regra de prazo
+
+**Escopo**: commits `db604d0` e `2809840`, inspecionados individualmente. Os commits visuais entre eles não pertencem a esta validação.
+**Veredito do escopo**: PASS.
+
+| Fatia do contrato | Resultado definido pela spec | Evidência `file:line` + assertion expression | Resultado |
+| --- | --- | --- | --- |
+| DELETE antes de `expiresAt` | HTTP `200`, `CANCELLED`, `CANCELLED_BY_REQUEST` e capacidade devolvida uma vez | `ReservationDeadlineIT.java:106-113` — `status().isOk()`, `jsonPath("$.status").value("CANCELLED")`, `jsonPath("$.closureReason.code").value("CANCELLED_BY_REQUEST")`; `:213-226` — `isEqualTo(status/reasonCode/reasonDescription)` e `isEqualTo(10)` | PASS |
+| Fronteira exata em `expiresAt` | O terminal é `EXPIRED` com `RESERVATION_DEADLINE_REACHED` | `ReservationTest.java:58-64` — `reservation.cancel(EXPIRES_AT)`, `status() == EXPIRED` e motivo exato; `JdbcReservationPersistenceAdapter.java:133-144` — somente `observed_at < expires_at` escolhe CANCELLED, e o complemento escolhe EXPIRED | PASS |
+| DELETE depois de `expiresAt` | HTTP `200`, `EXPIRED`, motivo de prazo; retries e worker não repetem o efeito | `ReservationDeadlineIT.java:121-138` — `status().isOk()`, `jsonPath("$.status").value("EXPIRED")`, motivo exato, respostas repetidas `EXPIRED`, `expire(...).isFalse()` e uma única `evict(eventId)`; `:213-226` — estado/motivo persistidos e `available == 10` | PASS |
+| Espera por lock atravessa o prazo | O instante PostgreSQL depois do lock prevalece e produz `EXPIRED` | `ReservationDeadlineIT.java:146-157` — segura `FOR UPDATE`, espera a sessão bloquear e o relógio alcançar o prazo, então `assertTerminalState(..., "EXPIRED", ...)`; `JdbcReservationPersistenceAdapter.java:122-149` — `FOR UPDATE` precede o CTE que avalia `clock_timestamp()` | PASS |
+| DELETE concorre com worker | O estado final é `EXPIRED` e a capacidade volta exatamente uma vez | `ReservationDeadlineIT.java:161-178` — duas operações partem do mesmo latch e `assertTerminalState(..., "EXPIRED", ...)`; `:213-226` — motivo exato e `available == 10` | PASS |
+| Atomicidade e encerramento já efetivado | Estado/motivo e incremento pertencem à mesma transação; perdedor não incrementa nem invalida novamente | `CancelReservationService.java:30-44` — `@Transactional`, release condicional, `inventoryOperations.increment(...)` e evento; `CancelReservationServiceTest.java:43-56` — `verify(inventory, never()).increment(...)` e `verify(publisher, never()).publishEvent(...)` quando já terminal | PASS |
+
+O inventário de testes cresce de 96 para 101 anotações `@Test` no commit `2809840` (+5). A inspeção do diff não encontrou exclusão, skip ou enfraquecimento de assertion. A implementação mantém a decisão temporal no adaptador JDBC, usa lock pessimista por uma exigência concreta de consistência e deixa a transação curta no serviço Spring.
+
+### Gate e sensor deste escopo
+
+- Unitário: Maven 3.9.10 com Java 21, alvo `test`; 47/47 PASS.
+- PostgreSQL descartável 17.5: Maven 3.9.10 com `-Dtest.postgres.url=jdbc:postgresql://127.0.0.1:55433/flash_booking_test -Dtest.postgres.username=postgres -Dtest.postgres.password= -Dit.test=ReservationDeadlineIT -Pintegration verify`; 4/4 PASS.
+- Sensor: 1/1 morto ao substituir o instante pós-lock por `statement_timestamp()`; a assertion `ReservationDeadlineIT.java:157` observou `CANCELLED` em vez de `EXPIRED`.
+- Isolamento: worktree removido; porcelain real permaneceu `?? .tmp/` antes e depois.
+- Estrutura e diff: `validate_spec.py`, `validate_tasks.py` e os dois `git diff --check` explícitos passam.
+
+### Gaps ranqueados
+
+1. **P1 — target oficial pendente.** PostgreSQL 16/Testcontainers não foi executado porque Docker está indisponível.
+2. **P1 — Full gate pendente.** `./mvnw clean verify -Pintegration` não foi executado neste passe; o PASS se limita à regra de prazo comprovada pelos gates acima.
+
+Nenhum defeito de implementação foi confirmado no escopo revisado.
 
 ## Independent verification
 

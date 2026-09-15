@@ -145,11 +145,11 @@
 
 ## Handoff
 
-- **Feature**: `eventual-consistency-aws-visuals`
-- **Phase / Task**: Verify / T07 complete; independent verification pending
-- **Completed**: T01--T07. Três SVGs AWS integrados ao README, gate documental discriminante, rotas revisadas e quatro assets obsoletos removidos. Inventário: 13/13 imagens restantes usadas.
-- **In-progress**: Verifier independente da feature.
-- **Next step**: Executar revisão spec-anchored e sensor isolado; persistir `validation.md` e fechar rastreabilidade.
-- **Blockers**: Nenhum para a documentação; nenhuma infraestrutura será reaplicada.
-- **Uncommitted files**: Alterações Java, testes, README e `.tmp/` de trabalho paralelo preservadas e excluídas dos commits desta feature.
+- **Feature**: `flash-booking-demo`
+- **Phase / Task**: Execute concluído; regra de precedência do prazo verificada independentemente
+- **Completed**: DEMO-03 validado. Antes de `expiresAt`, `DELETE` termina em `CANCELLED`; no instante do prazo ou depois, termina em `EXPIRED`. O relógio PostgreSQL é observado após o lock e a capacidade volta uma única vez. Gate unitário 47/47, `ReservationDeadlineIT` 4/4 no PostgreSQL 17.5 e sensor 1/1 morto.
+- **In-progress**: none
+- **Next step**: Retomar a avaliação arquitetural pela garantia de entrega da outbox antes de propor outra mudança.
+- **Blockers**: PostgreSQL 16/Testcontainers e o Full gate permanecem pendentes enquanto Docker estiver indisponível; não bloqueiam o PASS específico da regra de prazo executada em PostgreSQL 17.5.
+- **Uncommitted files**: Nenhum desta verificação. Alterações ainda abertas da feature `eventual-consistency-aws-visuals` foram preservadas fora desta entrega.
 - **Branch**: `main`
