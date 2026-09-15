@@ -157,3 +157,69 @@ Code quality is surgical and consistent with the existing Spring/JDBC boundaries
 The lightweight sensor used a detached scratch worktree based on `6597aa8` and injected memoization into `GetReservationService`, targeting `GetReservationServiceTest.java:42-51`. The mutant was killed: `get_whenCalledTwice_readsThePersistencePortTwice` expected two calls to `ReservationReader.findById` and observed one. Result: 1/1 killed, 0 survived. The scratch worktree was removed and real-tree porcelain returned to the baseline containing only this `validation.md` update.
 
 **Scoped verdict**: PASS — the code-only cache-scope correction satisfies the affected v1 criteria, the discrimination sensor distinguishes a reintroduced reservation cache, and no code-quality gap remains. Runtime execution of the affected integration tests remains explicitly pending because Docker is unavailable; their sources compile and the limitation does not convert high-load draft design into delivered behavior.
+
+## Independent verification — bounded idempotency window
+
+- **Verifier date**: 2026-09-15
+- **Reviewed diff**: `30ca0f4^..f86f6ed` (`30ca0f4` and `f86f6ed`)
+- **Verifier**: independent sub-agent (author != verifier)
+- **Scope**: current idempotency criteria in `spec.md:99-106`, AD-012 in `.specs/STATE.md:87-93`, `design.md:119-129,166`, ADR 0007, and T13 in `tasks.md:230-239`. No Docker, Testcontainers, PostgreSQL, Terraform, or AWS command was run.
+
+### Scoped verdict
+
+**Overall**: NOT FULLY VERIFIED — PASS for static implementation, configuration behavior, unit execution, and test compilation; PostgreSQL-dependent replay/reclaim/cleanup behavior remains pending runtime execution. Evidence-or-zero does not treat compiled `*IT.java` sources as executed scenarios.
+
+| Contract slice | Spec-defined outcome | Evidence | Result |
+| --- | --- | --- | --- |
+| Replay before expiry | Same unexpired key and fingerprint returns the stored response without another effect | `PersistentIdempotencyService.java:28-48`; `PersistentIdempotencyServiceTest.java:45-62` asserts stored `201` and no completion/new action; `IdempotencyControllerIT.java:74-96` asserts equal bodies and one event | PASS for orchestration/unit; PostgreSQL IT compiled, not executed |
+| Conflict before expiry | Different operation, target, or payload under an unexpired key returns `409` without the command effect | `JdbcIdempotencyStore.java:32-47` leaves an unexpired row unchanged; `PersistentIdempotencyServiceTest.java:64-78` asserts `ResourceConflictException`; `IdempotencyControllerIT.java:99-115` asserts `409`, `resource-conflict`, and one event | PASS for orchestration/unit/static SQL; PostgreSQL IT compiled, not executed |
+| Bounded 24-hour window and atomic reclaim | At or after `expires_at`, uniqueness and `ON CONFLICT` allow one claimant; a new 24-hour window is measured by PostgreSQL after acquiring the conflicting row lock | `JdbcIdempotencyStore.java:27-47` uses the unique key, `clock_timestamp()`, and conditional `ON CONFLICT DO UPDATE`; `V1__create_flash_booking_schema.sql:59-69` provides the unique key and timestamp constraints; `IdempotencyControllerIT.java:119-157` asserts two parallel retries create exactly one new effect, keep one record, and restore a future expiry | PASS by static PostgreSQL semantics and compiled regression contract; runtime PostgreSQL evidence pending |
+| Final responses and transient failures | Final domain responses, including capacity `409`, are stored; unexpected `5xx` paths do not complete and roll back the claim | `PersistentIdempotencyServiceTest.java:80-111` asserts persisted `409` and no completion on unexpected failure; `PersistentIdempotencyIT.java:50-64` asserts the failed claim is rolled back | PASS for unit behavior; rollback IT compiled, not executed |
+| Bounded, indexable cleanup | The worker selects at most the configured limit using a stable DB cutoff, skips locked rows, and revalidates expiry before deletion | `JdbcIdempotencyStore.java:79-96` uses `statement_timestamp()`, `LIMIT ?`, `FOR UPDATE SKIP LOCKED`, the captured `id`, and a final `clock_timestamp()` predicate; `V1__create_flash_booking_schema.sql:97` indexes `expires_at`; `PersistentIdempotencyIT.java:68-86` asserts a batch of two, only expired rows, and preservation of an active row | PASS static/query-shape; PostgreSQL IT compiled, not executed |
+| Worker/all activation | Cleanup runs only in worker or all mode and scheduling uses the typed cleanup settings | `IdempotencyRecordCleaner.java:9-29` has `@Profile({"worker", "all"})`, typed properties, and bounded deletion; `application.yml:41-45` supplies the v1 defaults | PASS static |
+| Typed binding, validation, and environment override | Missing values use safe defaults; explicit invalid values fail startup; environment variables bind explicit units/values | `IdempotencyCleanupProperties.java:9-27`; `FlashBookingApplication.java:8-10`; `IdempotencyCleanupPropertiesTest.java:20-64` asserts defaults, environment override, `batch-size` bounds, and duration bounds | PASS — 8/8 configuration tests executed within the 46-test quick suite |
+| Schema evolution | No migration is added when the existing table, uniqueness, timestamps, constraint, and cleanup index already support the new behavior | No path under `src/main/resources/db/migration/` changed in `30ca0f4^..f86f6ed`; existing support is at `V1__create_flash_booking_schema.sql:59-69,97` | PASS — no unnecessary migration |
+
+### PostgreSQL concurrency review
+
+- `ON CONFLICT` locks the conflicting unique row before evaluating its `WHERE`/`SET` action. The reclaim predicate at `JdbcIdempotencyStore.java:41` and the new `created_at`/`expires_at` expressions at `:39-40` therefore use the PostgreSQL wall clock after the wait instead of shortening the next window by lock-wait time.
+- Concurrent post-expiry retries serialize on `idempotency_key`; one update reports one affected row and executes the command, while later contenders observe the refreshed, unexpired row and replay or conflict through `PersistentIdempotencyService.java:28-48`.
+- Cleanup first uses the stable `statement_timestamp()` cutoff at `JdbcIdempotencyStore.java:87`, preserving the `expires_at` index access path, then locks a bounded ordered set with `LIMIT ? FOR UPDATE SKIP LOCKED` at `:88-90`. A claimant that already holds the row is skipped; a claimant waiting behind cleanup inserts/reclaims after deletion. The delete also joins the captured `id` and rechecks expiry at `:94-95`, so a refreshed identity/expiry is not deleted.
+
+These are static conclusions about PostgreSQL semantics, not observations from this verification run.
+
+### Gate evidence
+
+| Check | Result |
+| --- | --- |
+| Quick suite | PASS — 46 tests, 0 failures, 0 errors, 0 skipped. The eight new `IdempotencyCleanupPropertiesTest` cases are present in `target/surefire-reports/TEST-com.cielo.flashbooking.application.idempotency.IdempotencyCleanupPropertiesTest.xml`. |
+| Test-tree compilation | PASS — all production and test sources, including `IdempotencyControllerIT` and `PersistentIdempotencyIT`, compiled. Compilation is not recorded as PostgreSQL execution. |
+| Integration/Full gate | NOT RUN by instruction — `./mvnw verify -Pintegration` would start Testcontainers/PostgreSQL. |
+| Diff hygiene | PASS — `git diff --check 30ca0f4^ f86f6ed` produced no output. |
+| Migration scope | PASS — the reviewed range contains no migration change. |
+
+**Test integrity**: the quick-suite count increased from 38 before the correction to 46 after it (+8 configuration-binding cases), with no deletion or weakened assertion found in the reviewed test diff. The PostgreSQL `*IT` changes add the expired-key concurrency contract and keep the prior replay/conflict assertions.
+
+### Code quality
+
+The change is scoped to the active idempotency contract and its documentation. `IdempotencyCleanupProperties` is registered through `@ConfigurationPropertiesScan`, uses explicit `Duration` values and bounded startup validation, and the cleaner follows the established worker/all profile convention. JDBC remains the appropriate boundary for the PostgreSQL-specific `ON CONFLICT` and `SKIP LOCKED` semantics. No unrelated abstraction, dependency, public API, or schema change was introduced. The two missing concurrency-specific assertions are recorded below rather than silently counted as coverage.
+
+### Discrimination sensor
+
+A repository archive of `f86f6ed` was expanded into an isolated scratch copy. The sensor recreated the pre-hardening defect in `IdempotencyCleanupProperties`: `Integer` became primitive `int`, and the null-only default became `batchSize == 0 ? 500 : batchSize`. The targeted command ran only `IdempotencyCleanupPropertiesTest`, without Docker or external services.
+
+| Mutation | Targeted assertion | Outcome |
+| --- | --- | --- |
+| Convert explicit zero into the default, allowing `batch-size: 0` to bypass `@Min(1)` | `IdempotencyCleanupPropertiesTest.java:47-51` — context must fail for `0`, `-1`, and `10001` | KILLED — 8 tests ran and the zero case failed at line 51 because the mutated context started successfully (1 expected mutant failure, 0 errors) |
+
+**Sensor result**: 1/1 killed, 0 survived. An initial invocation accidentally targeted the real unmutated `pom.xml` and was discarded as invalid evidence; the counted invocation used the scratch `pom.xml` explicitly. Both scratch copies and archives were removed. Real-tree porcelain matched the clean pre-sensor baseline afterward.
+
+No SQL mutation was attempted: without an executed PostgreSQL test, a fabricated SQL sensor would provide no discrimination evidence.
+
+### Ranked gaps
+
+1. **P1 verification gap — PostgreSQL scenarios not executed.** Replay/conflict against the changed `ON CONFLICT`, concurrent post-expiry reclaim, transaction rollback, and bounded cleanup are defined by `IdempotencyControllerIT.java:74-157` and `PersistentIdempotencyIT.java:50-86`, but this run only compiled them. Run the Full gate with Docker/Testcontainers before claiming a fresh runtime PASS for T13.
+2. **P1 test-specificity gap — no lock-wait boundary assertion.** `IdempotencyControllerIT.java:119-157` expires a row and races two requests, but it does not hold the old row lock long enough to prove that the new `created_at`/`expires_at` window starts after the wait or assert an approximately 24-hour interval. The production SQL is statically correct at `JdbcIdempotencyStore.java:39-41`; a PostgreSQL integration test should discriminate `clock_timestamp()` in `SET` from the former pre-lock `EXCLUDED` timestamps.
+3. **P1 test-specificity gap — no cleanup-versus-reclaim race.** `PersistentIdempotencyIT.java:68-86` proves bounded sequential deletion and preservation of an already-active row, but does not race cleanup with reactivation. The SQL is statically safe at `JdbcIdempotencyStore.java:84-95`; add synchronized PostgreSQL coverage for both lock orders and confirm the refreshed record survives.
+
+No implementation defect was confirmed in `30ca0f4^..f86f6ed`. Gaps 1-3 are verification gaps. The orchestrator recorded the reusable test-specificity findings as candidate lessons `L-001` and `L-002` after this independent review.

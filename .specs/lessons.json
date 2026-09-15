@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::teste de expiracao dependente de lock deve manter o lock anterior e provar que a nova janela comeca apos sua liberacao",
+      "text": "Teste de expiração dependente de lock deve manter o lock anterior e provar que a nova janela começa após sua liberação.",
+      "signal": "ac_gap",
+      "scope": "postgresql-idempotency",
+      "status": "candidate",
+      "features": [
+        "flash-booking-demo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/flash-booking-demo/validation.md:213 (postgresql-idempotency)",
+        ".specs/features/flash-booking-demo/validation.md:222 (postgresql-idempotency)"
+      ],
+      "created": "2026-09-15T08:37:46Z",
+      "last_seen": "2026-09-15T08:38:17Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::limpeza e reativacao concorrentes da mesma linha devem ser testadas nas duas ordens de aquisicao do lock",
+      "text": "Limpeza e reativação concorrentes da mesma linha devem ser testadas nas duas ordens de aquisição do lock.",
+      "signal": "ac_gap",
+      "scope": "postgresql-retention",
+      "status": "candidate",
+      "features": [
+        "flash-booking-demo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/flash-booking-demo/validation.md:214 (postgresql-retention)",
+        ".specs/features/flash-booking-demo/validation.md:223 (postgresql-retention)"
+      ],
+      "created": "2026-09-15T08:37:47Z",
+      "last_seen": "2026-09-15T08:38:17Z"
+    }
+  ]
+}
