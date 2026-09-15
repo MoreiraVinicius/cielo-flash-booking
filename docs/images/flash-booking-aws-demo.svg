@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — topologia AWS da demo</title>
+  <desc id="desc">Topologia AWS efetivamente provisionada para a demo do Flash Booking. API Gateway e WAF protegem a borda; VPC Link v2 e Application Load Balancer interno encaminham para três serviços Amazon ECS Fargate. RDS PostgreSQL Single-AZ é a fonte de verdade, Valkey single-node acelera consultas, duas filas SQS com DLQs suportam expiração e notificação, e SES envia e-mails. CloudWatch, Secrets Manager e Budgets cobrem operação. A infraestrutura foi aplicada, validada e destruída.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F8FCFF"/><stop offset="1" stop-color="#EDF7FC"/></linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#061B4F"/><stop offset="1" stop-color="#204986"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#16375B" flood-opacity="0.12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 Z" fill="#204986"/></marker>
+    <marker id="arrowAsync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 Z" fill="#D61F69"/></marker>
+    <style>
+      .title{font:700 34px Montserrat,'Segoe UI',Arial,sans-serif;fill:#fff}.subtitle{font:500 16px Montserrat,'Segoe UI',Arial,sans-serif;fill:#DDF5FF}.eyebrow{font:700 12px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:1.3px}.column{font:700 18px Montserrat,'Segoe UI',Arial,sans-serif;fill:#09285C}.columnNote{font:500 12px Montserrat,'Segoe UI',Arial,sans-serif;fill:#547086}.cardTitle{font:700 15px Montserrat,'Segoe UI',Arial,sans-serif;fill:#102F5E}.body{font:500 12px Montserrat,'Segoe UI',Arial,sans-serif;fill:#29455F}.small{font:500 11px Montserrat,'Segoe UI',Arial,sans-serif;fill:#587086}.pill{font:700 10px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:.4px}.onDark{fill:#DDF5FF!important}.onDarkTitle{fill:#FFFFFF!important}.flow{fill:none;stroke:#204986;stroke-width:3;marker-end:url(#arrow)}.async{fill:none;stroke:#D61F69;stroke-width:3;stroke-dasharray:9 7;marker-end:url(#arrowAsync)}.observe{fill:none;stroke:#8296A8;stroke-width:2;stroke-dasharray:3 6}
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="url(#page)"/>
+  <rect x="24" y="20" width="1552" height="108" rx="22" fill="url(#hero)"/>
+  <text class="eyebrow" x="56" y="50" fill="#63D5FF">TOPOLOGIA AWS · DEMO ECONÔMICA</text>
+  <text class="title" x="56" y="87">Flash Booking — recursos realmente provisionados</text>
+  <text class="subtitle" x="56" y="113">Uma VPC em 2 AZs, workloads privados e três modos Java independentes no Amazon ECS Fargate.</text>
+  <g transform="translate(1192 43)">
+    <rect width="106" height="28" rx="14" fill="#D8F4E8"/><text class="pill" x="20" y="19" fill="#157A52">APLICADA</text>
+    <rect x="116" width="106" height="28" rx="14" fill="#D8F4E8"/><text class="pill" x="131" y="19" fill="#157A52">VALIDADA</text>
+    <rect x="232" width="112" height="28" rx="14" fill="#E8EEF4"/><text class="pill" x="246" y="19" fill="#425B70">DESTRUÍDA</text>
+    <text class="small onDark" x="2" y="54">Evidência histórica; não é ambiente ativo.</text>
+  </g>
+
+  <!-- VPC boundary -->
+  <rect x="28" y="148" width="1544" height="642" rx="22" fill="#FFFFFF" stroke="#8CCDE7" stroke-width="2"/>
+  <rect x="50" y="164" width="1500" height="42" rx="12" fill="#EAF8FE"/>
+  <text class="cardTitle" x="70" y="190">Amazon VPC · 2 Availability Zones</text>
+  <text class="body" x="344" y="190">subnets públicas de entrada · privadas de aplicação · isoladas de dados</text>
+  <rect x="1280" y="173" width="250" height="24" rx="12" fill="#FFF2E0"/>
+  <text class="pill" x="1296" y="189" fill="#A95C00">1 NAT GATEWAY · AZ A · LIMITAÇÃO DA DEMO</text>
+
+  <!-- Column panels -->
+  <rect x="50" y="224" width="294" height="536" rx="18" fill="#F6FAFD" stroke="#C9DBE8"/>
+  <rect x="364" y="224" width="348" height="536" rx="18" fill="#F1FAFE" stroke="#A8DFF2"/>
+  <rect x="732" y="224" width="498" height="536" rx="18" fill="#FFFBF5" stroke="#F0D29B"/>
+  <rect x="1250" y="224" width="300" height="536" rx="18" fill="#F7F9FB" stroke="#CDD8E2"/>
+  <text class="eyebrow" x="72" y="254" fill="#204986">01 · BORDA E ENTRADA</text>
+  <text class="column" x="72" y="280">Único caminho público</text>
+  <text class="columnNote" x="72" y="300">Controles antes da rede privada</text>
+  <text class="eyebrow" x="386" y="254" fill="#008BC0">02 · CORE DO PRODUTO</text>
+  <text class="column" x="386" y="280">Amazon ECS Fargate</text>
+  <text class="columnNote" x="386" y="300">1 task por serviço · mesma imagem no ECR</text>
+  <text class="eyebrow" x="754" y="254" fill="#B86B00">03 · DADOS E ASSÍNCRONO</text>
+  <text class="column" x="754" y="280">Estado, projeção e eventos</text>
+  <text class="columnNote" x="754" y="300">PostgreSQL é a única fonte de verdade</text>
+  <text class="eyebrow" x="1272" y="254" fill="#50677A">04 · OPERAÇÃO</text>
+  <text class="column" x="1272" y="280">Sinais e governança</text>
+  <text class="columnNote" x="1272" y="300">Logs, alarmes, segredos e custo</text>
+
+  <!-- Edge cards -->
+  <g filter="url(#shadow)">
+    <rect x="76" y="324" width="242" height="72" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+    <rect x="76" y="426" width="242" height="104" rx="14" fill="#FFF2F7" stroke="#D61F69" stroke-width="2"/>
+    <rect x="76" y="560" width="242" height="104" rx="14" fill="#EEF9FE" stroke="#00AEEF" stroke-width="2"/>
+  </g>
+  <circle cx="103" cy="360" r="18" fill="#204986"/><text class="pill onDarkTitle" x="91" y="364">IAM</text>
+  <text class="cardTitle" x="132" y="352">Operador / cliente</text><text class="body" x="132" y="374">credencial IAM · assinatura SigV4</text>
+  <circle cx="103" cy="460" r="18" fill="#D61F69"/><text class="pill onDarkTitle" x="91" y="464">API</text>
+  <text class="cardTitle" x="132" y="454">AWS WAF + API Gateway</text><text class="body" x="132" y="476">REST Regional · resource policy</text><text class="small" x="132" y="497">CIDR · rate limit · throttling por rota</text><text class="small" x="132" y="515">IAM em todos os métodos</text>
+  <circle cx="103" cy="594" r="18" fill="#00AEEF"/><text class="pill onDarkTitle" x="92" y="598">VPC</text>
+  <text class="cardTitle" x="132" y="588">VPC Link v2</text><text class="body" x="132" y="610">Application Load Balancer interno</text><text class="small" x="132" y="631">listener 80 · targets ECS privados</text><text class="small" x="132" y="649">health checks por serviço</text>
+  <path class="flow" d="M197 396 V426"/><path class="flow" d="M197 530 V560"/>
+
+  <!-- Compute cards -->
+  <g filter="url(#shadow)">
+    <rect x="392" y="324" width="292" height="100" rx="14" fill="#FFFFFF" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="392" y="450" width="292" height="100" rx="14" fill="#FFFFFF" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="392" y="576" width="292" height="122" rx="14" fill="#FFFFFF" stroke="#D61F69" stroke-width="2"/>
+  </g>
+  <rect x="414" y="342" width="62" height="22" rx="11" fill="#E8F9FF"/><text class="pill" x="426" y="357" fill="#008BC0">QUERY</text>
+  <text class="cardTitle" x="414" y="387">Query API</text><text class="body" x="414" y="408">GET evento via cache-aside · GET reserva no RDS</text>
+  <rect x="414" y="468" width="78" height="22" rx="11" fill="#E8F9FF"/><text class="pill" x="425" y="483" fill="#008BC0">COMMAND</text>
+  <text class="cardTitle" x="414" y="513">Command API</text><text class="body" x="414" y="534">regras, transação, idempotência e outbox</text>
+  <rect x="414" y="594" width="72" height="22" rx="11" fill="#FFF0F6"/><text class="pill" x="426" y="609" fill="#B41759">WORKER</text>
+  <text class="cardTitle" x="414" y="639">Publisher + consumers</text><text class="body" x="414" y="660">publica outbox · expira · notifica</text><text class="small" x="414" y="680">reconciliação de expirações pendentes</text>
+  <path class="flow" d="M318 612 H350 V374 H392"/><path class="flow" d="M350 500 H392"/>
+
+  <!-- Data and async cards -->
+  <g filter="url(#shadow)">
+    <rect x="760" y="324" width="212" height="100" rx="14" fill="#F3EEFF" stroke="#7B61E8" stroke-width="2"/>
+    <rect x="994" y="324" width="208" height="100" rx="14" fill="#FFF8EA" stroke="#FF9900" stroke-width="2"/>
+    <rect x="760" y="466" width="442" height="112" rx="14" fill="#FFF2F7" stroke="#D61F69" stroke-width="2"/>
+    <rect x="760" y="610" width="442" height="88" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
+  </g>
+  <text class="cardTitle" x="782" y="353">Amazon ElastiCache</text><text class="body" x="782" y="375">Valkey 7.2 · single-node</text><text class="small" x="782" y="397">cache.t4g.micro · TTL ≤ 1s</text><text class="small" x="782" y="414">criptografia em trânsito e repouso</text>
+  <text class="cardTitle" x="1016" y="353">Amazon RDS</text><text class="body" x="1016" y="375">PostgreSQL 16 · Single-AZ</text><text class="small" x="1016" y="397">db.t4g.micro · backups automáticos</text><text class="small" x="1016" y="414">credencial no Secrets Manager</text>
+  <text class="cardTitle" x="782" y="495">Amazon SQS · filas independentes</text><text class="body" x="782" y="519">Expiration Queue + DLQ</text><text class="body" x="1002" y="519">Notification Queue + DLQ</text><text class="small" x="782" y="543">SSE · retenção 14 dias · redrive após 5 recebimentos</text><text class="small" x="782" y="562">at-least-once: consumidores condicionais ou deduplicados</text>
+  <text class="cardTitle" x="782" y="639">Amazon SES</text><text class="body" x="782" y="662">identidade verificada · solicitação de envio de e-mail</text><text class="small" x="782" y="682">efeito assíncrono; não participa da resposta HTTP</text>
+  <path class="flow" d="M684 374 H760"/><path class="flow" d="M684 500 H718 V398 H994"/>
+  <path class="async" d="M684 637 H722 V522 H760"/><path class="async" d="M981 578 V610"/>
+
+  <!-- Operations cards -->
+  <g filter="url(#shadow)">
+    <rect x="1278" y="324" width="244" height="102" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+    <rect x="1278" y="452" width="244" height="102" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+    <rect x="1278" y="580" width="244" height="102" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+  </g>
+  <text class="cardTitle" x="1300" y="353">Amazon CloudWatch</text><text class="body" x="1300" y="376">logs + Container Insights</text><text class="small" x="1300" y="397">dashboard · 5xx · throttle</text><text class="small" x="1300" y="414">targets não saudáveis</text>
+  <text class="cardTitle" x="1300" y="481">AWS Secrets Manager</text><text class="body" x="1300" y="504">segredo gerenciado pelo RDS</text><text class="small" x="1300" y="525">injeção segura nas tasks ECS</text><text class="small" x="1300" y="542">sem credencial na imagem</text>
+  <text class="cardTitle" x="1300" y="609">AWS Budgets</text><text class="body" x="1300" y="632">orçamento mensal: US$ 5</text><text class="small" x="1300" y="653">alertas em 50%, 80% e 100%</text><text class="small" x="1300" y="670">governança da demo econômica</text>
+  <!-- Security and status footer -->
+  <rect x="50" y="714" width="1160" height="34" rx="11" fill="#EAF2F8"/>
+  <text class="pill" x="72" y="736" fill="#204986">SECURITY GROUPS</text>
+  <text class="body" x="206" y="736">VPC Link → ALB · ALB → ECS:8080 · ECS → RDS:5432 · ECS → Valkey:6379 · saída HTTPS via NAT</text>
+  <rect x="1250" y="714" width="300" height="34" rx="11" fill="#123B72"/>
+  <text class="pill onDarkTitle" x="1280" y="736">DEMO ENCERRADA · RECURSOS DESTRUÍDOS</text>
+  <text class="small" x="40" y="824">Fluxo sólido: requisição ou acesso síncrono · Fluxo magenta tracejado: eventos pós-commit · Linhas cinza: telemetria e segredos.</text>
+  <text class="small" x="40" y="850">Escopo visual: infraestrutura AWS da demo. Componentes internos Java permanecem detalhados nos diagramas C4 do README.</text>
+</svg>

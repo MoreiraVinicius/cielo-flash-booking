@@ -52,7 +52,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 
 ### T02: Redesenhar a topologia AWS demo
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar uma vista compacta dos recursos realmente provisionados, separada por edge, compute, dados e operação.
 **Where:** `docs/images/flash-booking-aws-demo.svg`
 **Depends on:** T01
@@ -61,6 +61,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 **Tests:** contrato de recursos contra os módulos Terraform e inspeção renderizada
 **Gate:** Visual
 **Commit:** `docs(visual): redraw demo AWS topology`
+**Result:** Topologia provisionada condensada em quatro zonas; XML e 21 fatos validados, render nativo inspecionado e conexões operacionais ambíguas removidas.
 
 ### T03: Redesenhar a arquitetura-alvo high-load
 
