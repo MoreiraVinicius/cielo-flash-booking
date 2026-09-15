@@ -78,15 +78,16 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 
 ### T04: Integrar as vistas no README
 
-**Status:** Pending
+**Status:** Complete
 **What:** Adicionar explicação textual curta, manter a consistência aberta e colocar as duas topologias em detalhes recolhíveis.
 **Where:** `README.md`
 **Depends on:** T03
 **Requirement:** AWSVIS-01, AWSVIS-02, AWSVIS-03
 **Done when:** A seção responde ao requisito original, referencia três imagens com alt text e não interrompe a narrativa do último ingresso.
 **Tests:** leitura dirigida, contagem de imagens, detalhes balanceados e links locais
-**Gate:** Documentation
+**Gate:** Quick + leitura dirigida; o gate Documentation é ampliado em T05
 **Commit:** `docs(readme): present AWS consistency architecture`
+**Result:** Seção inserida após o fluxo do último ingresso; 13 imagens e 6 blocos details válidos, com as três novas referências existentes e alt text descritivo.
 
 ### T05: Validar o contrato das novas vistas
 

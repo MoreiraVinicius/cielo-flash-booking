@@ -79,6 +79,35 @@ O caminho assíncrono começa **depois** da resposta da reserva. O worker public
 
 O prazo também prevalece no caminho síncrono. O PostgreSQL bloqueia a reserva e só então decide pelo próprio relógio: um `DELETE` antes de `expiresAt` retorna `CANCELLED`; em `expiresAt` ou depois retorna `EXPIRED`. A primeira transição devolve capacidade e invalida o cache; concorrentes apenas observam o estado terminal já persistido.
 
+## Consistência eventual e peças AWS
+
+O [case original](<Case BackEnd 1.md>) pede **consistência eventual para disponibilidade**. No Flash Booking isso não significa estoque eventual: a Command API confirma inventário, reserva e dois eventos no outbox em uma única transação PostgreSQL antes de responder `201`. O que converge depois é a projeção de leitura e os efeitos derivados:
+
+- somente `GET /events/{id}` usa Valkey em cache-aside; miss ou falha volta ao PostgreSQL e `GET /reservations/{id}` não passa pelo cache;
+- a invalidação ocorre depois do commit e é best effort; se falhar, o TTL de no máximo 1 segundo limita a janela desatualizada;
+- o worker publica o outbox em filas SQS separadas para expiração e notificação; redelivery é tratada por transição condicional ou deduplicação, com DLQ após cinco recebimentos;
+- em condição saudável, a expiração converge até `expiresAt + 5s` e a solicitação ao SES ocorre em até 30 segundos. Esses limites não prometem entrega exatamente uma vez nem entrega do e-mail na caixa postal.
+
+![Fronteira entre a transação forte, a disponibilidade eventual em Valkey e os efeitos pós-commit em SQS](docs/images/flash-booking-aws-eventual-consistency.svg)
+
+<details>
+<summary><strong>AWS · Demo provisionada e validada</strong></summary>
+
+![Topologia AWS da demo econômica aplicada, validada e depois destruída](docs/images/flash-booking-aws-demo.svg)
+
+A demo priorizou custo: uma task por modo Java, RDS Single-AZ, Valkey single-node e um NAT Gateway. API Gateway era o único ponto público; ALB, ECS, RDS e Valkey permaneciam privados. A evidência é histórica porque os recursos foram destruídos ao final da validação.
+
+</details>
+
+<details>
+<summary><strong>AWS · Arquitetura-alvo high-load</strong></summary>
+
+![Arquitetura-alvo AWS Multi-AZ ainda não provisionada nem medida](docs/images/flash-booking-aws-high-load.svg)
+
+O alvo preserva os três modos da mesma aplicação Java e troca a topologia operacional: tasks Multi-AZ, autoscaling independente, Aurora PostgreSQL com RDS Proxy, Valkey Multi-AZ e NAT por AZ. É um plano, não uma alegação de capacidade, failover ou benchmark executado.
+
+</details>
+
 ## Idempotência na prática
 
 ![Primeira chamada, retry igual e conflito ao reutilizar uma chave de idempotência](docs/images/flash-booking-idempotency.png)
