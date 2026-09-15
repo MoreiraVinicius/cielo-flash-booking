@@ -6,7 +6,7 @@ Executar as tarefas em ordem. Cada tarefa atualiza este arquivo, passa pelo gate
 
 **Design:** `.specs/features/eventual-consistency-aws-visuals/design.md`
 **Status:** Approved
-**Task count:** 8
+**Task count:** 9
 
 ## Test Coverage Matrix
 
@@ -32,7 +32,7 @@ Executar as tarefas em ordem. Cada tarefa atualiza este arquivo, passa pelo gate
 ## Execution Plan
 
 ```text
-T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
+T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09
 ```
 
 ## Task Breakdown
@@ -140,3 +140,16 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Gate:** Documentation
 **Commit:** `test(docs): cover complete AWS visual contract`
 **Result:** Contrato expandido por AC com 13 rotas de seta e contagens mínimas. Gate positivo aprovado; 3/3 mutações de transação, worker→SES e DLQ high-load foram mortas em cópias temporárias, com status real idêntico antes/depois.
+
+### T09: Fechar semântica dos consumidores e da recuperação
+
+**Status:** Complete
+**What:** Exigir a transição de expiração, devolução de vaga, reconciliação pelo relógio do banco e ausência de ligação direta entre SQS e SES.
+**Where:** `scripts/validate-readme.ps1`, `.specs/features/eventual-consistency-aws-visuals/`
+**Depends on:** T08
+**Requirement:** AWSVIS-02
+**Done when:** O gate rejeita a remoção das ações dos consumers, a perda do caminho de recuperação e qualquer seta SQS→SES que contorne o worker.
+**Tests:** execução positiva e três mutações isoladas de ação, recuperação e rota proibida
+**Gate:** Documentation
+**Commit:** `test(docs): enforce consumer recovery semantics`
+**Result:** O gate positivo passou e 3/3 mutações isoladas foram mortas ao remover a transição `PENDING → EXPIRED`, degradar a recuperação pelo relógio do banco ou inserir uma rota direta SQS→SES; o working tree permaneceu idêntico antes e depois.

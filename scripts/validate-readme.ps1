@@ -204,10 +204,12 @@ $awsVisualContracts = @(
             'permanece PENDING',
             'Worker consumer',
             'condicional e idempotente',
+            'PENDING → EXPIRED',
+            'devolve vaga',
             'deduplicado por registro',
             'solicita o SES',
             'maxReceiveCount = 5',
-            'Reconciliador',
+            'Reconciliador usa o relógio do banco: recupera expirações atrasadas',
             '+ 5s',
             'após expiresAt',
             '≤ 30s',
@@ -235,7 +237,7 @@ $awsVisualContracts = @(
             @{ Text = 'Worker consumer'; Count = 2 },
             @{ Text = 'DLQ'; Count = 2 }
         )
-        ForbiddenFacts = @('POST /reservations', 'M414 554 H348 V486 H958 V494')
+        ForbiddenFacts = @('POST /reservations', 'M414 554 H348 V486 H958 V494', 'M872 834 H1158')
     },
     @{
         Name = 'flash-booking-aws-demo.svg'
