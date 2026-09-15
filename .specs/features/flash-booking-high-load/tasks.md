@@ -6,7 +6,7 @@ Estas tarefas descrevem uma evolução futura e permanecem `Draft`. Execute-as c
 
 **Design:** `.specs/features/flash-booking-high-load/design.md`
 **Status:** Draft
-**Task count:** 20
+**Task count:** 21
 
 ## Test Coverage Matrix
 
@@ -14,6 +14,7 @@ Estas tarefas descrevem uma evolução futura e permanecem `Draft`. Execute-as c
 | --- | --- | --- | --- | --- |
 | Cache compartilhado | integration da demo + static | Contrato herdado de hit, miss, TTL, invalidação e falha; alta carga só valida infraestrutura | `src/test/java/**/*Cache*Test.java`, `infra/**/*.tf` | `./mvnw verify -Pintegration` e `terraform test` |
 | Reserva concorrente | integration da demo + plano de performance | Oversell zero é herdado da demo; SLO sob rajada é hipótese a validar depois | `src/test/java/**/*ConcurrencyIT.java`, `performance/high-load/` | `./mvnw verify -Pintegration` e review gate |
+| Publisher da outbox | integration PostgreSQL + SQS | Dois publishers dividem claims; lease abandonado é recuperado; confirmação exige token; I/O SQS não mantém transação aberta | `src/test/java/**/*Outbox*IT.java` | `./mvnw verify -Pintegration` |
 | Autoscaling/infra | static + terraform test | Multi-AZ, limites, políticas e rollback | `infra/**/*.tf` | `terraform fmt -check -recursive && terraform validate` |
 | Resiliência | plano de failure injection | Falha de task, Valkey, writer e AZ, sem execução remota atual | `performance/high-load/mixed/` | review gate |
 | Documentação | review | Gatilho, custo e rollback de cada evolução | `docs/` | review gate |
@@ -48,24 +49,27 @@ Phase 3
 T09 -> T10
 T10 -> T11
 T09 -> T12
-T07 -> T13
-T10 -> T13
 T12 -> T13
 T07 -> T14
-T08 -> T14
-T10 -> T15
-T11 -> T15
+T10 -> T14
+T13 -> T14
+T07 -> T15
+T08 -> T15
 T12 -> T15
-T13 -> T15
-T14 -> T15
+T10 -> T16
+T11 -> T16
+T12 -> T16
+T13 -> T16
+T14 -> T16
+T15 -> T16
 
 Phase 4
-T15 -> T16
-T15 -> T17
+T16 -> T17
 T16 -> T18
-T17 -> T18
+T17 -> T19
 T18 -> T19
 T19 -> T20
+T20 -> T21
 ```
 
 ## Task Breakdown
@@ -197,45 +201,56 @@ T19 -> T20
 **Gate:** Infra
 **Commit:** `infra: prescale scheduled flash sales`
 
-### T12: Escalar workers por backlog
+### T12: Tornar o publisher da outbox concorrente
+
+**What:** Evoluir o módulo compartilhado de outbox para adquirir lotes limitados por claim/lease PostgreSQL antes de publicar no SQS.
+**Where:** `src/main/java/com/cielo/flashbooking/application/outbox/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/outbox/`, `src/main/resources/db/migration/`, `src/test/java/com/cielo/flashbooking/adapter/out/messaging/publisher/`
+**Depends on:** T09
+**Requirement:** SCALE-06
+**Done when:** A aquisição usa uma transação curta com `FOR UPDATE SKIP LOCKED`, token, lease pelo relógio PostgreSQL e incremento de tentativa; dois publishers não obtêm o mesmo lease vigente; a chamada SQS ocorre fora da transação; confirmação exige o token; processo interrompido devolve elegibilidade após o lease; resposta ambígua continua coberta por consumidores idempotentes sem alegação de exactly-once.
+**Tests:** integração PostgreSQL + SQS com dois publishers sincronizados, expiração de lease, confirmação tardia rejeitada e falha ambígua
+**Gate:** Full
+**Commit:** `feat(outbox): claim events before concurrent publication`
+
+### T13: Escalar workers por backlog
 
 **What:** Configurar scaling por backlog por task e idade da mensagem mais antiga, com métricas separadas para expiração e notificação.
 **Where:** `infra/modules/compute/worker-scaling.tf`
-**Depends on:** T03, T09
-**Requirement:** SCALE-02
-**Done when:** Backlog aumenta workers e DLQ/idade excessiva de cada fila dispara alarme; a configuração não altera o worker Java nem permite que notificação bloqueie expiração.
+**Depends on:** T12
+**Requirement:** SCALE-02, SCALE-06
+**Done when:** Backlog aumenta workers somente depois do claim/lease estar validado; DLQ, idade excessiva de cada fila e claims vencidos disparam sinais separados; a configuração não exige nova alteração Java e não permite que notificação bloqueie expiração.
 **Tests:** terraform test, incluído
 **Gate:** Infra
 **Commit:** `infra: autoscale expiration workers`
 
-### T13: Tornar rede e edge altamente disponíveis
+### T14: Tornar rede e edge altamente disponíveis
 
 **What:** Adicionar NAT por AZ, mínimo de duas tasks por serviço, target groups separados e controles de admissão no API Gateway/WAF.
 **Where:** `infra/environments/high-load/network-edge.tf`
-**Depends on:** T07, T10, T12
+**Depends on:** T07, T10, T13
 **Requirement:** SCALE-02, SCALE-03
 **Done when:** Terraform mantém API Gateway REST como único ponto público, roteia GET para query-api e POST/DELETE para command-api e declara distribuição Multi-AZ; o runbook registra que a comprovação remota é pendente.
 **Tests:** terraform test e review do plano de failure injection, incluídos
 **Gate:** Infra
 **Commit:** `infra: harden high-load availability`
 
-### T14: Documentar limites e variáveis de capacidade
+### T15: Documentar limites e variáveis de capacidade
 
 **What:** Registrar variáveis Terraform para ACUs Aurora, topologia Valkey, mínimos/máximos por serviço, metas de autoscaling, agenda, throttling/WAF e teto de custo, vinculando cada valor ao baseline futuro.
 **Where:** `docs/architecture/high-load-capacity-parameters.md`
-**Depends on:** T07, T08
-**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-04, SCALE-05
-**Done when:** Cada ajuste é classificado como alteração de infraestrutura, tem valor inicial explicitamente provisório, limite, sinal de revisão e rollback; o documento proíbe alterar Java, schema ou contratos HTTP para trocar capacidade.
+**Depends on:** T07, T08, T12
+**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-04, SCALE-05, SCALE-06
+**Done when:** Cada ajuste tem valor inicial explicitamente provisório, limite, sinal de revisão e rollback; capacidade Terraform não altera regras de negócio ou contratos HTTP; lote e duração do lease da outbox são configuração operacional do mesmo binário e schema compartilhados.
 **Tests:** review gate only
 **Gate:** Build
 **Commit:** `docs: define high-load capacity parameters`
 
-### T15: Validar infraestrutura de alta carga sem apply
+### T16: Validar infraestrutura de alta carga sem apply
 
 **What:** Criar testes Terraform com provider AWS mockado e registrar os comandos de `init -backend=false`, `fmt`, `validate` e `terraform test` que não criam recursos.
 **Where:** `infra/environments/high-load/tests/`, `docs/architecture/high-load-static-validation.md`
-**Depends on:** T04, T07, T08, T09, T10, T11, T12, T13, T14
-**Requirement:** SCALE-01, SCALE-02, SCALE-03
+**Depends on:** T04, T07, T08, T09, T10, T11, T12, T13, T14, T15
+**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-06
 **Done when:** Os testes verificam topologia, parâmetros e wiring de endpoint sem credenciais AWS nem `apply`; a evidência declara expressamente que não mede disponibilidade, desempenho ou failover remoto.
 **Tests:** terraform test, incluído
 **Gate:** Infra
@@ -243,57 +258,57 @@ T19 -> T20
 
 ## Phase 4: Validation and Handoff
 
-### T16: Validar pico de leitura
+### T17: Validar pico de leitura
 
 **What:** Documentar carga futura de GET com cache frio, quente, stampede e Valkey indisponível.
 **Where:** `performance/high-load/read/`
-**Depends on:** T07, T13
+**Depends on:** T07, T14
 **Requirement:** SCALE-01
 **Done when:** O cenário, os SLOs e as métricas de Valkey/PostgreSQL estão documentados; o relatório declara que não houve execução remota nesta entrega.
 **Tests:** review gate only
 **Gate:** Build
 **Commit:** `docs: define read peak validation evidence`
 
-### T17: Validar pico de reservas
+### T18: Validar pico de reservas
 
 **What:** Documentar rajadas futuras de reservas com pré-escala ligada/desligada, múltiplas command-api e capacidade excedida.
 **Where:** `performance/high-load/reservation/`
-**Depends on:** T11, T13
+**Depends on:** T11, T14
 **Requirement:** SCALE-02
 **Done when:** O cenário mede oversell, disponibilidade acima da capacidade, lock waits, conexões e independência entre serviços; o relatório declara que não houve execução remota nesta entrega.
 **Tests:** review gate only
 **Gate:** Build
 **Commit:** `docs: define reservation peak validation evidence`
 
-### T18: Validar volatilidade e falhas
+### T19: Validar volatilidade e falhas
 
 **What:** Documentar alternância futura de picos de consulta/reserva e injeção de falhas de task, Valkey, conexão, SES, filas e zona de disponibilidade.
 **Where:** `performance/high-load/mixed/`
-**Depends on:** T16, T17
-**Requirement:** SCALE-01, SCALE-02, SCALE-03
-**Done when:** O plano de falhas de task, Valkey, conexão e AZ está documentado; nenhuma recuperação é declarada como comprovada remotamente.
+**Depends on:** T17, T18
+**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-06
+**Done when:** O plano de falhas de task, Valkey, conexão, publisher após claim, SES, fila e AZ está documentado; nenhuma recuperação é declarada como comprovada remotamente.
 **Tests:** review gate only
 **Gate:** Build
 **Commit:** `docs: define high-load resilience evidence`
 
-### T19: Documentar runbook e forks extremos
+### T20: Documentar runbook e forks extremos
 
 **What:** Registrar operação, custos, rollback, correlação futura com abertura da venda/proximidade do evento e critérios de nova ADR para DynamoDB, SQS FIFO ou EKS.
 **Where:** `docs/ARCHITECTURE.md`
-**Depends on:** T18
+**Depends on:** T19
 **Requirement:** SCALE-04
 **Done when:** Cada evolução tem sinal, ação, impacto, rollback e responsável.
 **Tests:** none, review gate only
 **Gate:** Build
 **Commit:** `docs: document high-load operations and evolution`
 
-### T20: Verificar alta carga contra a especificação e o case
+### T21: Verificar alta carga contra a especificação e o case
 
 **What:** Executar gates, revisar ACs e realizar discrimination sensor.
 **Where:** `.specs/features/flash-booking-high-load/validation.md`
-**Depends on:** T19
-**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-04, SCALE-05
-**Done when:** Validation registra PASS documental com evidência `file:line`, comprova que imagem/schema/contratos são os mesmos da demo, confronta todos os requisitos de `Case BackEnd 1.md` e lista limites ainda não medidos remotamente.
+**Depends on:** T20
+**Requirement:** SCALE-01, SCALE-02, SCALE-03, SCALE-04, SCALE-05, SCALE-06
+**Done when:** Validation registra PASS documental com evidência `file:line`, comprova que imagem, domínio, contratos e schema operacional permanecem compartilhados, verifica claim/lease antes do scale-out do publisher, confronta todos os requisitos de `Case BackEnd 1.md` e lista limites ainda não medidos remotamente.
 **Tests:** full da demo, infra estática e review dos planos de performance/resiliência
 **Gate:** Build + Infra
 **Commit:** `test: validate high-load architecture`
@@ -304,8 +319,8 @@ T19 -> T20
 | --- | --- | --- |
 | Baseline | T01-T04 | Baseline precede política, parâmetros e métricas. Match. |
 | Read | T05-T09 | Contrato precede runtime; runtime precede Valkey; Aurora e configuração precedem proxy e adaptador de roteamento. Match. |
-| Purchase/HA | T10-T15 | Proxy precede autoscaling; Valkey, API e worker precedem HA; limites documentados precedem validação estática. Match. |
-| Validation | T16-T20 | Validação estática precede planos de carga; planos precedem runbook e verificação documental. Match. |
+| Purchase/HA | T10-T16 | Proxy precede autoscaling; claim/lease precede scale-out do worker; Valkey, API e worker precedem HA; limites documentados precedem validação estática. Match. |
+| Validation | T17-T21 | Validação estática precede planos de carga; planos precedem runbook e verificação documental. Match. |
 
 ## Test Co-location Validation
 
@@ -313,7 +328,7 @@ T19 -> T20
 | --- | --- | --- | --- |
 | T01-T04 | performance/static | Tests and review in same task | OK |
 | T05-T09 | contrato/infra | Review e terraform test na mesma task; integração é herdada da demo | OK |
-| T10-T15 | infra/static | Tests estáticos/mockados e review na mesma task | OK |
-| T16-T18 | planos de performance/resiliência | Cenário documentado é o deliverable; sem execução remota | OK |
-| T19 | review | No production behavior created | OK |
-| T20 | documentação e infra estática | Verificador registra limites pendentes de teste remoto | OK |
+| T10-T16 | outbox/integration + infra/static | T12 inclui concorrência PostgreSQL/SQS; demais tasks incluem testes Terraform e review no mesmo trabalho | OK |
+| T17-T19 | planos de performance/resiliência | Cenário documentado é o deliverable; sem execução remota | OK |
+| T20 | review | No production behavior created | OK |
+| T21 | documentação, integração e infra estática | Verificador registra claim/lease e limites pendentes de teste remoto | OK |

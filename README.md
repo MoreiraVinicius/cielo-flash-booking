@@ -75,7 +75,7 @@ O caminho síncrono é curto e autoritativo:
 4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
 5. somente depois do commit o cache de disponibilidade do evento é invalidado.
 
-O caminho assíncrono fica elegível **depois do commit** e não participa da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
+O caminho assíncrono fica elegível **depois do commit** e não participa da resposta da reserva. A demo mantém um único publisher no worker, que publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
 
 O prazo também prevalece no caminho síncrono. O PostgreSQL bloqueia a reserva e só então decide pelo próprio relógio: um `DELETE` antes de `expiresAt` retorna `CANCELLED`; em `expiresAt` ou depois retorna `EXPIRED`. A primeira transição devolve capacidade e invalida o cache; concorrentes apenas observam o estado terminal já persistido.
 
@@ -85,7 +85,7 @@ O [case original](<Case BackEnd 1.md>) pede **consistência eventual para dispon
 
 - somente `GET /events/{id}` usa Valkey em cache-aside; miss ou falha volta ao PostgreSQL e `GET /reservations/{id}` não passa pelo cache;
 - a invalidação ocorre depois do commit e é best effort; se falhar, o TTL de no máximo 1 segundo limita a janela desatualizada;
-- o worker publica o outbox em filas SQS separadas para expiração e notificação; redelivery é tratada por transição condicional ou deduplicação, com DLQ após cinco recebimentos;
+- o worker publica o outbox em filas SQS separadas para expiração e notificação; a demo usa um publisher, e a arquitetura high-load exige claim/lease PostgreSQL antes de habilitar múltiplos publishers; redelivery continua tratada por transição condicional ou deduplicação, com DLQ após cinco recebimentos;
 - em condição saudável, a expiração converge até `expiresAt + 5s` e a solicitação ao SES ocorre em até 30 segundos. Esses limites não prometem entrega exatamente uma vez nem entrega do e-mail na caixa postal.
 
 ![Fronteira entre a transação forte, a disponibilidade eventual em Valkey e os efeitos pós-commit em SQS](docs/images/flash-booking-aws-eventual-consistency.svg)
@@ -139,10 +139,10 @@ A aplicação inicia **uma única imagem Java** em três modos. A arquitetura hi
 | Objetivo | Menor custo e operação por uma pessoa | Disponibilidade e escala guiadas por gargalo medido |
 | Compute | Uma task ECS por serviço | Múltiplas tasks Multi-AZ e autoscaling independente |
 | Dados | RDS PostgreSQL Single-AZ e Valkey econômico | Aurora PostgreSQL, RDS Proxy e Valkey Multi-AZ |
-| Assíncrono | Filas e DLQs separadas; um worker | Workers escalados por backlog e idade da mensagem |
-| Estado | Aplicada, observada, validada e destruída | Design + 20 tarefas Draft; sem runtime remoto |
+| Assíncrono | Filas e DLQs separadas; um worker e um publisher | Workers escalados por backlog e idade da mensagem após claim/lease atômico da outbox |
+| Estado | Aplicada, observada, validada e destruída | Design + 21 tarefas Draft; sem runtime remoto |
 
-O gatilho de evolução não é “mais componentes”. São métricas: saturação do writer, p95/p99 por rota, conexões, hit rate, backlog e idade da mensagem. O core, os controllers, o schema, as migrations, a idempotência e o outbox permanecem iguais.
+O gatilho de evolução não é “mais componentes”. São métricas: saturação do writer, p95/p99 por rota, conexões, hit rate, backlog e idade da mensagem. Domínio, controllers, contratos e eventos permanecem iguais. Adaptadores e migrations operacionais podem evoluir no mesmo binário e schema compartilhados; em particular, o publisher precisa de claim/lease antes de escalar horizontalmente.
 
 ## Evidência de qualidade
 
@@ -237,7 +237,7 @@ Separa a transação síncrona da publicação e dos consumidores assíncronos, 
 | --- | --- |
 | O enunciado original | [Case BackEnd 1.md](Case%20BackEnd%201.md) |
 | Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [29 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação](.specs/features/flash-booking-demo/validation.md) |
-| Evolução high-load | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [20 tarefas planejadas](.specs/features/flash-booking-high-load/tasks.md) |
+| Evolução high-load | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [21 tarefas planejadas](.specs/features/flash-booking-high-load/tasks.md) |
 | Modelo de dados | [Customer → Reservation → Event](docs/data-model.md) |
 | Decisões e trade-offs | [PostgreSQL autoritativo](docs/adr/0004-postgresql-como-fonte-autoritativa.md) · [cache](docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md) · [segurança](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md) · [serviços](docs/adr/0013-separar-servicos-de-consulta-e-comando.md) |
 | Operar ou apresentar a demo | [runbook](docs/demo-runbook.md) · [Postman](postman/README.md) · [custos](docs/cost-estimate.md) |

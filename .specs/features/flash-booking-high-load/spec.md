@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-A demo funcional não deve receber toda a complexidade de produção antecipadamente. A evolução precisa absorver picos voláteis de consultas e reservas por mecanismos independentes, mantendo ausência de oversell, as mesmas regras Java e operação observável.
+A demo funcional não deve receber toda a complexidade de produção antecipadamente. A evolução precisa absorver picos voláteis de consultas, reservas e trabalho assíncrono por mecanismos independentes, mantendo ausência de oversell, as mesmas regras de negócio e operação observável.
 
 ## Goals
 
@@ -10,6 +10,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 - [ ] Escalar leitura sem aumentar proporcionalmente a carga no banco principal.
 - [ ] Escalar serviços de consultas, comandos e workers de forma independente antes e durante flash sales.
+- [ ] Escalar a publicação da outbox sem multiplicar sistematicamente cada evento pelo número de workers.
 - [ ] Remover pontos únicos de falha da demo.
 - [ ] Definir gatilhos mensuráveis para evoluções posteriores.
 
@@ -28,12 +29,12 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | Tema | Decisão | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
 | Pré-requisito | Demo com validação PASS | Evolução depende de baseline confiável. | yes |
-| Banco | Aurora PostgreSQL Serverless | Escala por ACU e preserva JDBC, schema e binário da demo; ADR 0004. | yes |
+| Banco | Aurora PostgreSQL Serverless | Escala por ACU e preserva JDBC e o modelo relacional; a promoção aplica ao schema compartilhado os campos operacionais exigidos pelo claim da outbox; ADR 0004. | yes |
 | Cache | ElastiCache for Valkey Multi-AZ | Mantém o cache exclusivo de disponibilidade de eventos; só a topologia e capacidade mudam por Terraform; ADR 0005. | yes |
 | Compute | ECS Fargate | Escala horizontal sem Kubernetes. | yes |
 | Serviços | `query-api`, `command-api` e `worker` construídos da mesma base Java | Escala independente sem duplicar regras; adaptadores operacionais da evolução permanecem no mesmo repositório e artefato; ADR 0013. | yes |
 | Segurança | API Gateway REST único, IAM/SigV4, WAF e throttling | Protege antes dos containers e preserva o mesmo contrato da demo; ADR 0012. | yes |
-| Notificação | Mesmo outbox, filas e SES da demo | Carga só altera quantidade de workers e parâmetros; ADR 0011. | yes |
+| Notificação | Mesmos eventos, filas, consumidores e SES da demo, com claim/lease no publisher compartilhado antes do scale-out | Consumidores continuam idempotentes, mas múltiplos publishers não devem reler simultaneamente o mesmo lote; ADR 0011. | yes |
 | Gatilhos | SLO e percentual do envelope medido | TPS absoluto é volátil e específico do ambiente. | yes |
 
 **Open questions:** none. SLOs, capacidade máxima e limites de custo são valores inicialmente provisórios, a substituir pelo baseline da demo antes de qualquer `apply`; a ausência de medição não autoriza promover a arquitetura.
@@ -82,6 +83,21 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 **Teste independente futuro:** Interromper componentes em ambiente controlado e observar recuperação. Nesta entrega, documentar o experimento e validar somente de forma estática/mockada.
 
+### P1: Escalar a publicação da outbox
+
+**História:** Como operador, quero executar múltiplos workers sem que cada publisher envie novamente o mesmo lote da outbox.
+
+**Critérios de aceite:**
+
+1. ENQUANTO houver mais de um publisher ativo, o sistema DEVE conceder no máximo um lease vigente por evento de outbox e DEVE excluir eventos com lease vigente dos demais lotes.
+2. QUANDO um publisher adquirir um lote, o PostgreSQL DEVE selecionar e marcar no máximo o limite configurado em uma transação curta, com `FOR UPDATE SKIP LOCKED`, token de posse, lease baseado no relógio do banco e incremento de tentativa.
+3. ENQUANTO o publisher chamar o SQS, o sistema DEVE manter encerrada a transação PostgreSQL usada para adquirir o lote.
+4. QUANDO o SQS confirmar o envio, o sistema DEVE marcar o evento como publicado somente se o token de posse ainda corresponder ao claim vigente.
+5. SE o publisher encerrar após o claim e antes da confirmação, ENTÃO o evento DEVE voltar a ser elegível após o lease expirar.
+6. SE o resultado do envio ao SQS for ambíguo, ENTÃO o sistema DEVE aceitar possível redelivery e manter consumidores idempotentes, sem prometer entrega exatamente uma vez.
+
+**Teste independente futuro:** Executar dois publishers sincronizados contra PostgreSQL e SQS, comprovar um envio por evento sem falha, interromper o dono do claim e comprovar recuperação após o lease; simular resposta ambígua e comprovar a segurança dos consumidores.
+
 ### P1: Evoluir por evidência
 
 **História:** Como arquiteto, quero promover componentes somente quando métricas justificarem custo e complexidade.
@@ -102,12 +118,12 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 **Critérios de aceite:**
 
-1. O ambiente de alta carga DEVE preservar controllers, módulos de domínio, schema, migrations, eventos e contratos HTTP da demo em uma única imagem compartilhada pelos três modos.
-2. SE uma alteração de capacidade exigir mudança nas regras Java, ENTÃO ela DEVE ser tratada como nova decisão de produto e não como execução desta arquitetura.
+1. O ambiente de alta carga DEVE preservar controllers, módulos de domínio, eventos e contratos HTTP da demo em uma única imagem compartilhada pelos três modos; adaptações operacionais de persistência e suas migrations DEVEM integrar o schema compartilhado, sem criar um modelo de negócio paralelo.
+2. SE uma alteração de capacidade exigir mudança nas regras de negócio Java, ENTÃO ela DEVE ser tratada como nova decisão de produto; adaptadores operacionais necessários para concorrência, roteamento ou leases pertencem à execução desta arquitetura.
 3. QUANDO a topologia exigir endpoints read-only e read-write, ENTÃO a evolução DEVE implementar um adaptador explícito de roteamento sem alterar regras de negócio ou contratos HTTP.
 4. A autenticação IAM, a notificação por e-mail e a ligação entre cliente, reserva e evento DEVEM permanecer idênticas nas duas arquiteturas.
 
-**Teste independente futuro:** Verificar que uma única imagem atende os três modos, que eventos e reservas usam os endpoints definidos e que domínio, migrations e contratos permanecem compartilhados.
+**Teste independente futuro:** Verificar que uma única imagem atende os três modos, que eventos e reservas usam os endpoints definidos e que domínio, migrations e contratos permanecem compartilhados entre os ambientes.
 
 ## Edge Cases
 
@@ -117,6 +133,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 - SE uma zona de disponibilidade falhar, ENTÃO recursos distribuídos DEVEM continuar atendendo conforme o SLO.
 - SE a réplica atrasar, ENTÃO a consulta de disponibilidade pode refletir consistência eventual, mas a consulta de reserva DEVE usar o caminho read-write.
 - SE o SES falhar, ENTÃO o worker DEVE preservar a reserva e isolar a mensagem na fila de notificação.
+- SE um publisher perder seu lease antes de confirmar a publicação, ENTÃO uma marcação tardia DEVE falhar e outro publisher DEVE poder adquirir o evento.
 
 ## Requirement Traceability
 
@@ -127,14 +144,16 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | SCALE-03 | Alta disponibilidade | Design | Em design |
 | SCALE-04 | Evolução por evidência | Design | Em design |
 | SCALE-05 | Preservar o mesmo comportamento | Design | Em design |
+| SCALE-06 | Escalar a publicação da outbox | Design | Em design |
 
-**Cobertura:** 5 requisitos, 5 mapeados ao design, nenhum sem mapeamento.
+**Cobertura:** 6 requisitos, 6 mapeados ao design, nenhum sem mapeamento.
 
 ## Success Criteria
 
 - [ ] Picos de leitura não escalam a carga do writer na mesma proporção.
 - [ ] Picos de reserva escalam somente o serviço de comandos, sem oversell.
 - [ ] Picos de consulta escalam somente o serviço de consultas.
+- [ ] Múltiplos publishers dividem eventos da outbox por claim/lease e recuperam claims abandonados sem manter transação aberta durante chamadas SQS.
 - [ ] A evolução high-load preserva o mesmo domínio, contratos e regras de negócio, com adaptadores operacionais explícitos para sua topologia.
 - [ ] Falha de task ou AZ possui recuperação documentada e validada estaticamente nesta entrega; o teste remoto fica explicitamente pendente.
 - [ ] Cada evolução tem gatilho, custo, rollback e limite conhecido.

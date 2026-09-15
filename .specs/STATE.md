@@ -145,11 +145,11 @@
 
 ## Handoff
 
-- **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute concluído; regra de precedência do prazo verificada independentemente
-- **Completed**: DEMO-03 validado. Antes de `expiresAt`, `DELETE` termina em `CANCELLED`; no instante do prazo ou depois, termina em `EXPIRED`. O relógio PostgreSQL é observado após o lock e a capacidade volta uma única vez. Gate unitário 47/47, `ReservationDeadlineIT` 4/4 no PostgreSQL 17.5 e sensor 1/1 morto.
-- **In-progress**: none
-- **Next step**: Retomar a avaliação arquitetural pela garantia de entrega da outbox antes de propor outra mudança.
-- **Blockers**: PostgreSQL 16/Testcontainers e o Full gate permanecem pendentes enquanto Docker estiver indisponível; não bloqueiam o PASS específico da regra de prazo executada em PostgreSQL 17.5.
-- **Uncommitted files**: Nenhum desta verificação. Alterações ainda abertas da feature `eventual-consistency-aws-visuals` foram preservadas fora desta entrega.
+- **Feature**: `flash-booking-high-load`
+- **Phase / Task**: Design corrigido; verificação independente pendente
+- **Completed**: A demo permanece com um publisher. A arquitetura high-load exige claim/lease PostgreSQL antes de habilitar `2..N` publishers, mantém I/O SQS fora da transação e preserva consumidores idempotentes para respostas ambíguas.
+- **In-progress**: Validação spec-anchored da coerência entre spec, contexto, design, tasks e README.
+- **Next step**: Verificador independente deve revisar o contrato, executar os validadores e persistir `validation.md` sem marcar a arquitetura high-load como implementada.
+- **Blockers**: A arquitetura high-load continua Draft e sem runtime remoto por decisão AD-006; o claim/lease pertence à implementação futura T12.
+- **Uncommitted files**: Alterações abertas da feature `eventual-consistency-aws-visuals` em spec/tasks/validation, SVG e `scripts/validate-readme.ps1` permanecem fora desta entrega.
 - **Branch**: `main`

@@ -4,7 +4,7 @@
 
 ## Limite da feature
 
-Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A evolução preserva domínio, contratos HTTP, schema Flyway, autenticação e notificação, mas pode acrescentar adaptadores operacionais exigidos pela nova topologia.
+Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A evolução preserva domínio, contratos HTTP, autenticação e semântica de notificação. Adaptadores e migrations operacionais podem evoluir no schema compartilhado quando a nova topologia exigir coordenação distribuída.
 
 ## Decisões de implementação
 
@@ -23,7 +23,9 @@ Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A ev
 - Eventos com horário conhecido usarão pré-escala programada além de target tracking.
 - `query-api` e `command-api` serão serviços ECS separados, mas apontarão para a mesma imagem; ADR 0013.
 - O serviço de consultas usará Valkey e o endpoint read-only do RDS Proxy para disponibilidade. Consulta de reserva não usa cache e usa o endpoint read-write para evitar leitura ausente logo após criação.
-- Autenticação IAM/SigV4, API Gateway REST único, WAF e notificação SES permanecem iguais à demo; somente limites e quantidade de tasks variam por Terraform.
+- A demo mantém um único publisher da outbox. Antes de escalar workers, o adaptador compartilhado deve adquirir lotes por claim/lease atômico no PostgreSQL; chamadas SQS ficam fora da transação de aquisição e uma falha libera o evento pelo vencimento do lease.
+- O claim reduz duplicidade sistemática entre publishers, mas não promete exactly-once diante de resposta ambígua do SQS; consumidores continuam idempotentes.
+- Autenticação IAM/SigV4, API Gateway REST único, WAF e notificação SES permanecem iguais à demo. Limites e quantidade das APIs variam por Terraform; o scale-out do publisher depende primeiro do adaptador de claim/lease.
 
 ### Limite explícito
 
@@ -35,7 +37,7 @@ Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A ev
 
 - Tipo de nó, shards, réplicas, ACUs e máximo de tasks, sempre parametrizados no Terraform.
 - Métricas de target tracking escolhidas a partir do benchmark.
-- Adaptadores de infraestrutura podem evoluir para suportar a topologia. Controllers, regras de negócio, schema e eventos permanecem compartilhados com a demo.
+- Adaptadores de infraestrutura podem evoluir para suportar a topologia. Controllers, regras de negócio e eventos permanecem compartilhados com a demo. Migrations operacionais atualizam um único schema usado pelos dois ambientes, sem criar um fork high-load.
 
 ## Ideias adiadas
 

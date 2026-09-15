@@ -57,7 +57,7 @@ Dentro de uma boundary “AWS Region”, desenhe uma VPC altamente disponível d
 No ALB, mostre target groups independentes e roteamento:
 - GET /events/{id} e GET /reservations/{id} -> “ECS Fargate query-api, 2..N tasks”;
 - POST /events, POST /events/{id}/reservations e DELETE /reservations/{id} -> “ECS Fargate command-api, 2..N tasks”.
-Mostre também “ECS Fargate worker, 2..N tasks”, sem exposição pelo ALB. Distribua no mínimo duas tasks de cada serviço entre AZs distintas. Os três serviços usam a mesma imagem imutável no Amazon ECR, mas possuem task definitions, IAM roles, deployments e políticas de escala independentes.
+Mostre também “ECS Fargate worker, 2..N tasks”, sem exposição pelo ALB, e rotule sua leitura da outbox como “claim/lease PostgreSQL antes do publish”. Distribua no mínimo duas tasks de cada serviço entre AZs distintas. Os três serviços usam a mesma imagem imutável no Amazon ECR, mas possuem task definitions, IAM roles, deployments e políticas de escala independentes.
 
 Represente as políticas de escala como caixas de controle conectadas ao respectivo serviço:
 - query-api: requisições, p95, CPU e cache hit rate;
@@ -155,7 +155,7 @@ Pessoa:
 - “Operador / consumidor da API”: usa credenciais temporárias e HTTPS com IAM/SigV4.
 
 Software System boundary:
-- “Flash Booking”: preserva domínio, endpoints, schema e migrations da demo; adaptadores operacionais evoluem no mesmo artefato Java.
+- “Flash Booking”: preserva domínio, endpoints e um único schema compartilhado; adaptadores e migrations operacionais evoluem no mesmo artefato Java.
 
 Deployment nodes e infrastructure nodes planejados por Terraform:
 - “AWS Region”.
@@ -179,7 +179,7 @@ Deployment nodes e infrastructure nodes planejados por Terraform:
 Containers C4 implantados no ECS/Fargate, todos executando a mesma imagem Java 21 / Spring Boot 3 do ECR:
 - “Query API [Container] — 2..N tasks”: serve os dois GETs; usa cache apenas para evento e escala por requisições, p95, CPU e hit rate de disponibilidade.
 - “Command API [Container] — 2..N tasks”: serve POST/DELETE; escala por requisições, p95, CPU e conexões, além de scheduled pre-scaling antes da flash sale; o máximo é limitado pelo envelope do writer.
-- “Worker [Container] — 2..N tasks”: outbox, expiração, reconciliação e notificação; escala por backlog por task e idade da mensagem, com concorrência separada por fila.
+- “Worker [Container] — 2..N tasks”: outbox com claim/lease PostgreSQL antes do publish, expiração, reconciliação e notificação; escala por backlog por task e idade da mensagem, com concorrência separada por fila.
 Distribua no mínimo duas instâncias de cada container entre AZs distintas. Mostre deployment, task role e política de escala independentes, apesar de compartilharem o mesmo artefato.
 
 Relações C4 obrigatórias:
@@ -193,7 +193,7 @@ Relações C4 obrigatórias:
 - Query API -> RDS Proxy read-write -> Aurora writer: “GET de reserva com read-after-write, JDBC/TLS”.
 - Command API -> RDS Proxy read-write -> Aurora writer: “Transações autoritativas e outbox, JDBC/TLS”.
 - Command API -> Valkey: “Invalidação pós-commit”.
-- Worker -> RDS Proxy read-write -> Aurora writer: “Outbox, expiração e reconciliação”.
+- Worker -> RDS Proxy read-write -> Aurora writer: “Claim/lease da outbox, expiração e reconciliação”.
 - Worker <-> filas SQS: “Publica/consome eventos, AWS API/HTTPS”.
 - Cada fila -> DLQ própria: “Redrive e retenção”.
 - Worker -> SES: “E-mail de reserva temporária”.

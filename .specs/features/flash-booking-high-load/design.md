@@ -26,7 +26,7 @@ flowchart LR
     WriteProxy --> Writer[(Aurora writer)]
 
     Writer --> Outbox[(Outbox)]
-    Workers[ECS Workers 2..N] --> Outbox
+    Workers[ECS Workers 2..N] -->|claim/lease atômico| Outbox
     Workers --> ExpirationQ[SQS Expiration]
     Workers --> NotificationQ[SQS Notification]
     ExpirationQ --> Workers
@@ -70,8 +70,20 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 
 1. Expiração e notificação usam filas e DLQs separadas para uma não bloquear a outra.
 2. Listeners, executores, timeouts e cotas de concorrência são separados dentro de cada task; a cota de notificação não consome a reservada à expiração.
-3. O serviço escala pelo maior sinal normalizado de backlog por task e idade da mensagem entre as filas, não pela profundidade bruta agregada.
-4. O worker conclui mensagens em voo durante SIGTERM dentro do `stopTimeout`; redelivery continua idempotente.
+3. Antes de habilitar mais de um publisher, o módulo de outbox adquire lotes limitados em uma transação PostgreSQL curta com `FOR UPDATE SKIP LOCKED`, token de posse e lease medido pelo relógio do banco.
+4. A chamada ao SQS ocorre depois do commit do claim. A confirmação marca `published_at` somente quando evento e token ainda pertencem ao publisher; um processo interrompido deixa o evento elegível quando o lease vence.
+5. O serviço escala pelo maior sinal normalizado de backlog por task e idade da mensagem entre as filas, não pela profundidade bruta agregada.
+6. O worker conclui mensagens em voo durante SIGTERM dentro do `stopTimeout`; redelivery continua idempotente porque resposta ambígua do SQS ainda pode produzir duplicidade.
+
+### Interface do módulo de outbox
+
+O seam permanece em `OutboxEventStore`. Sua interface high-load esconde lock, token e relógio PostgreSQL dos callers:
+
+- `claimPending(limit, leaseDuration)` retorna somente eventos adquiridos pelo chamador, cada um com token opaco de posse; a implementação incrementa a tentativa no mesmo comando que cria o claim;
+- `markPublished(eventId, claimToken)` conclui somente o claim vigente e informa se a atualização ocorreu;
+- falha antes da confirmação não exige transação compensatória: o lease expirado torna a linha elegível para um novo claim.
+
+O publisher conhece apenas essas operações e nunca mantém uma transação aberta enquanto espera o SQS. O adaptador JDBC concentra a seleção limitada, o `SKIP LOCKED`, o relógio e a atualização condicional. Essa profundidade evita espalhar protocolo de lease pelo agendador e pelos testes.
 
 ## Controle de volatilidade
 
@@ -79,7 +91,7 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 - O mínimo programado sobe antes da venda e retorna após uma janela de estabilização.
 - O máximo de tasks será limitado pela capacidade validada do banco.
 - Controle de admissão será aplicado antes de saturar o writer.
-- Cache, Aurora e compute serão habilitados e dimensionados por variáveis Terraform, sem mudança no binário Java.
+- Cache, Aurora e compute serão habilitados e dimensionados por variáveis Terraform. O mesmo binário Java atende os ambientes, mas deve incorporar o adaptador compartilhado de claim/lease antes de permitir scale-out do publisher.
 
 ## Alternativas para escala além do PostgreSQL
 
@@ -97,6 +109,7 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 - Evoluir Valkey para grupo de replicação Multi-AZ e habilitar múltiplas tasks e autoscaling independente.
 - Criar serviços e target groups distintos para `query-api` e `command-api`, apontando para a mesma imagem imutável.
 - Criar endpoints RDS Proxy read-only e read-write e um adaptador de roteamento na Query API; regras de negócio e contratos não variam.
+- Evoluir o módulo compartilhado de outbox e o schema Flyway com claim/lease antes de configurar mais de uma task publicadora.
 - Usar NAT por AZ e recursos Multi-AZ.
 - Manter estados Terraform separados entre demo e high-load.
 
@@ -112,6 +125,9 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 | Escala do ECS supera banco | Mais conexões e lock waits sem maior vazão | RDS Proxy controla conexões; o máximo do serviço de comandos vem do benchmark e não pode ultrapassar a capacidade validada do writer. |
 | Linha quente de evento | p95/p99 de reserva cresce mesmo com mais tasks | Medir lock waits por evento, aplicar admissão e pré-escala; considerar mudança de modelo somente por nova ADR quando o SLO falhar após tuning. |
 | Redução de tasks interrompe trabalho | Requisição ou mensagem em voo volta a ser processada | Drenagem do ALB, SIGTERM, `stopTimeout`, idempotência e redelivery da fila. |
+| Publishers concorrentes leem o mesmo lote | Mensagens, tentativas, logs e custo crescem proporcionalmente ao número de workers | Claim/lease atômico e limitado com `FOR UPDATE SKIP LOCKED`; teste sincronizado com dois publishers. |
+| Publisher encerra após o claim | Evento permanece temporariamente indisponível | Lease curto baseado no relógio PostgreSQL devolve elegibilidade; backlog e idade do claim geram sinal operacional. |
+| Resposta do SQS é ambígua | O evento pode ser reenviado mesmo com claim exclusivo | Sem promessa de exactly-once; `outboxEventId` permanece estável e consumidores continuam idempotentes. |
 | Falha de envio de e-mail | Cliente não recebe referência | Fila própria, retry, DLQ e alarme; reserva não é revertida. |
 | Abuso ou credencial vazada | Custo e saturação | IAM com menor privilégio, credenciais temporárias, WAF, throttling por método, máximos Terraform e rotação/revogação da role. |
 | Custo permanente | Recursos ociosos | Ambiente não é aplicado nesta entrega; futura promoção exige orçamento, janela, owner e rollback. |
@@ -123,6 +139,7 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 | Artefato | Uma imagem Java com modos `query-api`, `command-api` e `worker` | Impede divergência de regras e permite escalar deployments independentemente por configuração. |
 | Escala de consultas | Serviço ECS próprio + Valkey Multi-AZ + proxy read-only para disponibilidade | Leituras têm sinal e custo distintos; cache reduz pressão e readers absorvem misses sem criar outro modelo Java. |
 | Escala de comandos | Serviço ECS próprio + pré-escala + RDS Proxy read-write | Reservas crescem na abertura da venda; mais tasks só são úteis até o limite de conexão e contenção do writer. |
+| Escala do publisher | Claim/lease PostgreSQL antes de `2..N` workers | Evita duplicidade sistemática sem segurar transação durante I/O de rede; lease recupera processo interrompido. |
 | Escrita autoritativa | Aurora PostgreSQL Serverless | Preserva transações, constraints, migrations e driver da demo; mudar para NoSQL exigiria regra e código novos. |
 | Disponibilidade | Recursos Multi-AZ e mínimo de duas tasks por serviço | Tolera perda de task/AZ, com custo aceito somente quando a arquitetura for promovida. |
 | Borda | Único API Gateway REST com IAM, WAF e throttling | Rejeita acesso e excesso antes do compute, centraliza rotas e impede endpoint alternativo sem proteção. |
@@ -130,4 +147,6 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 
 ## Modelagem de dados
 
-A arquitetura usa exatamente a [mesma modelagem da demo](../../../docs/data-model.md). Aurora não recebe tabelas, índices, migrations ou regras exclusivas. A separação entre leitura e comando é operacional: os mesmos modelos usam datasources distintos por caso de uso, selecionados dentro do adaptador de persistência.
+A arquitetura parte da [modelagem da demo](../../../docs/data-model.md) e mantém um único schema Flyway para os dois ambientes. A promoção acrescenta ao `outbox_event` apenas estado operacional de claim, com token opaco e `lease_until TIMESTAMPTZ`, além de um acesso indexável aos eventos não publicados elegíveis. O adaptador adquire um lote limitado com `FOR UPDATE SKIP LOCKED` e atualiza token, lease e tentativas em uma transação curta. `markPublished` exige o mesmo token e limpa o claim. Não existe tabela ou modelo de negócio exclusivo do ambiente high-load.
+
+O índice da aquisição deve filtrar `published_at IS NULL` e começar pelo instante de elegibilidade do lease, seguido de `occurred_at` e `id` para ordenação determinística. O predicado temporal usa `clock_timestamp()` na consulta, não no predicado do índice. A migration e o plano de consulta serão validados no PostgreSQL suportado antes da promoção.
