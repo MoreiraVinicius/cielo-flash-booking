@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Flash Booking — arquitetura-alvo AWS high-load</title>
+  <desc id="desc">Arquitetura-alvo planejada e ainda não provisionada para alta carga. API Gateway e WAF entram em um VPC Link e Application Load Balancer Multi-AZ. Os modos Query API, Command API e worker preservam a mesma aplicação Java, mas escalam de forma independente no ECS Fargate. Valkey Multi-AZ, RDS Proxy e Aurora PostgreSQL substituem os componentes Single-AZ. Filas SQS separadas com DLQs preservam expiração e notificação. A vista não representa capacidade medida ou failover validado.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F8FCFF"/><stop offset="1" stop-color="#EDF7FC"/></linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#061B4F"/><stop offset="1" stop-color="#204986"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#16375B" flood-opacity="0.12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 Z" fill="#204986"/></marker>
+    <marker id="arrowAsync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 Z" fill="#D61F69"/></marker>
+    <style>
+      .title{font:700 34px Montserrat,'Segoe UI',Arial,sans-serif;fill:#fff}.subtitle{font:500 16px Montserrat,'Segoe UI',Arial,sans-serif;fill:#DDF5FF}.eyebrow{font:700 12px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:1.3px}.column{font:700 18px Montserrat,'Segoe UI',Arial,sans-serif;fill:#09285C}.columnNote{font:500 12px Montserrat,'Segoe UI',Arial,sans-serif;fill:#547086}.cardTitle{font:700 15px Montserrat,'Segoe UI',Arial,sans-serif;fill:#102F5E}.body{font:500 12px Montserrat,'Segoe UI',Arial,sans-serif;fill:#29455F}.small{font:500 11px Montserrat,'Segoe UI',Arial,sans-serif;fill:#587086}.pill{font:700 10px Montserrat,'Segoe UI',Arial,sans-serif;letter-spacing:.35px}.onDark{fill:#DDF5FF!important}.onDarkTitle{fill:#FFFFFF!important}.flow{fill:none;stroke:#204986;stroke-width:3;marker-end:url(#arrow)}.async{fill:none;stroke:#D61F69;stroke-width:3;stroke-dasharray:9 7;marker-end:url(#arrowAsync)}
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="url(#page)"/>
+  <rect x="24" y="20" width="1552" height="108" rx="22" fill="url(#hero)"/>
+  <text class="eyebrow" x="56" y="50" fill="#63D5FF">TOPOLOGIA AWS · ARQUITETURA-ALVO</text>
+  <text class="title" x="56" y="87">Flash Booking — evolução high-load planejada</text>
+  <text class="subtitle" x="56" y="113">Mesmos três modos Java e mesmos invariantes; topologia Multi-AZ e escala orientada por sinais.</text>
+  <g transform="translate(1112 43)">
+    <rect width="150" height="28" rx="14" fill="#FFF2E0"/><text class="pill" x="18" y="19" fill="#A95C00">NÃO PROVISIONADA</text>
+    <rect x="160" width="204" height="28" rx="14" fill="#FFF2E0"/><text class="pill" x="179" y="19" fill="#A95C00">SEM CAPACIDADE MEDIDA</text>
+    <text class="small onDark" x="2" y="54">Alvo técnico; failover e escala ainda precisam de evidência.</text>
+  </g>
+
+  <!-- VPC boundary -->
+  <rect x="28" y="148" width="1544" height="642" rx="22" fill="#FFFFFF" stroke="#8CCDE7" stroke-width="2"/>
+  <rect x="50" y="164" width="1500" height="42" rx="12" fill="#EAF8FE"/>
+  <text class="cardTitle" x="70" y="190">Amazon VPC · pelo menos 2 Availability Zones</text>
+  <text class="body" x="426" y="190">workloads privados · subnets de dados isoladas · rotas simétricas</text>
+  <g transform="translate(1266 173)">
+    <rect width="264" height="24" rx="12" fill="#DDF5FF"/>
+    <circle cx="18" cy="12" r="6" fill="#00AEEF"/><circle cx="38" cy="12" r="6" fill="#204986"/>
+    <text class="pill" x="54" y="16" fill="#204986">MULTI-AZ · NAT GATEWAY POR AZ</text>
+  </g>
+
+  <!-- Column panels -->
+  <rect x="50" y="224" width="294" height="536" rx="18" fill="#F6FAFD" stroke="#C9DBE8"/>
+  <rect x="364" y="224" width="348" height="536" rx="18" fill="#F1FAFE" stroke="#A8DFF2"/>
+  <rect x="732" y="224" width="498" height="536" rx="18" fill="#FFFBF5" stroke="#F0D29B"/>
+  <rect x="1250" y="224" width="300" height="536" rx="18" fill="#F7F9FB" stroke="#CDD8E2"/>
+  <text class="eyebrow" x="72" y="254" fill="#204986">01 · BORDA MULTI-AZ</text>
+  <text class="column" x="72" y="280">Entrada protegida</text>
+  <text class="columnNote" x="72" y="300">Controle de abuso e distribuição interna</text>
+  <text class="eyebrow" x="386" y="254" fill="#008BC0">02 · CORE ESCALÁVEL</text>
+  <text class="column" x="386" y="280">Amazon ECS Fargate</text>
+  <text class="columnNote" x="386" y="300">tasks Multi-AZ · autoscaling independente</text>
+  <text class="eyebrow" x="754" y="254" fill="#B86B00">03 · DADOS E ASSÍNCRONO</text>
+  <text class="column" x="754" y="280">Escala sem trocar o domínio</text>
+  <text class="columnNote" x="754" y="300">mesmo schema, migrations e contrato de eventos</text>
+  <text class="eyebrow" x="1272" y="254" fill="#50677A">04 · OPERABILIDADE</text>
+  <text class="column" x="1272" y="280">Sinais para escalar</text>
+  <text class="columnNote" x="1272" y="300">instrumentação requerida, ainda não validada</text>
+
+  <!-- Edge cards -->
+  <g filter="url(#shadow)">
+    <rect x="76" y="324" width="242" height="84" rx="14" fill="#FFF2F7" stroke="#D61F69" stroke-width="2"/>
+    <rect x="76" y="444" width="242" height="112" rx="14" fill="#EEF9FE" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="76" y="592" width="242" height="92" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+  </g>
+  <circle cx="103" cy="358" r="18" fill="#D61F69"/><text class="pill onDarkTitle" x="91" y="362">API</text>
+  <text class="cardTitle" x="132" y="350">AWS WAF + API Gateway</text><text class="body" x="132" y="372">IAM / SigV4 · quotas por rota</text><text class="small" x="132" y="393">rate limit + proteção de borda</text>
+  <circle cx="103" cy="480" r="18" fill="#00AEEF"/><text class="pill onDarkTitle" x="92" y="484">VPC</text>
+  <text class="cardTitle" x="132" y="474">VPC Link v2</text><text class="body" x="132" y="496">Application Load Balancer</text><text class="small" x="132" y="517">interno · cross-zone</text><text class="small" x="132" y="538">health checks por target group</text>
+  <circle cx="103" cy="626" r="18" fill="#204986"/><text class="pill onDarkTitle" x="91" y="630">AZ</text>
+  <text class="cardTitle" x="132" y="620">Falha zonal isolável</text><text class="body" x="132" y="642">tasks e saída distribuídas</text><text class="small" x="132" y="663">sem ponto único de NAT</text>
+  <path class="flow" d="M197 408 V444"/>
+
+  <!-- Compute cards -->
+  <g filter="url(#shadow)">
+    <rect x="398" y="330" width="286" height="104" rx="14" fill="#FFFFFF" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="398" y="458" width="286" height="104" rx="14" fill="#FFFFFF" stroke="#00AEEF" stroke-width="2"/>
+    <rect x="398" y="586" width="286" height="114" rx="14" fill="#FFFFFF" stroke="#D61F69" stroke-width="2"/>
+  </g>
+  <rect x="414" y="346" width="86" height="22" rx="11" fill="#E8F9FF"/><text class="pill" x="426" y="361" fill="#008BC0">QUERY · N TASKS</text>
+  <text class="cardTitle" x="414" y="391">Query API</text><text class="body" x="414" y="412">escala por RPS, latência e cache miss</text>
+  <rect x="414" y="474" width="106" height="22" rx="11" fill="#E8F9FF"/><text class="pill" x="426" y="489" fill="#008BC0">COMMAND · N TASKS</text>
+  <text class="cardTitle" x="414" y="519">Command API</text><text class="body" x="414" y="540">escala + controle de admissão</text>
+  <rect x="414" y="602" width="98" height="22" rx="11" fill="#FFF0F6"/><text class="pill" x="426" y="617" fill="#B41759">WORKER · N TASKS</text>
+  <text class="cardTitle" x="414" y="647">Publisher + consumers</text><text class="body" x="414" y="668">escala por backlog e idade</text><text class="small" x="414" y="688">concorrência limitada por dependência</text>
+  <path class="flow" d="M318 500 H354 V382 H398"/><path class="flow" d="M354 510 H398"/>
+
+  <!-- Data and async cards -->
+  <g filter="url(#shadow)">
+    <rect x="760" y="324" width="212" height="112" rx="14" fill="#F3EEFF" stroke="#7B61E8" stroke-width="2"/>
+    <rect x="994" y="324" width="208" height="112" rx="14" fill="#FFF8EA" stroke="#FF9900" stroke-width="2"/>
+    <rect x="760" y="470" width="442" height="112" rx="14" fill="#FFF2F7" stroke="#D61F69" stroke-width="2"/>
+    <rect x="760" y="616" width="442" height="84" rx="14" fill="#FFF8EA" stroke="#FF9900"/>
+  </g>
+  <text class="cardTitle" x="782" y="353">ElastiCache for Valkey</text><text class="body" x="782" y="375">Multi-AZ · primary + réplica</text><text class="small" x="782" y="397">failover planejado · TTL curto</text><text class="small" x="782" y="417">cache nunca autoriza reserva</text>
+  <text class="cardTitle" x="1016" y="353">RDS Proxy + Aurora</text><text class="body" x="1016" y="375">PostgreSQL Serverless v2</text><text class="small" x="1016" y="397">writer + reader Multi-AZ</text><text class="small" x="1016" y="417">pool e limite de conexões</text>
+  <text class="cardTitle" x="782" y="499">Amazon SQS · isolamento por fluxo</text><text class="body" x="782" y="523">Expiration Queue + DLQ</text><text class="body" x="1002" y="523">Notification Queue + DLQ</text><text class="small" x="782" y="547">backlog e idade dirigem o autoscaling do worker</text><text class="small" x="782" y="566">redrive limitado · consumidores idempotentes</text>
+  <text class="cardTitle" x="782" y="645">Amazon SES</text><text class="body" x="782" y="668">notificação desacoplada da reserva</text><text class="small" x="782" y="688">quota e falhas tratadas como sinais operacionais</text>
+  <path class="flow" d="M684 382 H760"/><path class="flow" d="M684 510 H718 V402 H994"/>
+  <path class="async" d="M684 650 H722 V526 H760"/><path class="async" d="M981 582 V616"/>
+
+  <!-- Operability cards -->
+  <g filter="url(#shadow)">
+    <rect x="1278" y="324" width="244" height="114" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+    <rect x="1278" y="462" width="244" height="108" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+    <rect x="1278" y="594" width="244" height="106" rx="14" fill="#FFFFFF" stroke="#91B6D3"/>
+  </g>
+  <text class="cardTitle" x="1300" y="353">CloudWatch + tracing</text><text class="body" x="1300" y="376">p95 / p99 · erro · saturação</text><text class="small" x="1300" y="397">cache hit · locks · conexões</text><text class="small" x="1300" y="416">backlog · idade · DLQs</text>
+  <text class="cardTitle" x="1300" y="491">Auto Scaling</text><text class="body" x="1300" y="514">política por modo Java</text><text class="small" x="1300" y="535">cooldown e limites explícitos</text><text class="small" x="1300" y="553">escala validada por teste futuro</text>
+  <text class="cardTitle" x="1300" y="623">Secrets Manager + KMS</text><text class="body" x="1300" y="646">segredos e criptografia</text><text class="small" x="1300" y="667">rotação e acesso mínimo</text><text class="small" x="1300" y="685">alarmar custo e quota</text>
+
+  <!-- Status footer -->
+  <rect x="50" y="714" width="1160" height="34" rx="11" fill="#EAF2F8"/>
+  <text class="pill" x="72" y="736" fill="#204986">RESILIÊNCIA PLANEJADA</text>
+  <text class="body" x="238" y="736">Multi-AZ · cache-aside + fallback · outbox · DLQs · consumidores idempotentes · reconciliação</text>
+  <rect x="1250" y="714" width="300" height="34" rx="11" fill="#A95C00"/>
+  <text class="pill onDarkTitle" x="1284" y="736">ALVO NÃO PROVISIONADO NEM MEDIDO</text>
+  <text class="small" x="40" y="824">Fluxo sólido: acesso síncrono · Fluxo magenta tracejado: eventos pós-commit. O desenho mostra intenção arquitetural, não resultado de benchmark.</text>
+  <text class="small" x="40" y="850">Evidência necessária antes de produção: capacidade, autoscaling, tolerância a falha zonal, failover de dados e tracing distribuído.</text>
+</svg>

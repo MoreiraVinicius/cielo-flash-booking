@@ -65,7 +65,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 
 ### T03: Redesenhar a arquitetura-alvo high-load
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar uma vista comparável à demo com Multi-AZ e escala independente, sem alegar execução.
 **Where:** `docs/images/flash-booking-aws-high-load.svg`
 **Depends on:** T02
@@ -74,6 +74,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06
 **Tests:** contrato de status/componentes contra STATE e inspeção renderizada
 **Gate:** Visual
 **Commit:** `docs(visual): redraw high-load AWS target`
+**Result:** Vista comparável à demo, com Multi-AZ compacto, escala separada e status não provisionado repetido; XML, 18 fatos e render nativo aprovados.
 
 ### T04: Integrar as vistas no README
 
