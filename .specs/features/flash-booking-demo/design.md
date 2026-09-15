@@ -173,7 +173,7 @@ A proteção não depende de sincronização Java, quantidade de containers, cac
 2. O banco conquista lock sobre a linha do evento e reavalia a condição depois de aguardar outra transação; somente operações que ainda cabem alteram uma linha.
 3. Cliente, reserva, outbox e decremento são confirmados juntos. Qualquer erro desfaz todos os efeitos.
 4. A constraint `0 <= available <= capacity` oferece uma segunda barreira contra valores impossíveis.
-5. Cancelamento e expiração usam transição condicional do estado. Somente quem alterar `PENDING` incrementa o estoque na mesma transação.
+5. O comando de encerramento conquista o lock da reserva e só então observa o relógio PostgreSQL: `DELETE` antes do prazo materializa `CANCELLED`; `DELETE`, consumidor ou reconciliador em `expiresAt` ou depois materializam `EXPIRED`. Somente quem alterar `PENDING` incrementa o estoque na mesma transação.
 6. Idempotência impede que retries do mesmo comando criem novas reservas ou devolvam capacidade novamente.
 
 Com carga muito alta no mesmo evento, as transações se enfileiram na linha quente. Isso pode aumentar p95/p99 ou produzir timeout, mas não justifica relaxar a regra: o sistema degrada ou rejeita antes de aceitar uma reserva sem capacidade. A arquitetura alta mantém exatamente esse algoritmo e mede quando a contenção passa a violar o SLO.
@@ -183,6 +183,8 @@ Com carga muito alta no mesmo evento, as transações se enfileiram na linha que
 O publisher calcula `DelaySeconds` a partir de `expiresAt`, limitado a 15 minutos. O consumidor executa uma transição condicional. Um reconciliador periódico consulta reservas vencidas para cobrir falhas de publicação e mensagens na DLQ.
 
 Conforme [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md) e [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md), concluir a transição, a gravação do motivo e a devolução de capacidade na mesma transação até expiresAt + 5 segundos em operação saudável. O relógio PostgreSQL decide a elegibilidade; mensagem antecipada não autoriza expiração antes de expiresAt e o reconciliador varre candidatos ao menos a cada segundo. A janela não estende a validade e não define a defasagem de caches.
+
+O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva pendente, amostra o relógio do banco depois do lock e encerra como `CANCELLED` apenas se esse instante ainda for anterior a `expiresAt`; caso contrário, encerra como `EXPIRED`. A resposta `200` contém o estado terminal efetivamente persistido. Isso impede que uma requisição iniciada antes do prazo, mas desbloqueada depois dele, registre um cancelamento tardio.
 
 ## Tratamento de erros
 
@@ -234,7 +236,7 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 | Compute | Três serviços ECS Fargate | Consultas, comandos e trabalho assíncrono têm sinais diferentes; Fargate evita a operação de Kubernetes para um projeto individual. |
 | Banco | RDS PostgreSQL | Transações, constraints e chaves estrangeiras defendem estoque e vínculos com menos código; a comparação com NoSQL está no ADR 0004. |
 | Cache | ElastiCache for Valkey | Mantém protocolo e clientes Redis, custa menos no ElastiCache e tem governança aberta; comparação completa no ADR 0005. |
-| Concorrência | Atualização e transições condicionais | A decisão de estoque acontece em uma única escrita atômica; retries e fluxos de devolução só alteram uma linha se ainda possuírem o estado esperado. |
+| Concorrência | Atualização e transições condicionais | A decisão de estoque acontece em uma única escrita atômica; o encerramento observa o relógio PostgreSQL depois do lock; retries e fluxos de devolução só alteram uma linha se ainda possuírem o estado esperado. |
 | Assíncrono | Outbox + duas filas SQS | Reserva e eventos são confirmados juntos; expiração e e-mail têm retries/DLQs independentes e não alongam a transação HTTP. |
 | Entrada | API Gateway REST com IAM/WAF/throttling + VPC Link V2 + ALB interno | Autentica e limita antes do compute; nenhum segundo endpoint público contorna a proteção; ADR 0012. |
 | Infraestrutura | Terraform | Torna topologia, tetos de capacidade e destruição revisáveis; alta carga muda parâmetros/recursos sem alterar Java. |

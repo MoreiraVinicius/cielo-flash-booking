@@ -44,7 +44,7 @@
 ### AD-007 - Reserva temporária e encerramento auditável
 
 - **Status:** active
-- **Decision:** Manter PENDING, CANCELLED e EXPIRED, sem confirmação definitiva de compra; persistir código e descrição do motivo nos estados terminais.
+- **Decision:** Manter PENDING, CANCELLED e EXPIRED, sem confirmação definitiva de compra; antes de `expiresAt`, `DELETE` encerra uma reserva pendente como CANCELLED, enquanto em `expiresAt` ou depois o prazo prevalece e o encerramento é EXPIRED; persistir código e descrição do motivo nos estados terminais.
 - **Reason:** Preservar o escopo de reserva temporária e explicar seus encerramentos.
 - **Scope:** Domínio compartilhado pelas duas arquiteturas.
 - **ADR:** [ADR 0002](../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md).
@@ -52,7 +52,7 @@
 ### AD-008 - Liberação até cinco segundos após vencimento
 
 - **Status:** active
-- **Decision:** Concluir devolução de capacidade até expiresAt + 5 segundos com banco e processamento de expiração saudáveis, sem estender a validade.
+- **Decision:** A reserva deixa de ser válida em `expiresAt`; qualquer encerramento iniciado nesse instante ou depois deve materializar EXPIRED pelo relógio do PostgreSQL, ainda que seja disparado por `DELETE`. Com banco e processamento saudáveis, concluir devolução de capacidade até `expiresAt + 5 segundos`, sem estender a validade.
 - **Reason:** Limitar estoque temporariamente bloqueado e definir um prazo verificável para o fluxo assíncrono.
 - **Trade-off:** Pode haver indisponibilidade temporária de ingressos vencidos dentro dessa janela; falhas exigem contrato de recuperação separado.
 - **Scope:** Expiração por consumidor e reconciliador, em ambas as arquiteturas.
@@ -79,7 +79,7 @@
 ### AD-011 - Catálogo fechado de motivos de encerramento
 
 - **Status:** active
-- **Decision:** O servidor grava `CANCELLED_BY_REQUEST` ou `RESERVATION_DEADLINE_REACHED`, com descrição fixa, e expõe `closureReason` somente em reservas terminais.
+- **Decision:** O servidor grava `CANCELLED_BY_REQUEST` somente quando `DELETE` encerra a reserva antes de `expiresAt`; em `expiresAt` ou depois grava `RESERVATION_DEADLINE_REACHED`, inclusive quando `DELETE` materializa o vencimento. As descrições são fixas e `closureReason` aparece somente em reservas terminais.
 - **Reason:** O encerramento precisa ser auditável e ter contrato HTTP estável.
 - **Scope:** Domínio e API compartilhados pelas duas arquiteturas.
 - **ADR:** [ADR 0006](../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).

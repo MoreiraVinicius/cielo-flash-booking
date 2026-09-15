@@ -13,6 +13,8 @@ A reserva representa um bloqueio temporário de ingressos. Aceitar a reserva nã
 
 Persistir código e descrição do motivo ao encerrar a reserva em CANCELLED ou EXPIRED. O nome de domínio é motivo de encerramento: não registrar falha de pagamento quando não existe processamento de pagamento neste escopo.
 
+O prazo define a validade, não a fila que primeiro tenta encerrar a reserva. Uma solicitação de cancelamento decidida antes de `expiresAt` produz CANCELLED. Em `expiresAt` ou depois, o PostgreSQL materializa EXPIRED, inclusive se o gatilho for `DELETE /reservations/{id}`.
+
 ## Alternativas e consequências
 
 Adicionar confirmação definitiva exigiria ampliar estados e contrato sem atender a um requisito do escopo atual. Guardar apenas o estado não permite registrar a causa de encerramento com código e descrição.

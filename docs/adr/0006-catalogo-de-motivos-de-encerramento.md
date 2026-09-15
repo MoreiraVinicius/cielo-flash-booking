@@ -16,6 +16,8 @@ O servidor atribui os motivos; `DELETE /reservations/{id}` não recebe motivo in
 | `CANCELLED` | `CANCELLED_BY_REQUEST` | `Reserva cancelada por solicitação` |
 | `EXPIRED` | `RESERVATION_DEADLINE_REACHED` | `Prazo da reserva encerrado` |
 
+`DELETE /reservations/{id}` não implica sempre `CANCELLED`. O PostgreSQL decide depois de conquistar o lock: antes de `expiresAt`, usa `CANCELLED_BY_REQUEST`; em `expiresAt` ou depois, usa `RESERVATION_DEADLINE_REACHED` e retorna `EXPIRED`. O gatilho HTTP não pode falsificar a causa temporal do encerramento.
+
 O motivo é gravado na mesma transação que a mudança de estado e a devolução de estoque. `GET /reservations/{id}` retorna `closureReason` como objeto com `code` e `description` para estados terminais, e `null` para `PENDING`. A descrição é controlada pelo servidor e não pode ser atualizada após o encerramento.
 
 ## Alternativas consideradas

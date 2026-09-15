@@ -15,6 +15,8 @@ Com banco e processamento de expiração saudáveis, concluir a transição para
 
 Persistir estado e motivo de encerramento e devolver capacidade na mesma transação. Duplicidades e concorrência com cancelamento não podem devolver capacidade mais de uma vez nem sobrescrever um encerramento já efetivado.
 
+O PostgreSQL conquista o lock da reserva antes de observar o instante que decide o motivo. `DELETE /reservations/{id}` retorna CANCELLED somente quando esse instante é anterior a `expiresAt`; em `expiresAt` ou depois, a chamada retorna e persiste EXPIRED. Uma requisição iniciada antes do prazo não adquire direito a cancelar se só conquistar o lock depois do vencimento.
+
 O limite se refere à disponibilidade autoritativa no banco, não à atualização de caches de leitura. A defasagem de cache é tratada separadamente no [ADR 0005](0005-cache-valkey-compartilhado-e-binario-unico.md).
 
 ## Alternativas e justificativa
@@ -25,7 +27,7 @@ O limite se refere à disponibilidade autoritativa no banco, não à atualizaç�
 
 ## Verificação e limites
 
-Testar ausência de liberação antecipada, commit até o limite, motivo persistido e devolução única sob duplicidade e disputa com cancelamento. Repetir o teste de prazo com ausência da mensagem de expiração e reconciliador saudável. Medir do expiresAt persistido até a devolução confirmada no banco.
+Testar ausência de liberação antecipada, `DELETE` dos dois lados de `expiresAt`, espera por lock atravessando o prazo, commit até o limite, motivo persistido e devolução única sob duplicidade e disputa com cancelamento. Repetir o teste de prazo com ausência da mensagem de expiração e reconciliador saudável. Medir do expiresAt persistido até a devolução confirmada no banco.
 
 O intervalo de varredura, tempo de espera e processamento devem caber juntos no limite. A configuração exata será definida no design e comprovada pelos testes; este ADR não declara desempenho já medido.
 

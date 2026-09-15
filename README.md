@@ -59,7 +59,7 @@ Os comandos mutáveis exigem `Idempotency-Key`. Erros usam `application/problem+
 | `GET` | `/events/{id}` | Query API | Consulta capacidade total e disponível |
 | `POST` | `/events/{id}/reservations` | Command API | Cria cliente e reserva `PENDING` sem exceder estoque |
 | `GET` | `/reservations/{id}` | Query API | Consulta a reserva e referencia o evento por `id` e `name` |
-| `DELETE` | `/reservations/{id}` | Command API | Cancela uma reserva pendente e devolve capacidade uma vez |
+| `DELETE` | `/reservations/{id}` | Command API | Antes do prazo cancela; no prazo/depois materializa expiração; devolve capacidade uma vez |
 
 A coleção [Postman para a demo AWS](postman/README.md) contém as cinco chamadas e o fluxo IAM/SigV4, mas o endpoint é deliberadamente temporário e não está ativo.
 
@@ -76,6 +76,8 @@ O caminho síncrono é curto e autoritativo:
 5. somente depois do commit o cache de disponibilidade do evento é invalidado.
 
 O caminho assíncrono começa **depois** da resposta da reserva. O worker publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
+
+O prazo também prevalece no caminho síncrono. O PostgreSQL bloqueia a reserva e só então decide pelo próprio relógio: um `DELETE` antes de `expiresAt` retorna `CANCELLED`; em `expiresAt` ou depois retorna `EXPIRED`. A primeira transição devolve capacidade e invalida o cache; concorrentes apenas observam o estado terminal já persistido.
 
 ## Idempotência na prática
 
@@ -141,7 +143,7 @@ Dados, proveniência e procedimento de reprodução: [performance/demo/README.md
 
 | Risco | Padrão aplicado | Sinal ou evidência |
 | --- | --- | --- |
-| Oversell e corrida terminal | Update/transição condicional, constraints e transação única | Linhas afetadas, disponibilidade e testes concorrentes |
+| Oversell e corrida terminal | Lock, relógio PostgreSQL, transição condicional, constraints e transação única | Fronteira de `expiresAt`, espera por lock, motivo, disponibilidade e testes concorrentes |
 | Retry de comando | Idempotência PostgreSQL por 24 h, ligada a operação/alvo/hash | Repetição igual, conflito `409` e registro persistido |
 | Mensagem perdida ou duplicada | Transactional outbox, consumidor idempotente, retry limitado e DLQ por fluxo | Backlog, idade da mensagem, DLQ e logs correlacionados |
 | Cache de evento lento ou indisponível | Timeout de 100 ms, bulkhead de 5 fallbacks/task e circuito após 5 falhas em 10 s | Hits/misses, fallback, circuito e pressão no PostgreSQL |
@@ -205,7 +207,7 @@ Separa a transação síncrona da publicação e dos consumidores assíncronos, 
 | Quero entender… | Comece por |
 | --- | --- |
 | O enunciado original | [Case BackEnd 1.md](Case%20BackEnd%201.md) |
-| Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [29 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação PASS](.specs/features/flash-booking-demo/validation.md) |
+| Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [31 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação](.specs/features/flash-booking-demo/validation.md) |
 | Evolução high-load | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [20 tarefas planejadas](.specs/features/flash-booking-high-load/tasks.md) |
 | Modelo de dados | [Customer → Reservation → Event](docs/data-model.md) |
 | Decisões e trade-offs | [PostgreSQL autoritativo](docs/adr/0004-postgresql-como-fonte-autoritativa.md) · [cache](docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md) · [segurança](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md) · [serviços](docs/adr/0013-separar-servicos-de-consulta-e-comando.md) |

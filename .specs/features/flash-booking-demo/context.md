@@ -23,6 +23,7 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 - A disponibilidade nunca será usada para autorizar a reserva; a transação de reserva decide.
 - Reservas pendentes expiram em 10 minutos, valor configurável.
 - Com banco e processamento saudáveis, a devolução de capacidade deve concluir até expiresAt + 5 segundos, sem estender a validade; ver [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md).
+- Antes de `expiresAt`, `DELETE /reservations/{id}` encerra uma reserva pendente como `CANCELLED`. Em `expiresAt` ou depois, o prazo prevalece e a mesma chamada materializa `EXPIRED`; o PostgreSQL decide após conquistar o lock da reserva.
 - CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP do [ADR 0006](../../../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
 - Idempotência dos comandos usa uma janela de 24 horas no PostgreSQL: a validade é decidida atomicamente pelo relógio do banco e o worker remove registros vencidos em lotes, conforme o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
 - A elegibilidade de expiração usa o relógio do PostgreSQL conforme o [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md).

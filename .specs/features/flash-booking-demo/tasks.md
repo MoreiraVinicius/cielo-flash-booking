@@ -6,7 +6,7 @@ Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente 
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
 **Status:** Complete
-**Task count:** 29
+**Task count:** 31
 
 ## Test Coverage Matrix
 
@@ -73,6 +73,10 @@ T25 -> T26
 T26 -> T27
 T27 -> T28
 T28 -> T29
+
+Phase 6
+T29 -> T30
+T30 -> T31
 ```
 
 ## Task Breakdown
@@ -436,6 +440,32 @@ T28 -> T29
 **Gate:** Build + Infra
 **Commit:** `test: validate flash booking demo`
 
+## Phase 6: Deadline Semantics Correction
+
+### T30: Fixar a precedência do prazo no contrato
+
+**Status:** Complete
+**What:** Corrigir a verdade vigente para que `DELETE` antes de `expiresAt` resulte em CANCELLED e, em `expiresAt` ou depois, resulte em EXPIRED pelo relógio PostgreSQL observado após o lock.
+**Where:** `.specs/features/flash-booking-demo/`, `.specs/STATE.md`, `CONTEXT.md`, `docs/adr/`, `docs/data-model.md`, `docs/case-requirements-evaluation.md`, `README.md`
+**Depends on:** T29
+**Requirement:** DEMO-03
+**Done when:** Spec, design, decisões, glossário, ADRs e documentação descrevem a mesma precedência temporal, resposta HTTP e devolução única, sem tratar a correção como uma segunda versão do projeto.
+**Tests:** validação estrutural de spec, tasks e README
+**Gate:** Build
+**Commit:** `docs(reservation): define deadline precedence`
+
+### T31: Aplicar a decisão terminal após o lock
+
+**Status:** Pending
+**What:** Fazer o PostgreSQL bloquear a reserva pendente, observar seu relógio e escolher atomicamente CANCELLED antes do prazo ou EXPIRED no prazo/depois, mantendo devolução e invalidação únicas.
+**Where:** `src/main/java/com/cielo/flashbooking/reservation/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/`, `src/test/java/com/cielo/flashbooking/reservation/`
+**Depends on:** T30
+**Requirement:** DEMO-03
+**Done when:** `DELETE` retorna o estado e motivo corretos nos dois lados da fronteira; uma espera por lock que atravessa `expiresAt` termina em EXPIRED; a corrida com o worker devolve capacidade uma vez; gates unitário e PostgreSQL passam.
+**Tests:** unit, integration e concurrency, incluídos na tarefa
+**Gate:** Full
+**Commit:** `fix(reservation): make deadline win terminal races`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -445,6 +475,7 @@ T28 -> T29
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
 | Quality | T26-T29 | Hardening precede benchmark; benchmark precede docs; docs precedem validação contra o case. Match. |
+| Deadline semantics | T30-T31 | O contrato corrigido precede testes e implementação da decisão pós-lock. Match. |
 
 ## Test Co-location Validation
 
@@ -457,3 +488,5 @@ T28 -> T29
 | T26-T27 | Security/performance | integration/performance | Tests in same task | OK |
 | T28 | Docs | build/review | No deferred production tests | OK |
 | T29 | Verification | all | Fresh verifier | OK |
+| T30 | Docs | structural | Gates da spec, tasks e README | OK |
+| T31 | Persistence/controllers/concurrency | unit + integration | Tests in same task | OK |

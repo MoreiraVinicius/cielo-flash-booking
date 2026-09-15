@@ -79,7 +79,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Acceptance Criteria:**
 
-1. WHEN a `PENDING` reservation is cancelled THEN the system SHALL transition it to `CANCELLED` and return capacity exactly once.
+1. WHEN `DELETE /reservations/{id}` closes a `PENDING` reservation before `expiresAt` THEN the system SHALL return `200`, transition it to `CANCELLED`, persist `CANCELLED_BY_REQUEST`, and return capacity exactly once; WHEN the database evaluates that command at or after `expiresAt`, after acquiring the reservation lock, THEN the system SHALL instead return `200`, transition it to `EXPIRED`, persist `RESERVATION_DEADLINE_REACHED`, and return capacity exactly once.
 2. WHEN a `PENDING` reservation reaches `expiresAt`, with healthy database and expiration processing, THEN the system SHALL complete its transition to `EXPIRED` and return capacity exactly once by `expiresAt + 5 seconds`.
 3. IF an expiration message is processed again THEN the system SHALL leave inventory and status unchanged.
 4. IF asynchronous processing fails THEN the system SHALL apply bounded retries and route an exhausted failure to a DLQ.
@@ -153,13 +153,13 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
 - SE uma reserva referenciar evento inexistente, ENTÃO o sistema DEVE retornar `404` sem efeito parcial.
-- SE cancelamento e expiração concorrerem, ENTÃO o sistema DEVE liberar capacidade uma vez.
+- SE `DELETE` e o worker de expiração concorrerem antes do prazo, ENTÃO somente a primeira transição DEVE liberar capacidade; SE o lock for obtido em `expiresAt` ou depois, ENTÃO o estado terminal DEVE ser `EXPIRED`, independentemente de qual caminho materializar o encerramento.
 - SE a publicação no SQS atrasar, ENTÃO o reconciliador DEVE expirar a reserva pelo horário persistido.
 - SE o banco estiver indisponível, ENTÃO o sistema DEVE falhar sem confirmar reserva.
 - SE o cache de evento falhar, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL com timeout de cache de 100 ms, no máximo 5 fallbacks simultâneos por task e circuito aberto após 5 falhas em 10 segundos.
 - SE o SQS entregar uma mensagem duplicada, ENTÃO o consumidor DEVE produzir o mesmo estado final.
 - SE o envio de e-mail for duplicado após resposta ambígua do provedor, ENTÃO a reserva DEVE permanecer inalterada e a ocorrência DEVE ser observável.
-- SE cancelamento ou expiração vencer a corrida, ENTÃO a operação concorrente DEVE afetar zero linhas e não incrementar capacidade novamente.
+- SE `DELETE` ou o worker materializar primeiro o estado terminal correto para o instante decidido pelo PostgreSQL, ENTÃO a operação concorrente DEVE afetar zero linhas e não incrementar capacidade novamente.
 
 ## Requirement Traceability
 
@@ -167,7 +167,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | --- | --- | --- | --- |
 | DEMO-01 | Gerenciar eventos | Execute | Validated |
 | DEMO-02 | Reservar sem oversell | Execute | Validated |
-| DEMO-03 | Cancelar e expirar | Execute | Validated |
+| DEMO-03 | Cancelar e expirar | Execute | Implementing |
 | DEMO-04 | Idempotência e erros | Execute | Validated |
 | DEMO-05 | Executar e provisionar | Execute | Validated |
 | DEMO-06 | Notificar a reserva | Execute | Validated |
@@ -179,7 +179,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 - [x] Os cinco endpoints passam nos testes de contrato.
 - [x] Nenhum teste concorrente produz oversell.
-- [x] Cancelamento e expiração devolvem capacidade uma vez.
+- [ ] Antes do prazo, `DELETE` resulta em CANCELLED; no prazo ou depois, resulta em EXPIRED; ambos devolvem capacidade uma vez sob concorrência.
 - [x] Expiração saudável conclui devolução até expiresAt + 5 segundos, inclusive pelo reconciliador na ausência de mensagem.
 - [x] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
 - [x] `GET /events/{id}` usa cache Valkey com TTL máximo de um segundo e invalidação pós-commit; `GET /reservations/{id}` consulta PostgreSQL sem depender do cache.

@@ -27,7 +27,7 @@ A fonte consolidada da demo é a [validação independente](../.specs/features/f
 | `GET /events/{id}` | Retorna capacidade total/disponível com cache-aside de até 1 segundo. | `EventControllerIT` |
 | `POST /events/{id}/reservations` | Persiste cliente e reserva `PENDING`, decrementa estoque e grava outbox na mesma transação. | `ReservationControllerIT` e testes de concorrência |
 | `GET /reservations/{id}` | Retorna a reserva, o cliente e a referência estável do evento `{id, name}` diretamente do PostgreSQL. | `ReservationQueryControllerIT` |
-| `DELETE /reservations/{id}` | Cancela uma reserva pendente e devolve estoque exatamente uma vez. | `ReservationQueryControllerIT` e testes de corrida |
+| `DELETE /reservations/{id}` | Antes do prazo encerra como CANCELLED; no prazo ou depois materializa EXPIRED; devolve estoque exatamente uma vez. | `ReservationQueryControllerIT` e testes de corrida/lock |
 
 O domínio entregue é de **reserva temporária**. Não há pagamento, compra confirmada ou emissão de ingresso. O e-mail informa a reserva e seu prazo, sem prometer venda concluída.
 
@@ -49,7 +49,7 @@ O domínio entregue é de **reserva temporária**. Não há pagamento, compra co
 | Mensagem perdida ou repetida | Transactional outbox, entrega pelo menos uma vez, consumidor idempotente e DLQ por fluxo | backlog, idade da mensagem, DLQ e logs correlacionados |
 | Cache de evento indisponível | timeout de 100 ms, bulkhead de 5 fallbacks por task e circuit breaker após 5 falhas/10 s | hit rate, falhas, circuito aberto e pressão no banco |
 | Expiração atrasada | mensagem atrasada + reconciliador consultando o relógio do PostgreSQL | idade da fila e atraso até o estado terminal |
-| Corrida entre cancelar e expirar | transição condicional; somente o vencedor devolve estoque | linhas afetadas, estado terminal e disponibilidade |
+| Corrida entre cancelar e expirar | lock e relógio PostgreSQL escolhem o estado terminal; somente a primeira transição devolve estoque | espera por lock, motivo, estado terminal e disponibilidade |
 | Rajada ou abuso na borda | IAM/SigV4, resource policy, WAF e throttling de melhor esforço | logs do API Gateway/WAF e distribuição de respostas |
 
 Os limites do API Gateway e o AWS Budget reduzem risco, mas não são garantias determinísticas de admissão ou teto de custo. O snapshot PostgreSQL do benchmark é coletado ao final e não prova ausência de lock waits durante toda a execução.

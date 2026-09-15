@@ -20,10 +20,10 @@ _Avoid_: Cliente, titular da reserva.
 Reserva ainda não encerrada por cancelamento ou expiração. Seu prazo de validade é limitado.
 
 **Reserva cancelada**:
-Reserva encerrada por cancelamento, com código e descrição do motivo preservados.
+Reserva encerrada por solicitação recebida e decidida antes do prazo, com código e descrição do motivo preservados.
 
 **Reserva expirada**:
-Reserva encerrada por vencimento do prazo, com código e descrição do motivo preservados.
+Reserva cujo prazo já foi alcançado quando o PostgreSQL decidiu o encerramento, com código e descrição do motivo preservados. O vencimento prevalece mesmo quando uma solicitação de cancelamento materializa o estado terminal.
 
 **Motivo de encerramento**:
 Causa registrada para o cancelamento ou a expiração de uma reserva, identificada por um código e explicada por uma descrição.

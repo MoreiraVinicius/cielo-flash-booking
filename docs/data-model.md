@@ -128,7 +128,7 @@ Uma reserva pertence a exatamente um cliente e um evento. Um cliente pode realiz
 
 Criar uma reserva executa, na mesma transação, o upsert do cliente e uma atualização condicional equivalente a `UPDATE event SET available = available - :quantity WHERE id = :eventId AND available >= :quantity`, seguida do vínculo `Reservation -> Event -> Customer` e do outbox. Se nenhuma linha for atualizada, a transação inteira é desfeita, retorna `409` e não persiste cliente, reserva nem evento de outbox.
 
-Cancelar ou expirar primeiro conquista a transição condicional `PENDING -> estado terminal`. Somente a transação que alterar uma linha incrementa `available` pela quantidade reservada. Repetição, entrega duplicada, cancelamento concorrente e disputa entre cancelamento e expiração afetam zero linhas e não devolvem ingressos novamente. O banco serializa alterações na mesma linha do evento; em carga extrema a latência pode crescer, mas o estoque não fica negativo nem supera a capacidade.
+O encerramento primeiro bloqueia a reserva PENDING e depois observa o relógio PostgreSQL. `DELETE` antes de `expires_at` escolhe CANCELLED; `DELETE`, consumidor ou reconciliador em `expires_at` ou depois escolhem EXPIRED. Somente a transação que alterar uma linha incrementa `available` pela quantidade reservada. Repetição, entrega duplicada, cancelamento concorrente e disputa entre cancelamento e expiração afetam zero linhas e não devolvem ingressos novamente. O banco serializa alterações na mesma linha da reserva e do evento; em carga extrema a latência pode crescer, mas o estoque não fica negativo nem supera a capacidade.
 
 ## Contrato HTTP relevante
 
@@ -144,7 +144,7 @@ Corpo mínimo de criação de reserva:
 }
 ```
 
-A consulta da reserva retorna `customer`, `event: {id, name}`, `quantity`, `status`, `expiresAt` e `closureReason`. Capacidade total e disponibilidade atual pertencem a `GET /events/{id}` e não são duplicadas na resposta da reserva. A consulta não usa cache e não retorna campos internos de idempotência, outbox ou entrega de notificação.
+A consulta da reserva retorna `customer`, `event: {id, name}`, `quantity`, `status`, `expiresAt` e `closureReason`. `DELETE /reservations/{id}` retorna `200` com essa mesma representação terminal: CANCELLED antes do prazo e EXPIRED no prazo ou depois. Capacidade total e disponibilidade atual pertencem a `GET /events/{id}` e não são duplicadas na resposta da reserva. A consulta não usa cache e não retorna campos internos de idempotência, outbox ou entrega de notificação.
 
 ## Proteção de dados
 
