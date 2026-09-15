@@ -40,6 +40,8 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
         registry.add("spring.datasource.password", POSTGRESQL::getPassword);
         registry.add("spring.data.redis.host", VALKEY::getHost);
         registry.add("spring.data.redis.port", () -> VALKEY.getMappedPort(6379));
+        registry.add("idempotency.cleanup.fixed-delay", () -> "1h");
+        registry.add("idempotency.cleanup.initial-delay", () -> "1h");
     }
 
     @Autowired
@@ -129,7 +131,12 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .isEqualTo(9);
 
         jdbcTemplate.update(
-                "UPDATE idempotency_record SET expires_at = clock_timestamp() - interval '1 second' WHERE idempotency_key = ?",
+                """
+                UPDATE idempotency_record
+                SET created_at = clock_timestamp() - interval '25 hours',
+                    expires_at = clock_timestamp() - interval '1 second'
+                WHERE idempotency_key = ?
+                """,
                 key);
         String newRequest = objectMapper.writeValueAsString(Map.of(
                 "quantity", 1,

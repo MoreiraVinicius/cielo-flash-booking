@@ -122,7 +122,7 @@ Uma reserva pertence a exatamente um cliente e um evento. Um cliente pode realiz
 | `reservation(customer_id, created_at desc)` | histórico futuro do cliente | Mantém o relacionamento navegável sem criar endpoint agora. |
 | `reservation(expires_at) WHERE status = 'PENDING'` | reconciliador de expiração | Mantém a varredura de vencidas pequena. |
 | `outbox_event(occurred_at) WHERE published_at IS NULL` | publicação pendente | Evita reler eventos já publicados. |
-| `idempotency_record(expires_at)` | seleção de registros vencidos | Permite ao worker limpar, por padrão, até 500 linhas por rodada sem varrer toda a tabela; a aquisição continua decidindo a validade. |
+| `idempotency_record(expires_at)` | seleção de registros vencidos | O cutoff estável `statement_timestamp()` permite acesso por índice; o worker limpa, por padrão, até 500 linhas por rodada e a aquisição continua decidindo a validade. |
 
 ## Escritas concorrentes e prevenção de oversell
 

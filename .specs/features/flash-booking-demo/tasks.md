@@ -235,7 +235,7 @@ T28 -> T29
 **Depends on:** T07, T10, T12
 **Requirement:** DEMO-04
 **Done when:** Antes do vencimento, repetição com operação, alvo e payload iguais retorna a resposta final persistida e reutilização incompatível retorna 409; respostas finais de domínio, inclusive 409 por capacidade, são preservadas; 5xx não é preservado; depois do vencimento, uma nova impressão digital pode reivindicar a chave, inclusive com concorrência gerando um único novo efeito; a limpeza limitada remove apenas registros vencidos e não define a validade. Seguir ADR 0007.
-**Tests:** unit, integration e concurrency, incluídos na tarefa
+**Tests:** unit para binding/defaults, overrides de ambiente e rejeição de lotes/durações inválidos; integration e concurrency para replay, reclaim e limpeza, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(api): add persistent idempotency`
 

@@ -120,9 +120,13 @@ Um cliente realiza várias reservas; cada reserva pertence a exatamente um clien
 
 - `Idempotency-Key` é globalmente única durante a janela; operação, alvo normalizado e hash do payload formam a impressão digital usada para distinguir replay de conflito.
 - Armazena status HTTP, resposta serializada, criação e vencimento após 24 horas, ambos medidos pelo PostgreSQL.
-- A aquisição insere uma chave nova ou substitui atomicamente o registro vencido. A restrição única e o `ON CONFLICT` serializam chamadas concorrentes; somente a vencedora executa o comando.
+- A aquisição insere uma chave nova ou substitui atomicamente o registro vencido. A restrição única e o `ON CONFLICT` serializam chamadas concorrentes; somente a vencedora executa o comando. A substituição inicia a nova janela com `clock_timestamp()` depois de conquistar o lock, sem descontar o tempo de espera.
 - O worker remove até 500 registros vencidos a cada cinco segundos por padrão, com tamanho e intervalos tipados em `idempotency.cleanup` e aquisição via `FOR UPDATE SKIP LOCKED`. A limpeza é manutenção de retenção: atraso ou concorrência com uma nova aquisição não prolonga a janela nem apaga uma chave reativada.
 - O desenho segue o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
+
+A configuração de limpeza usa `batch-size` entre 1 e 10.000, `fixed-delay` positivo e `initial-delay` não negativo. Valores ausentes usam 500 linhas e cinco segundos; valores explícitos inválidos impedem o startup. Overrides de ambiente usam `IDEMPOTENCY_CLEANUP_BATCHSIZE`, `IDEMPOTENCY_CLEANUP_FIXEDDELAY` e `IDEMPOTENCY_CLEANUP_INITIALDELAY`, com unidades explícitas de duração. Mudanças exigem reinício, sem refresh dinâmico.
+
+A seleção de limpeza compara `expires_at` com `statement_timestamp()`, um cutoff estável do banco que permite o acesso por índice. A exclusão revalida o vencimento e os locks são mantidos até o fim dessa única instrução atômica.
 
 ### OutboxEvent
 

@@ -36,8 +36,8 @@ class JdbcIdempotencyStore implements IdempotencyStore {
                     payload_hash = EXCLUDED.payload_hash,
                     response_status = EXCLUDED.response_status,
                     response_body = EXCLUDED.response_body,
-                    created_at = EXCLUDED.created_at,
-                    expires_at = EXCLUDED.expires_at
+                    created_at = clock_timestamp(),
+                    expires_at = clock_timestamp() + interval '24 hours'
                 WHERE idempotency_record.expires_at <= clock_timestamp()
                 """,
                 UUID.randomUUID(),
@@ -84,7 +84,7 @@ class JdbcIdempotencyStore implements IdempotencyStore {
                 WITH expired AS (
                     SELECT id
                     FROM idempotency_record
-                    WHERE expires_at <= clock_timestamp()
+                    WHERE expires_at <= statement_timestamp()
                     ORDER BY expires_at, id
                     LIMIT ?
                     FOR UPDATE SKIP LOCKED
