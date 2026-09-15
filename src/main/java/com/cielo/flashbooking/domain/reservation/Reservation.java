@@ -45,7 +45,11 @@ public final class Reservation {
     }
 
     public boolean cancel(Instant changedAt) {
-        return close(ClosureReason.CANCELLED_BY_REQUEST, changedAt);
+        Objects.requireNonNull(changedAt, "changedAt must not be null");
+        ClosureReason reason = changedAt.isBefore(expiresAt)
+                ? ClosureReason.CANCELLED_BY_REQUEST
+                : ClosureReason.RESERVATION_DEADLINE_REACHED;
+        return close(reason, changedAt);
     }
 
     public boolean expire(Instant changedAt) {

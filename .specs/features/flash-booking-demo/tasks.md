@@ -6,7 +6,7 @@ Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente 
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
 **Status:** Complete
-**Task count:** 31
+**Task count:** 29
 
 ## Test Coverage Matrix
 
@@ -74,9 +74,6 @@ T26 -> T27
 T27 -> T28
 T28 -> T29
 
-Phase 6
-T29 -> T30
-T30 -> T31
 ```
 
 ## Task Breakdown
@@ -114,7 +111,7 @@ T30 -> T31
 **Where:** `src/main/java/com/cielo/flashbooking/domain/reservation/`
 **Depends on:** T01
 **Requirement:** DEMO-03
-**Done when:** Toda reserva pertence a um cliente e um evento; o Java trata o e-mail com uma regra única antes de buscar ou persistir; somente transições válidas alteram o estado e indicam devolução única; estados terminais usam o catálogo imutável do ADR 0006.
+**Done when:** Toda reserva pertence a um cliente e um evento; o Java trata o e-mail com uma regra única antes de buscar ou persistir; cancelamento antes de `expiresAt` resulta em CANCELLED e no prazo/depois resulta em EXPIRED; somente transições válidas alteram o estado e indicam devolução única; estados terminais usam o catálogo imutável do ADR 0006.
 **Tests:** unit, incluídos na tarefa
 **Gate:** Quick
 **Commit:** `feat(reservation): add reservation state model`
@@ -220,11 +217,11 @@ T30 -> T31
 ### T12: Implementar cancelamento
 
 **Status:** Complete
-**What:** Implementar `DELETE /reservations/{id}` com devolução condicional.
-**Where:** `src/main/java/com/cielo/flashbooking/reservation/controller/`
+**What:** Implementar `DELETE /reservations/{id}` com decisão terminal pelo relógio PostgreSQL após o lock e devolução condicional.
+**Where:** `src/main/java/com/cielo/flashbooking/domain/reservation/`, `src/main/java/com/cielo/flashbooking/reservation/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/`, `src/test/java/com/cielo/flashbooking/reservation/`
 **Depends on:** T10
 **Requirement:** DEMO-03
-**Done when:** Repetição, expiração concorrente e cancelamento concorrente devolvem capacidade uma vez; CANCELLED persiste código e descrição do motivo do ADR 0006 na mesma transação, preservando um encerramento já efetivado e invalidando as chaves de evento e reserva após o commit.
+**Done when:** `DELETE` retorna 200 e CANCELLED antes de `expiresAt`, ou 200 e EXPIRED no prazo/depois; uma espera por lock que atravessa o prazo resulta em EXPIRED; repetição, expiração concorrente e cancelamento concorrente devolvem capacidade uma vez; estado e motivo do ADR 0006 são persistidos na mesma transação, preservando um encerramento já efetivado e invalidando somente a chave do evento após o commit.
 **Tests:** unit, integration e concurrency, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(reservation): cancel reservation endpoint`
@@ -440,32 +437,6 @@ T30 -> T31
 **Gate:** Build + Infra
 **Commit:** `test: validate flash booking demo`
 
-## Phase 6: Deadline Semantics Correction
-
-### T30: Fixar a precedência do prazo no contrato
-
-**Status:** Complete
-**What:** Corrigir a verdade vigente para que `DELETE` antes de `expiresAt` resulte em CANCELLED e, em `expiresAt` ou depois, resulte em EXPIRED pelo relógio PostgreSQL observado após o lock.
-**Where:** `.specs/features/flash-booking-demo/`, `.specs/STATE.md`, `CONTEXT.md`, `docs/adr/`, `docs/data-model.md`, `docs/case-requirements-evaluation.md`, `README.md`
-**Depends on:** T29
-**Requirement:** DEMO-03
-**Done when:** Spec, design, decisões, glossário, ADRs e documentação descrevem a mesma precedência temporal, resposta HTTP e devolução única, sem tratar a correção como uma segunda versão do projeto.
-**Tests:** validação estrutural de spec, tasks e README
-**Gate:** Build
-**Commit:** `docs(reservation): define deadline precedence`
-
-### T31: Aplicar a decisão terminal após o lock
-
-**Status:** Pending
-**What:** Fazer o PostgreSQL bloquear a reserva pendente, observar seu relógio e escolher atomicamente CANCELLED antes do prazo ou EXPIRED no prazo/depois, mantendo devolução e invalidação únicas.
-**Where:** `src/main/java/com/cielo/flashbooking/reservation/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/`, `src/test/java/com/cielo/flashbooking/reservation/`
-**Depends on:** T30
-**Requirement:** DEMO-03
-**Done when:** `DELETE` retorna o estado e motivo corretos nos dois lados da fronteira; uma espera por lock que atravessa `expiresAt` termina em EXPIRED; a corrida com o worker devolve capacidade uma vez; gates unitário e PostgreSQL passam.
-**Tests:** unit, integration e concurrency, incluídos na tarefa
-**Gate:** Full
-**Commit:** `fix(reservation): make deadline win terminal races`
-
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -475,7 +446,6 @@ T30 -> T31
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
 | Quality | T26-T29 | Hardening precede benchmark; benchmark precede docs; docs precedem validação contra o case. Match. |
-| Deadline semantics | T30-T31 | O contrato corrigido precede testes e implementação da decisão pós-lock. Match. |
 
 ## Test Co-location Validation
 
@@ -488,5 +458,3 @@ T30 -> T31
 | T26-T27 | Security/performance | integration/performance | Tests in same task | OK |
 | T28 | Docs | build/review | No deferred production tests | OK |
 | T29 | Verification | all | Fresh verifier | OK |
-| T30 | Docs | structural | Gates da spec, tasks e README | OK |
-| T31 | Persistence/controllers/concurrency | unit + integration | Tests in same task | OK |

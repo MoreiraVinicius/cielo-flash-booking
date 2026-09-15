@@ -133,7 +133,7 @@ class ReservationConcurrencyIT extends LocalIntegrationInfrastructure {
     private UUID insertPendingReservation(UUID eventId, int quantity) {
         UUID customerId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
-        Instant createdAt = Instant.parse("2026-09-09T12:00:00Z");
+        Instant createdAt = jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
         jdbcTemplate.update(
                 "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
                 customerId,

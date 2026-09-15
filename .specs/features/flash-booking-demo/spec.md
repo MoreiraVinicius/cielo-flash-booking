@@ -167,7 +167,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | --- | --- | --- | --- |
 | DEMO-01 | Gerenciar eventos | Execute | Validated |
 | DEMO-02 | Reservar sem oversell | Execute | Validated |
-| DEMO-03 | Cancelar e expirar | Execute | Implementing |
+| DEMO-03 | Cancelar e expirar | Execute | Implemented |
 | DEMO-04 | Idempotência e erros | Execute | Validated |
 | DEMO-05 | Executar e provisionar | Execute | Validated |
 | DEMO-06 | Notificar a reserva | Execute | Validated |
@@ -179,7 +179,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 - [x] Os cinco endpoints passam nos testes de contrato.
 - [x] Nenhum teste concorrente produz oversell.
-- [ ] Antes do prazo, `DELETE` resulta em CANCELLED; no prazo ou depois, resulta em EXPIRED; ambos devolvem capacidade uma vez sob concorrência.
+- [x] Antes do prazo, `DELETE` resulta em CANCELLED; no prazo ou depois, resulta em EXPIRED; ambos devolvem capacidade uma vez sob concorrência.
 - [x] Expiração saudável conclui devolução até expiresAt + 5 segundos, inclusive pelo reconciliador na ausência de mensagem.
 - [x] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
 - [x] `GET /events/{id}` usa cache Valkey com TTL máximo de um segundo e invalidação pós-commit; `GET /reservations/{id}` consulta PostgreSQL sem depender do cache.

@@ -2,9 +2,8 @@ package com.cielo.flashbooking.reservation.application;
 
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
-import java.util.UUID;
-import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface ReservationWriter {
 
@@ -18,7 +17,11 @@ public interface ReservationWriter {
 
     void addReservationExpirationScheduledOutboxEvent(Reservation reservation);
 
-    Optional<CapacityRelease> cancelPending(UUID reservationId, Instant changedAt);
+    /**
+     * Closes PENDING as CANCELLED before the deadline or EXPIRED at/after it, using database time after the row lock.
+     * Returns a release only for the winning transition; participates in the caller's capacity-return transaction.
+     */
+    Optional<CapacityRelease> closePendingOnCancellation(UUID reservationId);
 
     Optional<CapacityRelease> expirePending(UUID reservationId);
 

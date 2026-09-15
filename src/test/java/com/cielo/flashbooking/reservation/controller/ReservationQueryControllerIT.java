@@ -154,7 +154,7 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         UUID eventId = UUID.randomUUID();
         UUID customerId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
-        Instant createdAt = Instant.parse("2026-09-09T12:00:00Z");
+        Instant createdAt = jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
         jdbcTemplate.update(
                 "INSERT INTO event (id, name, capacity, available, created_at) VALUES (?, ?, ?, ?, ?)",
                 eventId,

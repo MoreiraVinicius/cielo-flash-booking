@@ -117,19 +117,40 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     }
 
     @Override
-    public Optional<CapacityRelease> cancelPending(UUID reservationId, java.time.Instant changedAt) {
+    public Optional<CapacityRelease> closePendingOnCancellation(UUID reservationId) {
         return jdbcTemplate.query("""
-                UPDATE reservation
-                SET status = 'CANCELLED',
-                    closure_reason_code = 'CANCELLED_BY_REQUEST',
-                    closure_reason_description = 'Reserva cancelada por solicitação',
-                    updated_at = ?
-                WHERE id = ? AND status = 'PENDING'
-                RETURNING event_id, quantity
+                WITH locked_reservation AS MATERIALIZED (
+                    SELECT id, event_id, quantity, expires_at
+                    FROM reservation
+                    WHERE id = ? AND status = 'PENDING'
+                    FOR UPDATE
+                ), observed_reservation AS MATERIALIZED (
+                    SELECT id, event_id, quantity, expires_at, clock_timestamp() AS observed_at
+                    FROM locked_reservation
+                )
+                UPDATE reservation AS current_reservation
+                SET status = CASE
+                        WHEN observed_reservation.observed_at < observed_reservation.expires_at THEN 'CANCELLED'
+                        ELSE 'EXPIRED'
+                    END,
+                    closure_reason_code = CASE
+                        WHEN observed_reservation.observed_at < observed_reservation.expires_at
+                            THEN 'CANCELLED_BY_REQUEST'
+                        ELSE 'RESERVATION_DEADLINE_REACHED'
+                    END,
+                    closure_reason_description = CASE
+                        WHEN observed_reservation.observed_at < observed_reservation.expires_at
+                            THEN 'Reserva cancelada por solicitação'
+                        ELSE 'Prazo da reserva encerrado'
+                    END,
+                    updated_at = observed_reservation.observed_at
+                FROM observed_reservation
+                WHERE current_reservation.id = observed_reservation.id
+                RETURNING observed_reservation.event_id, observed_reservation.quantity
                 """, resultSet -> resultSet.next()
                 ? Optional.of(new CapacityRelease(
                         resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
-                : Optional.empty(), Timestamp.from(changedAt), reservationId);
+                : Optional.empty(), reservationId);
     }
 
     @Override

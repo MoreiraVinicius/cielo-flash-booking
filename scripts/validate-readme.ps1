@@ -72,8 +72,8 @@ foreach ($requiredTruth in @(
     'Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega',
     '43/43 critérios',
     '38 testes unitários + 56 de integração = 94 aprovados',
-    '46/46 unitários',
-    'execução PostgreSQL pendente',
+    '47/47 unitários',
+    'execução PostgreSQL completa',
     'arquitetura-alvo planejada',
     'não foi provisionada, benchmarkada nem validada remotamente',
     'não comprova distribuição multiprocesso',
@@ -182,17 +182,21 @@ $awsVisualContracts = @(
         Facts = @(
             'PostgreSQL · uma única transação',
             '201 Created',
+            'POST /events/{id}/reservations',
             'GET /events/{id}',
-            'GET reserva',
+            'GET /reservations/{id}',
             'TTL máximo: 1 segundo',
             'AFTER_COMMIT · EVICT BEST EFFORT',
+            'MISS / FALHA · QUERY API LÊ RDS',
             'ReservationCreated',
-            'ExpirationScheduled',
+            'ReservationExpirationScheduled',
             'maxReceiveCount = 5',
             'Reconciliador',
             '≤ 30s',
             'Sem oversell'
         )
+        Paths = @('M196 580 V592 H958 V580')
+        ForbiddenFacts = @('POST /reservations', 'M414 554 H348 V486 H958 V494')
     },
     @{
         Name = 'flash-booking-aws-demo.svg'
@@ -201,7 +205,9 @@ $awsVisualContracts = @(
             'APLICADA',
             'VALIDADA',
             'DESTRUÍDA',
-            'Amazon VPC · 2 Availability Zones',
+            'AWS Region',
+            'VPC em 2 AZs',
+            'serviços regionais',
             '1 NAT GATEWAY',
             'AWS WAF + API Gateway',
             'VPC Link v2',
@@ -215,6 +221,8 @@ $awsVisualContracts = @(
             'AWS Budgets',
             'SECURITY GROUPS'
         )
+        Paths = @('M684 408 H704 V438 H1060 V424', 'M684 500 H716 V454 H1138 V424', 'M760 552 H742 V650 H684', 'M684 678 H760')
+        ForbiddenFacts = @('Amazon VPC · 2 Availability Zones', 'M684 500 H718 V398 H994', 'M981 578 V610')
     },
     @{
         Name = 'flash-booking-aws-high-load.svg'
@@ -222,6 +230,9 @@ $awsVisualContracts = @(
         Facts = @(
             'NÃO PROVISIONADA',
             'SEM CAPACIDADE MEDIDA',
+            'AWS Region',
+            'VPC em pelo menos 2 AZs',
+            'serviços gerenciados regionais fora da VPC',
             'NAT GATEWAY POR AZ',
             'tasks Multi-AZ · autoscaling independente',
             'QUERY · N TASKS',
@@ -234,6 +245,8 @@ $awsVisualContracts = @(
             'Auto Scaling',
             'ALVO NÃO PROVISIONADO NEM MEDIDO'
         )
+        Paths = @('M684 410 H704 V448 H1060 V436', 'M684 510 H716 V464 H1138 V436', 'M760 554 H742 V654 H684', 'M684 682 H760')
+        ForbiddenFacts = @('Amazon VPC · pelo menos 2 Availability Zones', 'M684 510 H718 V402 H994', 'M981 582 V616')
     }
 )
 
@@ -253,6 +266,12 @@ foreach ($contract in $awsVisualContracts) {
     Assert-Condition -Condition ($svgText -notmatch '(?i)terraform') -Message "$($contract.Name) contains implementation-tool noise"
     foreach ($fact in $contract.Facts) {
         Assert-Contains -Text $svgText -Expected $fact -Context "$($contract.Name) truth contract"
+    }
+    foreach ($path in $contract.Paths) {
+        Assert-Contains -Text $svgText -Expected $path -Context "$($contract.Name) routed-arrow contract"
+    }
+    foreach ($forbiddenFact in $contract.ForbiddenFacts) {
+        Assert-Condition -Condition ($svgText.IndexOf($forbiddenFact, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) -Message "$($contract.Name) retains an obsolete or misleading fact: $forbiddenFact"
     }
 }
 

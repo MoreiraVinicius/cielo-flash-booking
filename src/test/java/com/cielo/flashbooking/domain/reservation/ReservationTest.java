@@ -52,6 +52,19 @@ class ReservationTest {
     }
 
     @Test
+    void cancel_whenDeadlineIsReached_expiresWithTheDeadlineReason() {
+        var reservation = reservation();
+
+        var returnedCapacity = reservation.cancel(EXPIRES_AT);
+
+        assertThat(returnedCapacity).isTrue();
+        assertThat(reservation.status()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservation.closureReason()).isEqualTo(ClosureReason.RESERVATION_DEADLINE_REACHED);
+        assertThat(reservation.closureReason().code()).isEqualTo("RESERVATION_DEADLINE_REACHED");
+        assertThat(reservation.closureReason().description()).isEqualTo("Prazo da reserva encerrado");
+    }
+
+    @Test
     void expiresOnceWithTheFixedClosureReason() {
         var reservation = reservation();
 

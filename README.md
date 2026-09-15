@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | Baseline integral histórico com **PASS em 43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. Após a correção de idempotência: **46/46 unitários**, ITs compilados e execução PostgreSQL pendente. |
+| Qual é a evidência? | Baseline integral histórico com **PASS em 43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. Estado atual: **47/47 unitários**, 61 ITs compilados e os 4 cenários de fronteira do prazo aprovados em PostgreSQL 17; a execução PostgreSQL completa em PostgreSQL 16/Testcontainers permanece pendente. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
@@ -40,10 +40,10 @@ docker compose down
 Para executar os gates Java:
 
 ```powershell
-# 46 testes unitários
+# 47 testes unitários
 .\mvnw.cmd test
 
-# Gate completo atual: 46 unitários + 57 testes de integração
+# Gate completo atual: 47 unitários + 61 testes de integração
 .\mvnw.cmd clean verify -Pintegration
 ```
 
@@ -149,8 +149,8 @@ O gatilho de evolução não é “mais componentes”. São métricas: saturaç
 | Gate | Resultado | O que comprova |
 | --- | ---: | --- |
 | Critérios de aceitação | **Baseline 43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime antes da correção atual |
-| Testes unitários | **46/46** | Regras, serviços e configuração de limpeza de idempotência |
-| Testes de integração | **56/56 no baseline; 57 atuais compilados** | A execução PostgreSQL da nova janela idempotente permanece pendente; compilação não é contada como execução |
+| Testes unitários | **47/47** | Regras, serviços, fronteira exata de `expiresAt` e configuração de limpeza de idempotência |
+| Testes de integração | **56/56 no baseline; 61 atuais compilados** | Os 4 cenários de prazo passaram em PostgreSQL 17 descartável; o gate completo em PostgreSQL 16/Testcontainers e os cenários de idempotência ainda não foram reexecutados |
 | Sensor de discriminação | **2/2 mutações mortas** | Os testes falham quando segurança ou decremento de estoque são quebrados |
 | Compose smoke | **PASS** | Query, command, worker, banco, cache, fila e Mailpit integrados |
 | Módulos de infraestrutura | **4/4 PASS** | Rede, dados, compute e edge/observabilidade |
@@ -236,7 +236,7 @@ Separa a transação síncrona da publicação e dos consumidores assíncronos, 
 | Quero entender… | Comece por |
 | --- | --- |
 | O enunciado original | [Case BackEnd 1.md](Case%20BackEnd%201.md) |
-| Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [31 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação](.specs/features/flash-booking-demo/validation.md) |
+| Requisitos e prova da demo | [spec](.specs/features/flash-booking-demo/spec.md) · [29 tarefas](.specs/features/flash-booking-demo/tasks.md) · [validação](.specs/features/flash-booking-demo/validation.md) |
 | Evolução high-load | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [20 tarefas planejadas](.specs/features/flash-booking-high-load/tasks.md) |
 | Modelo de dados | [Customer → Reservation → Event](docs/data-model.md) |
 | Decisões e trade-offs | [PostgreSQL autoritativo](docs/adr/0004-postgresql-como-fonte-autoritativa.md) · [cache](docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md) · [segurança](docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md) · [serviços](docs/adr/0013-separar-servicos-de-consulta-e-comando.md) |
