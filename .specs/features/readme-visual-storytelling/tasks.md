@@ -143,4 +143,4 @@ T06 -> T07
 **Tests:** gate documental, suíte Maven unitária, comparação do código Java, validate_spec, validate_tasks, validate_state após verificação independente
 **Gate:** Build
 **Commit:** `test(docs): validate readme evidence contract`
-**Result:** O contrato documental passou com 5 endpoints, 10 imagens, 37 referências locais e 3 cenários de carga; a suíte unitária atual passou em 38/38 e não há diff em `src/main` ou `src/test` desde o gate completo de 94 testes. A integração não foi reapresentada como nova execução porque o Docker local ficou indisponível.
+**Result:** O contrato documental passou com 5 endpoints, 10 imagens, 37 referências locais e 3 cenários de carga. O baseline integral mantém 94 testes aprovados. Após a correção de idempotência, a suíte rápida atual passou em 46/46 e os 57 ITs compilam; os novos cenários PostgreSQL não foram reapresentados como execução porque Testcontainers não foi iniciado.

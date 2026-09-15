@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | Demo com validação independente **PASS em 43/43 critérios**; **38 testes unitários + 56 de integração = 94 aprovados**. |
+| Qual é a evidência? | Baseline integral histórico com **PASS em 43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. Após a correção de idempotência: **46/46 unitários**, ITs compilados e execução PostgreSQL pendente. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
@@ -40,10 +40,10 @@ docker compose down
 Para executar os gates Java:
 
 ```powershell
-# 38 testes unitários
+# 46 testes unitários
 .\mvnw.cmd test
 
-# Gate completo: unitários + 56 testes de integração
+# Gate completo atual: 46 unitários + 57 testes de integração
 .\mvnw.cmd clean verify -Pintegration
 ```
 
@@ -117,9 +117,9 @@ O gatilho de evolução não é “mais componentes”. São métricas: saturaç
 
 | Gate | Resultado | O que comprova |
 | --- | ---: | --- |
-| Critérios de aceitação | **43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime |
-| Testes unitários | **38/38** | Regras de domínio e serviços de aplicação |
-| Testes de integração | **56/56** | PostgreSQL, Valkey, SQS, concorrência, controllers e migrations |
+| Critérios de aceitação | **Baseline 43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime antes da correção atual |
+| Testes unitários | **46/46** | Regras, serviços e configuração de limpeza de idempotência |
+| Testes de integração | **56/56 no baseline; 57 atuais compilados** | A execução PostgreSQL da nova janela idempotente permanece pendente; compilação não é contada como execução |
 | Sensor de discriminação | **2/2 mutações mortas** | Os testes falham quando segurança ou decremento de estoque são quebrados |
 | Compose smoke | **PASS** | Query, command, worker, banco, cache, fila e Mailpit integrados |
 | Módulos de infraestrutura | **4/4 PASS** | Rede, dados, compute e edge/observabilidade |

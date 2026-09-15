@@ -55,7 +55,7 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 
 **Acceptance Criteria:**
 
-1. WHEN the README presents delivery status THEN it SHALL label the demo as independently validated with `43/43` acceptance criteria and `94` automated tests passing, and SHALL label high-load as planned, not provisioned, and not remotely validated.
+1. WHEN the README presents delivery status THEN it SHALL label `43/43` acceptance criteria and `94` automated tests as the last complete baseline, SHALL show the current fast-suite count and any integration rerun still pending, and SHALL label high-load as planned, not provisioned, and not remotely validated.
 2. WHEN the README compares demo and high-load THEN it SHALL preserve the shared Java domain and explicitly distinguish Single-AZ economical runtime from the Multi-AZ target topology.
 3. WHEN resilience, security, or observability is described THEN each pattern SHALL be paired with its operational signal or evidence source, and the text SHALL not claim deterministic throttling, high-load failover, or production capacity.
 

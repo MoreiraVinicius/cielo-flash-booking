@@ -12,11 +12,11 @@ A fonte consolidada da demo é a [validação independente](../.specs/features/f
 
 | Área | Demo entregue | High-load alvo |
 | --- | --- | --- |
-| Estado | **PASS — 43/43 critérios** | **Planejada — sem provisionamento remoto** |
+| Estado | **Baseline PASS — 43/43 critérios**; correção atual de idempotência com runtime PostgreSQL pendente | **Planejada — sem provisionamento remoto** |
 | Código Java | Implementado e compartilhado entre três modos | Preserva domínio, contratos e schema; adaptadores operacionais pertencem à evolução futura |
 | Execução local | Compose e smoke test validados | Não é um segundo produto local |
 | AWS | Plan/apply, probes e destroy concluídos; state final vazio | Topologia Multi-AZ descrita, não aplicada |
-| Testes | 38 unitários + 56 de integração = **94 aprovados** | Reutiliza gates da demo; falha/capacidade remotas pendentes |
+| Testes | Baseline: 38 unitários + 56 de integração = **94 aprovados**. Atual: 46 unitários aprovados e 57 ITs compilados; novos cenários PostgreSQL pendentes. | Reutiliza gates da demo; falha/capacidade remotas pendentes |
 | Desempenho | Baseline local curto; não representa capacidade de produção | Sem benchmark ou SLO comprovado |
 
 ## Requisitos funcionais

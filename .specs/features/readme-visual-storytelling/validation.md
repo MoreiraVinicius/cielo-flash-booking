@@ -98,3 +98,7 @@ Nenhum gap funcional, estrutural, de precisão da spec ou de discriminação per
 ## Summary
 
 **Overall:** PASS. Os 9/9 critérios de aceitação passam, o sensor matou 1/1 mutação, os validadores documentais/estruturais e os checks estáticos de Compose, k6, SVG e diff passam, e os relatórios atuais mostram 38/38 unitários. O working tree real contém somente este `validation.md` não versionado.
+
+## Evidence reconciliation — 2026-09-15
+
+O `43/43` e os 94 testes continuam rotulados no README como o último baseline integral, não como uma reexecução após mudanças. A suíte rápida atual passou com 46/46; a árvore atual contém 57 ITs compilados, mas os novos cenários PostgreSQL de idempotência não foram executados. `scripts/validate-readme.ps1` passou exigindo esses rótulos distintos. O relatório de idempotência em `.specs/features/flash-booking-demo/validation.md` registra a evidência e os gaps de runtime. Esta reconciliação atualiza a verdade documental; não reescreve a execução histórica acima.
