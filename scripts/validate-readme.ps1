@@ -77,7 +77,10 @@ foreach ($requiredTruth in @(
     'arquitetura-alvo planejada',
     'não foi provisionada, benchmarkada nem validada remotamente',
     'não comprova distribuição multiprocesso',
-    'Nenhum número novo foi inventado'
+    'Nenhum número novo foi inventado',
+    '80 GETs assinados iniciados em 834 ms retornaram `80 × 503`',
+    '20 POSTs assinados retornou `20 × 400`',
+    'não um teste DDoS, admissão determinística ou capacidade sustentável'
 )) {
     Assert-Contains -Text $readme -Expected $requiredTruth -Context 'README truth contract'
 }
@@ -121,6 +124,7 @@ foreach ($requiredAsset in @(
     'flash-booking-spec-driven.svg',
     'flash-booking-architecture-evolution.svg',
     'flash-booking-performance.svg',
+    'flash-booking-edge-burst.svg',
     'flash-booking-aws-eventual-consistency.svg',
     'flash-booking-aws-demo.svg',
     'flash-booking-aws-high-load.svg',
@@ -394,6 +398,26 @@ foreach ($scenario in $baseline.scenarios) {
 Assert-Contains -Text $performanceSvg -Expected 'Latência agregada de GET + POST' -Context 'mixed chart limitation'
 Assert-Contains -Text $performanceSvg -Expected '1 endpoint de comandos exercitado' -Context 'historical chart limitation'
 
+# Edge-burst evidence preserves observed outcomes without turning them into capacity claims.
+$edgeBurstSvg = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs\images\flash-booking-edge-burst.svg') -Raw
+foreach ($fact in @(
+    '80 GETs assinados',
+    '834 ms',
+    '80 × 503',
+    '0 × 429',
+    'WAF → 403',
+    '20 POSTs assinados',
+    '20 × 400',
+    'DELETE não executado',
+    'MELHOR ESFORÇO',
+    'NÃO É TESTE DDOS',
+    'não é capacidade sustentável'
+)) {
+    Assert-Contains -Text $edgeBurstSvg -Expected $fact -Context 'edge burst evidence contract'
+}
+Assert-Contains -Text $edgeBurstSvg -Expected 'targets não implicam 429 determinístico' -Context 'edge burst best-effort disclaimer'
+Assert-Condition -Condition ($edgeBurstSvg -notmatch '(?i)capacidade garantida') -Message 'edge burst visual overstates the observed protection'
+
 # The current harness must not repeat the historical single-endpoint flaw.
 $compose = Get-Content -LiteralPath (Join-Path $repositoryRoot 'compose.yaml') -Raw
 $runner = Get-Content -LiteralPath (Join-Path $repositoryRoot 'performance\demo\run.ps1') -Raw
@@ -421,7 +445,7 @@ foreach ($summarySvgName in @(
 }
 
 $specDrivenSvg = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs\images\flash-booking-spec-driven.svg') -Raw
-foreach ($fact in '>7<', '>13<', '>29<', '>94<', '>43/43<', '20 tarefas', 'sem apply, benchmark ou failover remoto') {
+foreach ($fact in '>7<', '>13<', '>29<', '>94<', '>43/43<', 'baseline integral histórico', '20 tarefas', 'sem apply, benchmark ou failover remoto') {
     Assert-Contains -Text $specDrivenSvg -Expected $fact -Context 'spec-driven evidence trail'
 }
 

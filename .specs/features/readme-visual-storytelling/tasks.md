@@ -6,7 +6,7 @@ Executar as tarefas em ordem. Cada tarefa termina após o gate indicado, atualiz
 
 **Design:** `.specs/features/readme-visual-storytelling/design.md`
 **Status:** Complete
-**Task count:** 7
+**Task count:** 8
 
 ## Test Coverage Matrix
 
@@ -44,6 +44,9 @@ Phase 3: Editorial assembly
 T04 -> T06
 T05 -> T06
 T06 -> T07
+
+Phase 4: Edge evidence correction
+T07 -> T08
 ```
 
 ## Task Breakdown
@@ -144,3 +147,18 @@ T06 -> T07
 **Gate:** Build
 **Commit:** `test(docs): validate readme evidence contract`
 **Result:** O contrato documental passou com 5 endpoints, 10 imagens, 37 referências locais e 3 cenários de carga. O baseline integral mantém 94 testes aprovados. Após a correção de idempotência, a suíte rápida atual passou em 46/46 e os 57 ITs compilam; os novos cenários PostgreSQL não foram reapresentados como execução porque Testcontainers não foi iniciado.
+
+## Phase 4: Edge evidence correction
+
+### T08: Visualizar resultados observados de rajadas na borda
+
+**Status:** Complete
+**What:** Criar um SVG acessível com os targets de WAF/API Gateway e as distribuições históricas de GET e POST observadas na demo; inseri-lo no README e rotular o visual spec-driven como baseline histórico.
+**Where:** `README.md`, `docs/images/flash-booking-edge-burst.svg`, `docs/images/flash-booking-spec-driven.svg`, `scripts/validate-readme.ps1`, `.specs/features/readme-visual-storytelling/`
+**Depends on:** T07
+**Requirement:** README-04, README-02
+**Done when:** O README exibe os resultados exatos de 80 GETs/834 ms/80x503/0x429/WAF 403 e 20 POSTs/20x400/0x429, distingue targets de observação, declara melhor esforço e não chama a execução de teste DDoS ou capacidade sustentável; o gate falha se esses fatos, o asset ou o rótulo histórico forem removidos.
+**Tests:** XML, contrato documental e comparação dirigida com `flash-booking-demo/validation.md`
+**Gate:** Documentation
+**Commit:** `docs(readme): visualize edge burst evidence`
+**Result:** O README expõe o SVG de evidência histórica e descreve as duas rajadas assinadas sem inflar sua semântica. O visual separa targets de API Gateway/WAF das distribuições observadas, registra `80 × 503`/`0 × 429`/WAF `403` para GET e `20 × 400`/`0 × 429` para POST, explica a ausência de DELETE e identifica a demo como melhor esforço, não como teste DDoS ou capacidade sustentável. O gate documental exige o asset, seus fatos e o rótulo histórico do baseline integral.

@@ -10,6 +10,7 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 - [x] Separar visualmente a demo validada da arquitetura high-load planejada.
 - [x] Tornar rastreáveis o desenvolvimento orientado por especificação, os testes e o baseline de carga.
 - [x] Organizar resiliência, segurança e observabilidade sem alegações acima da evidência disponível.
+- [x] Mostrar visualmente a evidência histórica de rajadas na borda, sem chamá-la de benchmark DDoS ou capacidade de produção.
 
 ## Out of Scope
 
@@ -31,6 +32,7 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 | Fonte da demo | `.specs/features/flash-booking-demo/validation.md` | É a evidência independente consolidada com 43/43 critérios. | yes |
 | Fonte de alta carga | Spec e design high-load | Não há ambiente high-load aplicado nem validação remota. | yes |
 | Carga | Baseline local versionado, identificado em `req/s` | Evita apresentar um snapshot local como capacidade de produção. | yes |
+| Rajadas na borda | Visualizar somente as distribuições observadas na demo AWS | Separa targets configurados de resultados reais e evita prometer `429` determinístico. | yes |
 | Diagramas existentes | Permanecem como aprofundamento recolhível | As vistas C4 e de sequência são úteis, mas não pertencem ao primeiro minuto de leitura. | yes |
 
 **Open questions:** none. O usuário aprovou a aplicação do plano editorial e visual, incluindo o commit das mudanças.
@@ -73,6 +75,18 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 
 **Teste independente:** Executar o validador documental e inspecionar o relatório de carga versionado e o gráfico derivado.
 
+### P1: Distinguir proteção de borda de benchmark DDoS
+
+**História:** Como avaliador técnico, quero enxergar os resultados de rajadas observados na borda para entender a proteção existente sem confundi-la com capacidade garantida.
+
+**Acceptance Criteria:**
+
+1. WHEN the README presents AWS edge-burst evidence THEN it SHALL show the observed signed GET result of 80 requests started in 834 ms, 80 responses with status `503`, no `429`, and a subsequent WAF block with `403`.
+2. WHEN the README presents the safe command burst THEN it SHALL show 20 signed POST requests with 20 responses with status `400`, no `429`, and the reason that DELETE was not invoked.
+3. WHILE the visual compares WAF and API Gateway throttling THEN it SHALL label the configured targets as best effort and SHALL state that the observations are historical demo evidence, not a DDoS test or a sustainable-capacity claim.
+
+**Teste independente:** Executar o validador documental, conferir os fatos no SVG e comparar cada valor com `flash-booking-demo/validation.md`.
+
 ## Edge Cases
 
 - SE Docker não estiver disponível para uma nova execução, ENTÃO nenhum número novo DEVE ser alegado; o visual DEVE usar somente o baseline local já versionado e registrar sua proveniência.
@@ -88,8 +102,9 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 | README-01 | Entender o produto rapidamente | Execute | Validated |
 | README-02 | Distinguir entrega e evolução | Execute | Validated |
 | README-03 | Avaliar método e desempenho | Execute | Validated |
+| README-04 | Distinguir proteção de borda de benchmark DDoS | Execute | Validated |
 
-**Cobertura:** 3 requisitos, 9 critérios de aceitação, nenhum sem mapeamento.
+**Cobertura:** 4 requisitos, 12 critérios de aceitação, nenhum sem mapeamento.
 
 ## Success Criteria
 
@@ -98,3 +113,4 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 - [x] Todas as imagens referenciadas existem, são SVGs válidos quando aplicável e têm descrição acessível.
 - [x] O baseline publicado é local, reproduzível e não usa `TPS` como sinônimo de requisições HTTP por segundo.
 - [x] O validador documental e os gates proporcionais do projeto passam.
+- [x] As distribuições de rajadas da demo AWS são visíveis e rotuladas como evidência histórica de melhor esforço.

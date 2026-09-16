@@ -180,7 +180,11 @@ Dados, proveniência e procedimento de reprodução: [performance/demo/README.md
 | Falha de e-mail | Notificação desacoplada, retry e DLQ; estoque não é revertido | Estado de entrega, aceite do SES e DLQ de notificação |
 | Abuso na borda | IAM/SigV4, resource policy, allowlist, WAF e throttling de melhor esforço | `403`, logs do API Gateway/WAF e distribuição de respostas |
 
-Na demo AWS, API Gateway era a única entrada pública; ALB, ECS, RDS e Valkey não recebiam tráfego direto de clientes. Logs e alarmes do CloudWatch foram separados por serviço e dependência, com correlation ID atravessando a API. Os limites do API Gateway e o AWS Budget são camadas de redução de risco — não garantem `429` determinístico nem um teto financeiro imediato.
+![Evidência histórica de rajadas assinadas na borda AWS: configuração, respostas observadas e limites de interpretação](docs/images/flash-booking-edge-burst.svg)
+
+Na validação remota, 80 GETs assinados iniciados em 834 ms retornaram `80 × 503`, sem `429` ou datapoint de throttle; uma segunda tentativa foi bloqueada pelo WAF com `403`. Uma rajada segura de 20 POSTs assinados retornou `20 × 400`, também sem `429`; `DELETE` não foi disparado porque teria efeito sobre uma reserva persistida. Esses resultados confirmam a configuração efetiva e a reação observada, não um teste DDoS, admissão determinística ou capacidade sustentável.
+
+Na demo AWS, API Gateway era a única entrada pública; ALB, ECS, RDS e Valkey não recebiam tráfego direto de clientes. Logs e alarmes do CloudWatch foram separados por serviço e dependência, com correlation ID atravessando a API. Os limites do API Gateway e o AWS Budget são camadas de redução de risco, não garantem `429` determinístico nem um teto financeiro imediato.
 
 ## Limites e trade-offs assumidos
 
