@@ -88,9 +88,9 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 | ID | História | Fase | Estado |
 | --- | --- | --- | --- |
-| AWSVIS-01 | Entender a fronteira de consistência | Verify | Verifier gap corrected; re-verification pending |
-| AWSVIS-02 | Entender os efeitos assíncronos | Verify | Second verifier gap corrected; final re-verification pending |
-| AWSVIS-03 | Comparar as escolhas AWS | Verify | Verifier gap corrected; re-verification pending |
+| AWSVIS-01 | Entender a fronteira de consistência | Verified | Independent verifier approved all acceptance criteria |
+| AWSVIS-02 | Entender os efeitos assíncronos | Verified | Independent verifier approved all acceptance criteria |
+| AWSVIS-03 | Comparar as escolhas AWS | Verified | Independent verifier approved all acceptance criteria |
 
 **Cobertura:** 3 requisitos, 10 critérios de aceitação, nenhum sem mapeamento.
 
@@ -101,4 +101,4 @@ O case original exige consistência eventual para disponibilidade. O README prec
 - [x] A arquitetura high-load não é apresentada como implementada ou medida.
 - [x] As três vistas usam texto SVG nativo e setas sem sobreposição.
 - [x] O README e o gate documental referenciam somente imagens existentes e utilizadas.
-- [ ] O Verifier independente aprova todos os critérios e mata ao menos uma mutação documental.
+- [x] O Verifier independente aprova todos os critérios e mata ao menos uma mutação documental.
