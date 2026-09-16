@@ -145,11 +145,11 @@
 
 ## Handoff
 
-- **Feature**: `flash-booking-high-load`
-- **Phase / Task**: Design corrigido; verificação independente pendente
-- **Completed**: A demo permanece com um publisher. A arquitetura high-load exige claim/lease PostgreSQL antes de habilitar `2..N` publishers, mantém I/O SQS fora da transação e preserva consumidores idempotentes para respostas ambíguas.
-- **In-progress**: Validação spec-anchored da coerência entre spec, contexto, design, tasks e README.
-- **Next step**: Verificador independente deve revisar o contrato, executar os validadores e persistir `validation.md` sem marcar a arquitetura high-load como implementada.
-- **Blockers**: A arquitetura high-load continua Draft e sem runtime remoto por decisão AD-006; o claim/lease pertence à implementação futura T12.
-- **Uncommitted files**: Alterações abertas da feature `eventual-consistency-aws-visuals` em spec/tasks/validation, SVG e `scripts/validate-readme.ps1` permanecem fora desta entrega.
+- **Feature**: `readme-visual-storytelling`
+- **Phase / Task**: T08 concluída; verificação independente PASS.
+- **Completed**: O README contém um SVG acessível que separa os targets de WAF/API Gateway dos resultados históricos das rajadas assinadas na demo AWS. O visual registra `80 × 503` em 80 GETs iniciados em 834 ms, `20 × 400` em 20 POSTs seguros e a omissão de DELETE com efeito persistente, sem alegar benchmark DDoS, `429` determinístico ou capacidade sustentável.
+- **In-progress**: Nenhum trabalho desta feature.
+- **Next step**: Se uma nova execução remota for autorizada, atualizar a evidência com sua proveniência; não substituir os resultados históricos por inferência.
+- **Blockers**: Nenhum para a documentação. A demo AWS não está ativa; novas medições exigem provisionamento e autorização separados.
+- **Uncommitted files**: Somente `.tmp/outbox-scale-sensor-9f2666d/tasks.md`, arquivo de sensor de outra feature, permanece fora desta entrega.
 - **Branch**: `main`

@@ -102,3 +102,45 @@ Nenhum gap funcional, estrutural, de precisão da spec ou de discriminação per
 ## Evidence reconciliation — 2026-09-15
 
 O `43/43` e os 94 testes continuam rotulados no README como o último baseline integral, não como uma reexecução após mudanças. A suíte rápida atual passou com 46/46; a árvore atual contém 57 ITs compilados, mas os novos cenários PostgreSQL de idempotência não foram executados. `scripts/validate-readme.ps1` passou exigindo esses rótulos distintos. O relatório de idempotência em `.specs/features/flash-booking-demo/validation.md` registra a evidência e os gaps de runtime. Esta reconciliação atualiza a verdade documental; não reescreve a execução histórica acima.
+
+## Verificação independente de T08 / README-04 — 2026-09-16
+
+**Verdict:** PASS. A mudança `f0c450c` visualiza fatos já observados na demo AWS e não os transforma em benchmark DDoS, admissão determinística ou capacidade sustentável.
+
+**Diff verificado:** `f0c450c^..f0c450c`.
+
+### Critérios ancorados na spec
+
+| Critério | Resultado definido | Evidência `file:line` | Resultado |
+| --- | --- | --- | --- |
+| README-04.1 | GET assinado: 80 chamadas iniciadas em 834 ms, `80 × 503`, nenhum `429` e segunda tentativa bloqueada por WAF com `403`. | `.specs/features/readme-visual-storytelling/spec.md:84`; `.specs/features/flash-booking-demo/validation.md:58`; `README.md:185`; `docs/images/flash-booking-edge-burst.svg:42-54`; `scripts/validate-readme.ps1:81,404-408`. | PASS |
+| README-04.2 | POST seguro assinado: 20 chamadas, `20 × 400`, nenhum `429`; DELETE omitido por exigir reserva persistida e causar efeito de estado. | `.specs/features/readme-visual-storytelling/spec.md:85`; `.specs/features/flash-booking-demo/validation.md:59`; `README.md:185`; `docs/images/flash-booking-edge-burst.svg:60-68`; `scripts/validate-readme.ps1:82,409-411`. | PASS |
+| README-04.3 | Targets de WAF/API Gateway como melhor esforço; evidência histórica, não teste DDoS nem capacidade sustentável. | `.specs/features/readme-visual-storytelling/spec.md:86`; `docs/images/flash-booking-edge-burst.svg:16-20,26-36,72-74`; `README.md:183-185`; `scripts/validate-readme.ps1:412-419`. | PASS |
+
+**Spec-anchored status:** 3/3 critérios correspondem aos resultados precisos definidos; 0 gaps de precisão.
+
+### Gates
+
+| Gate | Resultado |
+| --- | --- |
+| `scripts/validate-readme.ps1` | PASS — 5 endpoints, 14 imagens, 42 referências locais e 3 cenários de desempenho. |
+| `validate_spec.py` | PASS — 0 erros, 0 avisos. |
+| `validate_tasks.py` | PASS — 0 erros; 6 avisos de granularidade legados, incluindo T08 por cobrir documentação, SVG e gate no mesmo commit. |
+| XML do SVG e `git diff --check f0c450c^ f0c450c` | PASS. |
+
+### Discrimination sensor
+
+| Mutação isolada | Resultado esperado | Resultado observado | Killed? |
+| --- | --- | --- | --- |
+| Em uma worktree temporária destacada de `f0c450c`, `README.md` trocou `80 × 503` por `79 × 503`. | O contrato de verdade deve rejeitar a distribuição GET adulterada. | `validate-readme.ps1` falhou com `README truth contract is missing '80 GETs assinados iniciados em 834 ms retornaram \`80 × 503\`'`. | PASS |
+
+**Isolamento:** a worktree temporária foi removida. O status da árvore real permaneceu igual antes e depois do sensor: somente o arquivo preexistente sob `.tmp/outbox-scale-sensor-9f2666d/` não rastreado.
+
+### Qualidade e escopo
+
+- [x] O novo SVG é acessível e XML válido; não contém raster nem `foreignObject`.
+- [x] A comparação entre targets e observações permanece explícita, incluindo o rótulo `MELHOR ESFORÇO` e a ausência de `429` determinístico.
+- [x] O visual de trilha agora classifica `94`/`43/43` como `baseline integral histórico` em `docs/images/flash-booking-spec-driven.svg:76`.
+- [x] Não há mudança Java/Spring, execução de carga nova ou alegação nova de capacidade.
+
+**Gaps:** nenhum. **Próximo passo:** concluir o gate de estado e registrar o fechamento da feature.
