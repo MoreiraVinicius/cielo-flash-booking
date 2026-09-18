@@ -72,14 +72,14 @@ Phase 2: T04 -> T05 -> T06
 
 ### T04: Add the safe AWS Postman environment
 
-**Status:** Pending
+**Status:** Complete
 
 **What:** Add importable AWS variables with blank endpoint, temporary credentials and verified-recipient placeholders.
 **Where:** `postman/flash-booking.aws.postman_environment.json`
 **Depends on:** T03
 **Requirement:** POSTMAN-04, POSTMAN-05
 **Tests:** static contract validation
-**Gate:** Quick
+**Gate:** `powershell -NoProfile -Command "Get-Content -LiteralPath 'postman/flash-booking.aws.postman_environment.json' -Raw | ConvertFrom-Json | Out-Null"`
 **Commit:** `test(postman): add safe aws environment`
 
 ### T05: Document Postman execution
