@@ -8,14 +8,20 @@ import java.security.NoSuchAlgorithmException;
 
 public record IdempotencyCommand(String key, String operation, String normalizedTarget, String payloadHash) {
 
+    private static final int MAXIMUM_KEY_LENGTH = 128;
+
     public static IdempotencyCommand from(
             String key, String operation, String normalizedTarget, Object payload, ObjectMapper objectMapper) {
         if (key == null || key.isBlank()) {
             throw new IllegalArgumentException("Idempotency-Key is required");
         }
+        String normalizedKey = key.trim();
+        if (normalizedKey.length() > MAXIMUM_KEY_LENGTH) {
+            throw new IllegalArgumentException("Idempotency-Key must not exceed 128 characters");
+        }
         try {
             return new IdempotencyCommand(
-                    key.trim(),
+                    normalizedKey,
                     operation,
                     normalizedTarget,
                     sha256(objectMapper.writeValueAsString(payload)));

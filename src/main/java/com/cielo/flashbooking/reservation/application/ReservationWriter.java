@@ -2,10 +2,13 @@ package com.cielo.flashbooking.reservation.application;
 
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ReservationWriter {
+
+    Instant currentTime();
 
     boolean eventExists(UUID eventId);
 

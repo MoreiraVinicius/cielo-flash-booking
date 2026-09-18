@@ -6,7 +6,6 @@ import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -20,19 +19,16 @@ public class CreateReservationService {
     private final ReservationWriter reservationWriter;
     private final InventoryOperations inventoryOperations;
     private final ReservationProperties properties;
-    private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
 
     public CreateReservationService(
             ReservationWriter reservationWriter,
             InventoryOperations inventoryOperations,
             ReservationProperties properties,
-            Clock clock,
             ApplicationEventPublisher eventPublisher) {
         this.reservationWriter = reservationWriter;
         this.inventoryOperations = inventoryOperations;
         this.properties = properties;
-        this.clock = clock;
         this.eventPublisher = eventPublisher;
     }
 
@@ -42,7 +38,7 @@ public class CreateReservationService {
             IllegalArgumentException.class})
     public CreatedReservation create(UUID eventId, int quantity, String customerName, String customerEmail) {
         Objects.requireNonNull(eventId, "eventId must not be null");
-        Instant createdAt = clock.instant();
+        Instant createdAt = reservationWriter.currentTime();
         Customer requestedCustomer = Customer.create(UUID.randomUUID(), customerName, customerEmail, createdAt);
 
         if (!reservationWriter.eventExists(eventId)) {

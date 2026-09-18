@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +37,11 @@ class CreateReservationServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @BeforeEach
+    void useDatabaseTime() {
+        when(reservationWriter.currentTime()).thenReturn(CLOCK.instant());
+    }
 
     @Test
     void create_whenCapacityExists_persistsCustomerReservationAndOutbox() {
@@ -104,7 +110,6 @@ class CreateReservationServiceTest {
                 reservationWriter,
                 inventoryOperations,
                 new ReservationProperties(Duration.ofMinutes(10)),
-                CLOCK,
                 eventPublisher);
     }
 }

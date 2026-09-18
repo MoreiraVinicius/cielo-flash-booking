@@ -140,6 +140,34 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
+    void create_whenCustomerEmailAlreadyExists_preservesPersistedIdentity() throws Exception {
+        UUID firstEventId = insertEvent(10, 10);
+        UUID secondEventId = insertEvent(10, 10);
+
+        mockMvc.perform(post("/events/{eventId}/reservations", firstEventId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content("""
+                                {"quantity": 1, "customer": {"name": "Ana Original", "email": "ana@example.com"}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customer.name").value("Ana Original"));
+
+        mockMvc.perform(post("/events/{eventId}/reservations", secondEventId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content("""
+                                {"quantity": 1, "customer": {"name": "Nome Diferente", "email": "ana@example.com"}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customer.name").value("Ana Original"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT name FROM customer WHERE email = 'ana@example.com'", String.class))
+                .isEqualTo("Ana Original");
+    }
+
+    @Test
     void create_whenEventIsAbsent_returnsNotFoundWithoutAnyEffect() throws Exception {
         mockMvc.perform(post("/events/{eventId}/reservations", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)

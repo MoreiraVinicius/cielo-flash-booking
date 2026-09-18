@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +26,11 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     JdbcReservationPersistenceAdapter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public Instant currentTime() {
+        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
     }
 
     @Override
@@ -53,7 +59,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 SELECT id
                 FROM reservation
                 WHERE status = 'PENDING'
-                  AND expires_at <= clock_timestamp()
+                  AND expires_at <= statement_timestamp()
                 ORDER BY expires_at, id
                 LIMIT ?
                 """, (resultSet, rowNum) -> resultSet.getObject("id", UUID.class), limit);
@@ -61,19 +67,22 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public Customer upsertCustomer(Customer customer) {
-        UUID id = jdbcTemplate.queryForObject("""
+        return jdbcTemplate.queryForObject("""
                 INSERT INTO customer (id, name, email, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT (email) DO UPDATE
-                SET name = EXCLUDED.name, updated_at = EXCLUDED.updated_at
-                RETURNING id
-                """, UUID.class,
+                SET email = EXCLUDED.email
+                RETURNING id, name, email, created_at
+                """, (resultSet, rowNum) -> Customer.create(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getString("name"),
+                        resultSet.getString("email"),
+                        resultSet.getTimestamp("created_at").toInstant()),
                 customer.id(),
                 customer.name(),
                 customer.email(),
                 Timestamp.from(customer.createdAt()),
                 Timestamp.from(customer.updatedAt()));
-        return Customer.create(id, customer.name(), customer.email(), customer.createdAt());
     }
 
     @Override

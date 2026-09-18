@@ -100,6 +100,8 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
         var key = "command-key";
         insertIdempotencyRecord(key);
         assertThatThrownBy(() -> insertIdempotencyRecord(key)).isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> insertIdempotencyRecord("k".repeat(129))).isInstanceOf(SQLException.class);
+        assertThatCode(() -> insertIdempotencyRecord("k".repeat(128))).doesNotThrowAnyException();
     }
 
     private Connection connection() throws SQLException {
