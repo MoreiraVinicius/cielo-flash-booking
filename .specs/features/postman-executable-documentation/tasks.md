@@ -84,14 +84,14 @@ Phase 2: T04 -> T05 -> T06
 
 ### T05: Document Postman execution
 
-**Status:** Pending
+**Status:** Complete
 
 **What:** Explain import, runtime selection, request order, expected results and AWS SigV4 setup.
 **Where:** `postman/README.md`
 **Depends on:** T04
 **Requirement:** POSTMAN-01, POSTMAN-04, POSTMAN-06
 **Tests:** static contract validation
-**Gate:** Quick
+**Gate:** `powershell -NoProfile -Command "Select-String -LiteralPath 'postman/README.md' -Pattern 'Executar localmente','Executar na AWS','AWS Signature v4','O que esta coleção prova' | Out-Null"`
 **Commit:** `docs(postman): document local and aws execution`
 
 ### T06: Add structural Postman validation
