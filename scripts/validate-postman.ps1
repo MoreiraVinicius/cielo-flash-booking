@@ -50,6 +50,28 @@ function Find-Request {
     return @($Folder.item | Where-Object { $_.name -eq $Name })[0]
 }
 
+function Get-TestScript {
+    param([object]$Request)
+
+    return ((@($Request.event | Where-Object { $_.listen -eq 'test' } | ForEach-Object { $_.script.exec }) -join "`n"))
+}
+
+function Assert-RequestTests {
+    param(
+        [object]$Folder,
+        [hashtable]$ExpectedScripts
+    )
+
+    foreach ($requestName in $ExpectedScripts.Keys) {
+        $request = Find-Request -Folder $Folder -Name $requestName
+        Assert-Condition ($null -ne $request) "Idempotency battery request is missing: $requestName"
+        $script = Get-TestScript -Request $request
+        foreach ($expectedFragment in $ExpectedScripts[$requestName]) {
+            Assert-Condition ($script.Contains($expectedFragment)) "Idempotency battery request $requestName is missing assertion: $expectedFragment"
+        }
+    }
+}
+
 $collectionRaw = Get-Content -LiteralPath $collectionPath -Raw
 $collection = $collectionRaw | ConvertFrom-Json
 $local = Get-EnvironmentValues -Path $localEnvironmentPath
@@ -107,6 +129,26 @@ foreach ($requestName in $expectedLocalRequests) {
 }
 foreach ($requestName in $expectedAwsRequests) {
     Assert-Condition ($awsNames -contains $requestName) "AWS request is missing: $requestName"
+}
+Assert-Condition (($localNames -join "`n") -eq ($expectedLocalRequests -join "`n")) 'Local requests must remain in the documented Runner order.'
+Assert-Condition (($awsNames -join "`n") -eq ($expectedAwsRequests -join "`n")) 'AWS requests must remain in the documented Runner order.'
+
+Assert-RequestTests -Folder $localFolder -ExpectedScripts @{
+    '04 | Repetir reserva com a mesma chave' = @('pm.response.to.have.status(201)', "pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId'))")
+    '09 | Rejeitar comando sem Idempotency-Key' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
+    '12 | Rejeitar mesma chave com payload diferente' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '13 | Rejeitar mesma chave em outro endpoint' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '14 | Repetir conflito de capacidade com a mesma chave' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '15 | Rejeitar Idempotency-Key maior que 128 caracteres' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
+}
+
+Assert-RequestTests -Folder $awsFolder -ExpectedScripts @{
+    '04 | Repetir reserva assinada' = @('pm.response.to.have.status(201)', "pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId'))")
+    '09 | Rejeitar comando assinado sem Idempotency-Key' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
+    '10 | Rejeitar chave AWS com payload diferente' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '11 | Rejeitar chave AWS em outro endpoint' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '12 | Repetir conflito de capacidade AWS' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
+    '13 | Rejeitar Idempotency-Key AWS maior que 128 caracteres' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
 }
 
 $unsignedBoundary = @($awsFolder.item | Where-Object { $_.name -eq '00 | Rejeitar chamada sem SigV4' })[0]

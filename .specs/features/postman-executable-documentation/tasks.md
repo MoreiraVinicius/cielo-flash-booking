@@ -132,6 +132,18 @@ Phase 4: T08
 **Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
 **Commit:** `test(postman): add idempotency runner batteries`
 
+### T09: Harden idempotency battery assertions
+
+**Status:** Complete
+
+**What:** Address independent validation gaps by asserting `invalid-request` for the Local missing-key case and by validating the exact status, code, content type and order of every Local/AWS idempotency battery request.
+**Where:** `postman/flash-booking-aws.postman_collection.json`, `scripts/validate-postman.ps1`, `.specs/features/postman-executable-documentation/tasks.md`
+**Depends on:** T08
+**Requirement:** POSTMAN-10 to POSTMAN-13
+**Tests:** static contract validation
+**Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
+**Commit:** `test(postman): harden idempotency runner assertions`
+
 ## Phase Execution Map
 
 ```text
@@ -139,6 +151,7 @@ Phase 1: T01 -> T02 -> T03 -> T04
 Phase 2: T04 -> T05 -> T06
 Phase 3: T06 -> T07
 Phase 4: T07 -> T08
+Phase 5: T08 -> T09
 ```
 
 ## Diagram-Definition Cross-Check
@@ -153,6 +166,7 @@ Phase 4: T07 -> T08
 | T06 | T05 | T05 -> T06 | ✅ Match |
 | T07 | T06 | T06 -> T07 | ✅ Match |
 | T08 | T07 | T07 -> T08 | ✅ Match |
+| T09 | T08 | T08 -> T09 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -166,3 +180,4 @@ Phase 4: T07 -> T08
 | T06 | Validator | executable documentation test | static contract validation | ✅ OK |
 | T07 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |
 | T08 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |
+| T09 | Collection and validator | static contract validation | static contract validation | ✅ OK |

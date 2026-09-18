@@ -259,6 +259,7 @@
               "listen": "test",
               "script": { "type": "text/javascript", "exec": [
                 "pm.test('chave ausente retorna 400', () => pm.response.to.have.status(400));",
+                "pm.test('chave ausente retorna invalid-request', () => pm.expect(pm.response.json().code).to.eql('invalid-request'));",
                 "pm.test('erro usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
               ] }
             }
