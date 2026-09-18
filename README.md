@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual passou com **50/50 unitários + 63 de integração = 113**, além dos gates Terraform locais; a execução PostgreSQL completa da suíte atual passou e a execução remota do GitHub Actions ainda depende de push/PR. |
+| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual passou com **50/50 unitários + 63 de integração = 113** na execução PostgreSQL completa, além dos gates Terraform locais e do [GitHub Actions](https://github.com/MoreiraVinicius/cielo-flash-booking/actions/runs/35323064791), que aprovou o job Java e os seis jobs Terraform. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
@@ -55,13 +55,19 @@ Os comandos mutáveis exigem `Idempotency-Key`. Erros usam `application/problem+
 
 | Método | Rota | Serviço | Resultado principal |
 | --- | --- | --- | --- |
-| `POST` | `/events` | Command API | Cria um evento com capacidade positiva |
-| `GET` | `/events/{id}` | Query API | Consulta capacidade total e disponível |
+| `POST` | `/events` | Command API | Cria um evento com capacidade positiva e janela opcional de venda |
+| `GET` | `/events/{id}` | Query API | Consulta capacidade, disponibilidade e a janela configurada |
 | `POST` | `/events/{id}/reservations` | Command API | Cria cliente e reserva `PENDING` sem exceder estoque |
 | `GET` | `/reservations/{id}` | Query API | Consulta a reserva e referencia o evento por `id` e `name` |
 | `DELETE` | `/reservations/{id}` | Command API | Antes do prazo cancela; no prazo/depois materializa expiração; devolve capacidade uma vez |
 
 A coleção [Postman para a demo AWS](postman/README.md) contém as cinco chamadas e o fluxo IAM/SigV4, mas o endpoint é deliberadamente temporário e não está ativo.
+
+### Janela de uma flash sale
+
+`POST /events` aceita `startsAt` e `endsAt` opcionais, como instantes ISO-8601 em UTC. Sem `startsAt`, a venda fica válida imediatamente; sem `endsAt`, ela segue válida enquanto existir capacidade. Se houver apenas `endsAt`, ele precisa estar pelo menos dez minutos depois da criação decidida pelo PostgreSQL. Com início informado, o início precisa ser futuro e o fim, se existir, precisa ser posterior ao início. Valores inválidos retornam `400`.
+
+O PostgreSQL também avalia a janela no mesmo `UPDATE` condicional que protege `available`: início é inclusivo e fim é exclusivo. Assim, uma reserva antes da abertura ou no fim/depois do encerramento recebe `409`, sem criar cliente, reserva ou outbox. A resposta de criação e a consulta do evento sempre expõem `startsAt` e `endsAt`, inclusive quando vêm do cache.
 
 ## Como o último ingresso é protegido
 
@@ -70,7 +76,7 @@ A coleção [Postman para a demo AWS](postman/README.md) contém as cinco chamad
 O caminho síncrono é curto e autoritativo:
 
 1. a Command API valida o cliente e a chave de idempotência;
-2. uma transação PostgreSQL tenta decrementar `available` somente se ainda houver quantidade suficiente;
+2. uma transação PostgreSQL tenta decrementar `available` somente se ainda houver quantidade suficiente e a janela de venda estiver aberta;
 3. o vencedor persiste cliente, reserva `PENDING` e eventos no outbox;
 4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
 5. somente depois do commit o cache de disponibilidade do evento é invalidado.

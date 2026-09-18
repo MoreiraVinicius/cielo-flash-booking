@@ -5,7 +5,7 @@
 Executar em ordem. Cada tarefa termina com o gate indicado, atualiza rastreabilidade e gera commit atomico.
 
 **Design:** `.specs/features/audit-remediation/design.md`
-**Status:** Locally validated; remote CI evidence pending
+**Status:** Complete and verified
 **Task count:** 6
 
 ## Test Coverage Matrix
@@ -113,7 +113,7 @@ T05 -> T06
 
 ### T06: Automatizar gates e alinhar evidencia
 
-**Status:** Complete locally; remote CI execution pending.
+**Status:** Complete; remote CI gate passed in run `35323064791`.
 **What:** Criar GitHub Actions, corrigir README/runbook e fechar rastreabilidade e validacao.
 **Where:** `.github/workflows`, README, docs e `.specs`
 **Depends on:** T02, T04, T05

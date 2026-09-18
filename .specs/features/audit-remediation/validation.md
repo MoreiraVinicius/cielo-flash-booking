@@ -1,15 +1,15 @@
 # Audit Remediation Validation
 
-**Date**: 2026-09-17
+**Date**: 2026-09-18
 **Spec**: `.specs/features/audit-remediation/spec.md`
-**Diff range**: remediation history from `c0a2eaf` through this validation
+**Diff range**: `c0a2eaf..0867515`
 **Verifier**: independent sub-agent (author != verifier)
 
 ---
 
 ## Verdict
 
-**PASS (LOCAL); REMOTE CI PENDING.** The unit, PostgreSQL/Testcontainers, and Terraform gates pass, and the request-limit mutation is killed. The Docker Desktop engine is healthy; the earlier Testcontainers failure was caused by the restricted execution context lacking access to the user's Docker named pipe and profile. The full gate was rerun through the accessible `desktop-linux` context. The only remaining evidence gap is an execution of the GitHub Actions workflow after push/PR.
+**PASS.** The unit, PostgreSQL/Testcontainers, Terraform, discrimination-sensor, and remote delivery gates pass. GitHub Actions run [#2](https://github.com/MoreiraVinicius/cielo-flash-booking/actions/runs/35323064791) completed successfully for commit `0867515`: the Java job passed in 3m18s and all six Terraform matrix jobs passed. The preceding run exposed `mvnw` without Linux execute permission; commit `0867515` corrected the Git mode from `100644` to `100755` and the rerun proved the fix.
 
 ## Task Completion
 
@@ -20,7 +20,7 @@
 | T03 | Verified locally | Scheduler is unit-verified; lease and cleanup ran against PostgreSQL. |
 | T04 | Verified locally | `mvn verify` passed. |
 | T05 | Verified locally | Format, module tests, and root validation passed. |
-| T06 | Partial | Workflow/docs are locally verified; no GitHub Actions execution is available locally. |
+| T06 | Verified | GitHub Actions run #2 passed the Java job and all six Terraform jobs. |
 
 ## Spec-Anchored Acceptance Criteria
 
@@ -46,10 +46,10 @@
 | REM-05.3 | ECS health checks and API scaling above one | `infra/modules/compute/main.tf:221-320,419-470`; `compute.tftest.hcl:43-48` | ✅ Terraform module test passed |
 | REM-05.4 | Relevant alarms target configured SNS topic | `infra/modules/compute/main.tf:471-488`; `data-plane/main.tf:111-171`; `edge-observability/main.tf:491-541`; module test assertions in `*.tftest.hcl:38-53,103` | ✅ Terraform module tests passed |
 | REM-05.5 | No unpublished API Gateway Throttle metric | `edge-observability/main.tf:516,560`; `edge-observability.tftest.hcl:103` asserts `4XXError` | ✅ Terraform module test passed |
-| REM-06.1 | GitHub Actions runs Java and Terraform gates | `.github/workflows/ci.yml:1-54` | ⚠️ Workflow exists; no remote CI execution evidence |
+| REM-06.1 | GitHub Actions runs Java and Terraform gates | `.github/workflows/ci.yml:1-54`; run `35323064791` for commit `0867515` | ✅ Java and all six Terraform jobs passed remotely |
 | REM-06.2 | README/runbook separate evidence and do not treat 503 bursts as capacity success | `README.md:174-190`; `docs/demo-runbook.md:69-109`; `scripts/validate-readme.ps1:1-31` | ✅ `scripts/validate-readme.ps1` passed |
 
-**Spec-anchored status**: all locally executable acceptance behavior, including PostgreSQL/Testcontainers outcomes, is verified. Remote CI execution remains unavailable on this host.
+**Spec-anchored status**: all acceptance behavior is verified locally where applicable, and the complete delivery workflow passed remotely.
 
 ## Discrimination Sensor
 
@@ -71,6 +71,7 @@ Scratch worktree: `C:\Users\vinic\AppData\Local\Temp\cielo-audit-remediation-sen
 | `terraform test` for network, compute, data-plane, edge-observability | ✅ 1/1 passed in each module |
 | `terraform -chdir=infra/environments/demo init -backend=false -input=false && validate` | ✅ Passed |
 | `terraform -chdir=infra/bootstrap init -backend=false -input=false && validate` | ✅ Passed |
+| GitHub Actions CI run `35323064791` | ✅ Success in 3m23s: Java job plus six Terraform jobs passed |
 
 ## Edge Cases
 
@@ -81,7 +82,7 @@ Scratch worktree: `C:\Users\vinic\AppData\Local\Temp\cielo-audit-remediation-sen
 
 ## Ranked Gaps
 
-1. **Minor — CI workflow has no execution evidence.** REM-06.1 must run on GitHub Actions after push/PR.
+None blocking. GitHub emitted maintenance warnings for Node.js 20-based action versions and the future `ubuntu-latest` migration; they did not affect this run's result.
 
 ## Code Quality
 
@@ -92,8 +93,8 @@ Scratch worktree: `C:\Users\vinic\AppData\Local\Temp\cielo-audit-remediation-sen
 | Java persistence stack simplified to JDBC | ✅ |
 | Static and unit gates pass | ✅ |
 | Integration claims limited to actual evidence | ✅ |
-| All locally executable acceptance criteria fully proven | ✅ |
+| All acceptance criteria fully proven | ✅ |
 
 ## Summary
 
-The remediation has a passing local unit/Terraform/PostgreSQL baseline plus a killed behavioral mutant. It is **locally verified**; GitHub Actions must still execute after push/PR before claiming end-to-end delivery-pipeline evidence. The Docker issue was an execution-context permission mismatch, and the resulting dated fixture was corrected to use PostgreSQL time so cancellation is tested before its real deadline.
+The remediation is **fully verified**. Locally, 50 unit tests and 63 PostgreSQL/Testcontainers integration tests passed together with Terraform and documentation gates; the behavioral mutant was killed. Remotely, GitHub Actions run `35323064791` passed the Java job and all six Terraform jobs after the Maven wrapper execute bit was corrected. No AWS resources were created or changed.

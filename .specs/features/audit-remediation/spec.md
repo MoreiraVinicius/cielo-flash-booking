@@ -6,12 +6,12 @@ A revisao tecnica encontrou falhas de corretude, operacao e reprodutibilidade no
 
 ## Goals
 
-- [ ] Usar o relogio do PostgreSQL nas decisoes temporais persistidas.
-- [ ] Reforcar limites HTTP, idempotencia, cache e observabilidade de erros.
-- [ ] Evitar trabalho remoto dentro de transacoes e dar vazao ao processamento de expiracao.
-- [ ] Remover codigo e dependencias sem uso real.
-- [ ] Tornar o deploy Terraform reproduzivel e os alarmes acionaveis.
-- [ ] Executar verificacao automatica no build e documentar somente evidencia sustentada.
+- [x] Usar o relogio do PostgreSQL nas decisoes temporais persistidas.
+- [x] Reforcar limites HTTP, idempotencia, cache e observabilidade de erros.
+- [x] Evitar trabalho remoto dentro de transacoes e dar vazao ao processamento de expiracao.
+- [x] Remover codigo e dependencias sem uso real.
+- [x] Tornar o deploy Terraform reproduzivel e os alarmes acionaveis.
+- [x] Executar verificacao automatica no build e documentar somente evidencia sustentada.
 
 ## Out of Scope
 
@@ -115,13 +115,13 @@ A revisao tecnica encontrou falhas de corretude, operacao e reprodutibilidade no
 | REM-03 | Processamento operacional seguro | T03 | Validated locally, including PostgreSQL integration |
 | REM-04 | Implementacao proporcional | T04 | Validated locally |
 | REM-05 | AWS reproduzivel e observavel | T05 | Validated locally |
-| REM-06 | Evidencia automatizada | T06 | Validated locally; remote CI execution pending |
+| REM-06 | Evidencia automatizada | T06 | Verified locally and in GitHub Actions run `35323064791` |
 
 **Coverage:** 6 total, 6 mapped, 0 unmapped.
 
 ## Success Criteria
 
-- [ ] Todos os testes Java aplicaveis passam.
-- [ ] `terraform fmt -check -recursive`, `terraform validate` e os testes de modulos passam.
-- [ ] Nenhuma credencial ou operacao AWS remota e executada.
-- [ ] O verificador independente registra PASS com evidencia por criterio.
+- [x] Todos os testes Java aplicaveis passam.
+- [x] `terraform fmt -check -recursive`, `terraform validate` e os testes de modulos passam.
+- [x] Nenhuma credencial ou operacao AWS remota e executada.
+- [x] O verificador independente registra PASS com evidencia por criterio.
