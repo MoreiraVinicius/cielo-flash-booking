@@ -7,11 +7,11 @@
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="query-api" />
       <env name="SERVER_PORT" value="8081" />
-      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:5432/flash_booking" />
+      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:15432/flash_booking" />
       <env name="SPRING_DATASOURCE_USERNAME" value="flash_booking" />
       <env name="SPRING_DATASOURCE_PASSWORD" value="flash_booking" />
       <env name="SPRING_DATA_REDIS_HOST" value="localhost" />
-      <env name="SPRING_DATA_REDIS_PORT" value="6379" />
+      <env name="SPRING_DATA_REDIS_PORT" value="16379" />
     </envs>
     <method v="2">
       <option name="Make" enabled="true" />

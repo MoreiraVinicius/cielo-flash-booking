@@ -6,11 +6,11 @@
       <env name="SPRING_PROFILES_ACTIVE" value="command-api" />
       <env name="SERVER_PORT" value="8082" />
       <env name="RESERVATION_HOLD_DURATION" value="10s" />
-      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:5432/flash_booking" />
+      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:15432/flash_booking" />
       <env name="SPRING_DATASOURCE_USERNAME" value="flash_booking" />
       <env name="SPRING_DATASOURCE_PASSWORD" value="flash_booking" />
       <env name="SPRING_DATA_REDIS_HOST" value="localhost" />
-      <env name="SPRING_DATA_REDIS_PORT" value="6379" />
+      <env name="SPRING_DATA_REDIS_PORT" value="16379" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="com.cielo.flashbooking.FlashBookingApplication" />
     <module name="flash-booking" />

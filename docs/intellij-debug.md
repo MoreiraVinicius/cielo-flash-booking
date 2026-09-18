@@ -12,7 +12,7 @@ O IntelliJ executa o Java da aplicacao no seu computador. O Docker Compose e usa
    docker compose up -d postgres valkey localstack mailpit
    ```
 
-   Isso inicia somente as dependencias que as configuracoes do IntelliJ usam em `localhost`.
+   Isso inicia somente as dependencias que as configuracoes do IntelliJ usam em `localhost`. Para nao colidir com servicos instalados na maquina, elas usam PostgreSQL em `15432`, Valkey em `16379`, LocalStack em `14566` e SMTP do Mailpit em `11025`.
 
 ## Depurar uma aplicacao
 
@@ -42,6 +42,6 @@ docker compose down
 ## Problemas comuns
 
 - **A configuracao nao aparece:** use **File > Reload All from Disk** e recarregue o projeto Maven.
-- **Falha de conexao com PostgreSQL, Valkey ou LocalStack:** confirme que o comando de preparacao terminou e que o Docker Desktop esta em execucao.
+- **Falha de conexao com PostgreSQL, Valkey ou LocalStack:** confirme que o comando de preparacao terminou e que o Docker Desktop esta em execucao. As configuracoes usam as portas locais `15432`, `16379` e `14566`, nao as portas padrao.
 - **Porta 8081 ou 8082 ocupada:** encerre o processo que usa a porta antes de iniciar a configuracao correspondente.
 - **Classe ou dependencias nao resolvidas:** confirme que o JDK 21 esta selecionado e execute a recarga Maven.

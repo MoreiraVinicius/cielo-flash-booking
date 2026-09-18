@@ -6,26 +6,26 @@
     <option name="SHORTEN_COMMAND_LINE" value="CLASSPATH_FILE" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="worker" />
-      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:5432/flash_booking" />
+      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:15432/flash_booking" />
       <env name="SPRING_DATASOURCE_USERNAME" value="flash_booking" />
       <env name="SPRING_DATASOURCE_PASSWORD" value="flash_booking" />
       <env name="SPRING_DATA_REDIS_HOST" value="localhost" />
-      <env name="SPRING_DATA_REDIS_PORT" value="6379" />
+      <env name="SPRING_DATA_REDIS_PORT" value="16379" />
       <env name="AWS_ACCESS_KEY_ID" value="test" />
       <env name="AWS_SECRET_ACCESS_KEY" value="test" />
       <env name="OUTBOX_PUBLISHER_ENABLED" value="true" />
-      <env name="OUTBOX_PUBLISHER_EXPIRATION_QUEUE_URL" value="http://localhost:4566/000000000000/flash-booking-expiration" />
-      <env name="OUTBOX_PUBLISHER_NOTIFICATION_QUEUE_URL" value="http://localhost:4566/000000000000/flash-booking-notification" />
+      <env name="OUTBOX_PUBLISHER_EXPIRATION_QUEUE_URL" value="http://localhost:14566/000000000000/flash-booking-expiration" />
+      <env name="OUTBOX_PUBLISHER_NOTIFICATION_QUEUE_URL" value="http://localhost:14566/000000000000/flash-booking-notification" />
       <env name="OUTBOX_PUBLISHER_REGION" value="us-east-1" />
-      <env name="OUTBOX_PUBLISHER_ENDPOINT" value="http://localhost:4566" />
+      <env name="OUTBOX_PUBLISHER_ENDPOINT" value="http://localhost:14566" />
       <env name="EXPIRATION_CONSUMER_ENABLED" value="true" />
-      <env name="EXPIRATION_CONSUMER_QUEUE_URL" value="http://localhost:4566/000000000000/flash-booking-expiration" />
+      <env name="EXPIRATION_CONSUMER_QUEUE_URL" value="http://localhost:14566/000000000000/flash-booking-expiration" />
       <env name="NOTIFICATION_CONSUMER_ENABLED" value="true" />
-      <env name="NOTIFICATION_CONSUMER_QUEUE_URL" value="http://localhost:4566/000000000000/flash-booking-notification" />
+      <env name="NOTIFICATION_CONSUMER_QUEUE_URL" value="http://localhost:14566/000000000000/flash-booking-notification" />
       <env name="NOTIFICATION_EMAIL_PROVIDER" value="smtp" />
       <env name="NOTIFICATION_EMAIL_FROM_ADDRESS" value="reservations@flash-booking.local" />
       <env name="SPRING_MAIL_HOST" value="localhost" />
-      <env name="SPRING_MAIL_PORT" value="1025" />
+      <env name="SPRING_MAIL_PORT" value="11025" />
     </envs>
     <method v="2">
       <option name="Make" enabled="true" />
