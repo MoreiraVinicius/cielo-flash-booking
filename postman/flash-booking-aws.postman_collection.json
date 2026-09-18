@@ -1,38 +1,18 @@
 {
   "info": {
     "_postman_id": "a79db9d6-9874-41cb-a631-a5391769bc25",
-    "name": "Flash Booking AWS Demo",
-    "description": "Validação mínima do case no ambiente demo da AWS. Execute as requisições na ordem da coleção. As credenciais SigV4 são temporárias e nunca devem ser salvas no repositório.",
+    "name": "Flash Booking | Guia executável",
+    "description": "Esta é a única coleção Postman do projeto. Ela é uma documentação executável: execute Local após iniciar Docker Compose, ou AWS após preencher URL temporária, credenciais IAM/SigV4 e destinatário SES verificado. Os requests precisam ser enviados em ordem.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
     "type": "awsv4",
     "awsv4": [
-      {
-        "key": "accessKey",
-        "value": "{{awsAccessKeyId}}",
-        "type": "string"
-      },
-      {
-        "key": "secretKey",
-        "value": "{{awsSecretAccessKey}}",
-        "type": "string"
-      },
-      {
-        "key": "sessionToken",
-        "value": "{{awsSessionToken}}",
-        "type": "string"
-      },
-      {
-        "key": "region",
-        "value": "{{awsRegion}}",
-        "type": "string"
-      },
-      {
-        "key": "service",
-        "value": "execute-api",
-        "type": "string"
-      }
+      { "key": "accessKey", "value": "{{awsAccessKeyId}}", "type": "string" },
+      { "key": "secretKey", "value": "{{awsSecretAccessKey}}", "type": "string" },
+      { "key": "sessionToken", "value": "{{awsSessionToken}}", "type": "string" },
+      { "key": "region", "value": "{{awsRegion}}", "type": "string" },
+      { "key": "service", "value": "execute-api", "type": "string" }
     ]
   },
   "event": [
@@ -41,531 +21,496 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if (!pm.collectionVariables.get('runId')) {",
-          "  pm.collectionVariables.set('runId', Date.now().toString());",
-          "}",
-          "pm.collectionVariables.set('saleEndsAt', new Date(Date.now() + 11 * 60 * 1000).toISOString());",
-          ""
+          "const now = Date.now();",
+          "pm.collectionVariables.set('saleStartsAt', new Date(now + 2 * 60 * 1000).toISOString());",
+          "pm.collectionVariables.set('saleEndsAt', new Date(now + 11 * 60 * 1000).toISOString());"
         ]
       }
     }
   ],
+  "variable": [
+    { "key": "runId", "value": "", "type": "string" },
+    { "key": "eventId", "value": "", "type": "string" },
+    { "key": "reservationId", "value": "", "type": "string" },
+    { "key": "futureEventId", "value": "", "type": "string" },
+    { "key": "createEventKey", "value": "", "type": "string" },
+    { "key": "reservationKey", "value": "", "type": "string" },
+    { "key": "insufficientCapacityKey", "value": "", "type": "string" },
+    { "key": "cancelReservationKey", "value": "", "type": "string" },
+    { "key": "futureEventKey", "value": "", "type": "string" },
+    { "key": "beforeStartKey", "value": "", "type": "string" },
+    { "key": "saleStartsAt", "value": "", "type": "string" },
+    { "key": "saleEndsAt", "value": "", "type": "string" }
+  ],
   "item": [
     {
-      "name": "1. Security boundary",
-      "item": [
-        {
-          "name": "Reject unsigned request",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/events/00000000-0000-0000-0000-000000000000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "00000000-0000-0000-0000-000000000000"
-              ]
-            },
-            "description": "Comprova que o endpoint público não aceita chamadas sem IAM/SigV4."
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('IAM/SigV4 is required', function () {",
-                  "  pm.response.to.have.status(403);",
-                  "});",
-                  ""
-                ]
-              }
-            }
-          ]
-        }
-      ]
+      "name": "00 | Como usar esta coleção",
+      "description": "1. Importe esta coleção e um ambiente de postman/. 2. Local: execute docker compose up --build --detach, selecione Flash Booking Local e rode a pasta Local. 3. AWS: selecione Flash Booking AWS, preencha somente os valores do ambiente ativo e rode AWS. A coleção guarda IDs e chaves de idempotência em variáveis próprias durante cada fluxo.",
+      "item": []
     },
     {
-      "name": "2. Required case flow",
+      "name": "Local | fluxo completo do case",
+      "description": "Command API: {{commandBaseUrl}}. Query API: {{queryBaseUrl}}. Esta pasta usa noauth porque Docker Compose não possui API Gateway/IAM.",
+      "auth": { "type": "noauth" },
       "item": [
         {
-          "name": "Create event",
+          "name": "01 | Criar evento imediato",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "event-{{runId}}"
-              }
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"AWS case validation {{runId}}\",\n  \"capacity\": 10,\n  \"endsAt\": \"{{saleEndsAt}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - evento imediato\",\n  \"capacity\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Reinicia as variáveis do fluxo. Evento sem janela aceita reservas imediatamente quando possui capacidade."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = Date.now().toString();",
+                  "pm.collectionVariables.set('runId', runId);",
+                  "pm.collectionVariables.set('eventId', '');",
+                  "pm.collectionVariables.set('reservationId', '');",
+                  "pm.collectionVariables.set('futureEventId', '');",
+                  "pm.collectionVariables.set('createEventKey', `postman-${runId}-event`);",
+                  "pm.collectionVariables.set('reservationKey', `postman-${runId}-reservation`);",
+                  "pm.collectionVariables.set('insufficientCapacityKey', `postman-${runId}-insufficient`);",
+                  "pm.collectionVariables.set('cancelReservationKey', `postman-${runId}-cancel`);",
+                  "pm.collectionVariables.set('futureEventKey', `postman-${runId}-future-event`);",
+                  "pm.collectionVariables.set('beforeStartKey', `postman-${runId}-before-start`);"
+                ]
               }
             },
-            "url": {
-              "raw": "{{baseUrl}}/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events"
-              ]
-            }
-          },
-          "response": [],
-          "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Event is created', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.id).to.be.a('string');",
-                  "  pm.expect(body.capacity).to.eql(10);",
-                  "  pm.expect(body.available).to.eql(10);",
-                  "  pm.expect(body.startsAt).to.eql(null);",
-                  "  pm.expect(body.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt'));",
-                  "  pm.collectionVariables.set('eventId', body.id);",
-                  "});",
-                  ""
+                  "pm.test('cria evento com 201', () => pm.response.to.have.status(201));",
+                  "const event = pm.response.json();",
+                  "pm.test('evento inicia com a capacidade disponível', () => { pm.expect(event.capacity).to.eql(2); pm.expect(event.available).to.eql(2); });",
+                  "pm.test('evento imediato não possui janela configurada', () => { pm.expect(event.startsAt).to.eql(null); pm.expect(event.endsAt).to.eql(null); });",
+                  "pm.collectionVariables.set('eventId', event.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Get event",
+          "name": "02 | Consultar disponibilidade",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/events/{{eventId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "{{eventId}}"
-              ]
-            }
+            "url": "{{queryBaseUrl}}/events/{{eventId}}",
+            "description": "A Query API pode responder via cache-aside ou PostgreSQL. O contrato deve retornar a mesma capacidade."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Event exposes capacity and immediate sale window', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('eventId'));",
-                  "  pm.expect(body.capacity).to.eql(10);",
-                  "  pm.expect(body.available).to.eql(10);",
-                  "  pm.expect(body.startsAt).to.eql(null);",
-                  "  pm.expect(body.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt'));",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta evento com 200', () => pm.response.to.have.status(200));",
+                "pm.test('disponibilidade inicial é 2', () => pm.expect(pm.response.json().available).to.eql(2));"
+              ] }
             }
           ]
         },
         {
-          "name": "Create reservation",
+          "name": "03 | Criar reserva",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "reservation-{{runId}}"
-              }
+              { "key": "Idempotency-Key", "value": "{{reservationKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"quantity\": 3,\n  \"customer\": {\n    \"name\": \"AWS Demo Validation\",\n    \"email\": \"{{customerEmail}}\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/events/{{eventId}}/reservations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "{{eventId}}",
-                "reservations"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman Smoke\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Command API reserva uma unidade. Inventário, cliente, reserva, idempotência e outbox pertencem à mesma transação."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Reservation is pending and linked to the event', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.eventId).to.eql(pm.collectionVariables.get('eventId'));",
-                  "  pm.expect(body.quantity).to.eql(3);",
-                  "  pm.expect(body.status).to.eql('PENDING');",
-                  "  pm.expect(body.closureReason).to.eql(null);",
-                  "  pm.collectionVariables.set('reservationId', body.id);",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cria reserva com 201', () => pm.response.to.have.status(201));",
+                "const reservation = pm.response.json();",
+                "pm.test('reserva inicia pendente com uma unidade', () => { pm.expect(reservation.status).to.eql('PENDING'); pm.expect(reservation.quantity).to.eql(1); });",
+                "pm.collectionVariables.set('reservationId', reservation.id);"
+              ] }
             }
           ]
         },
         {
-          "name": "Replay reservation idempotently",
+          "name": "04 | Repetir reserva com a mesma chave",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "reservation-{{runId}}"
-              }
+              { "key": "Idempotency-Key", "value": "{{reservationKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"quantity\": 3,\n  \"customer\": {\n    \"name\": \"AWS Demo Validation\",\n    \"email\": \"{{customerEmail}}\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/events/{{eventId}}/reservations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "{{eventId}}",
-                "reservations"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman Smoke\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Retry idêntico deve devolver a resposta persistida e não reduzir a disponibilidade novamente."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Replay returns the original reservation', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId'));",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('replay idempotente retorna 201', () => pm.response.to.have.status(201));",
+                "pm.test('replay devolve a mesma reserva', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId')));"
+              ] }
             }
           ]
         },
         {
-          "name": "Get reservation",
+          "name": "05 | Consultar reserva",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "reservations",
-                "{{reservationId}}"
-              ]
-            }
+            "url": "{{queryBaseUrl}}/reservations/{{reservationId}}",
+            "description": "A consulta de reserva lê PostgreSQL diretamente e referencia o evento como { id, name }."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Reservation details are complete', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('reservationId'));",
-                  "  pm.expect(body.event.id).to.eql(pm.collectionVariables.get('eventId'));",
-                  "  pm.expect(body.customer.email).to.eql(pm.collectionVariables.get('customerEmail').toLowerCase());",
-                  "  pm.expect(body.quantity).to.eql(3);",
-                  "  pm.expect(body.status).to.eql('PENDING');",
-                  "  pm.expect(body.expiresAt).to.be.a('string');",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta reserva com 200', () => pm.response.to.have.status(200));",
+                "const reservation = pm.response.json();",
+                "pm.test('reserva referencia o evento e permanece pendente', () => { pm.expect(reservation.event.id).to.eql(pm.collectionVariables.get('eventId')); pm.expect(reservation.status).to.eql('PENDING'); });"
+              ] }
             }
           ]
         },
         {
-          "name": "Reject insufficient capacity",
+          "name": "06 | Rejeitar capacidade insuficiente",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "over-capacity-{{runId}}"
-              }
+              { "key": "Idempotency-Key", "value": "{{insufficientCapacityKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"quantity\": 8,\n  \"customer\": {\n    \"name\": \"AWS Demo Validation\",\n    \"email\": \"{{customerEmail}}\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/events/{{eventId}}/reservations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "{{eventId}}",
-                "reservations"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2,\n  \"customer\": { \"name\": \"Capacidade Insuficiente\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Depois da primeira reserva, restou uma unidade. Pedir duas deve falhar sem efeito parcial."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Capacity cannot go below zero', function () {",
-                  "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
-                  "  pm.expect(pm.response.json().code).to.eql('resource-conflict');",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('capacidade insuficiente retorna 409', () => pm.response.to.have.status(409));",
+                "pm.test('conflito usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+              ] }
             }
           ]
         },
         {
-          "name": "Cancel reservation",
+          "name": "07 | Cancelar reserva antes do prazo",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Idempotency-Key",
-                "value": "cancel-{{runId}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "reservations",
-                "{{reservationId}}"
-              ]
-            }
+            "header": [ { "key": "Idempotency-Key", "value": "{{cancelReservationKey}}", "type": "text" } ],
+            "url": "{{commandBaseUrl}}/reservations/{{reservationId}}",
+            "description": "Antes de expiresAt, a reserva fica CANCELLED, grava CANCELLED_BY_REQUEST e devolve capacidade uma vez."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Cancellation closes the reservation', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.status).to.eql('CANCELLED');",
-                  "  pm.expect(body.closureReason.code).to.eql('CANCELLED_BY_REQUEST');",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cancelamento retorna 200', () => pm.response.to.have.status(200));",
+                "const reservation = pm.response.json();",
+                "pm.test('cancelamento preserva motivo auditável', () => { pm.expect(reservation.status).to.eql('CANCELLED'); pm.expect(reservation.closureReason.code).to.eql('CANCELLED_BY_REQUEST'); });"
+              ] }
             }
           ]
         },
         {
-          "name": "Get event after cancellation",
+          "name": "08 | Confirmar capacidade devolvida",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/events/{{eventId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events",
-                "{{eventId}}"
-              ]
-            }
+            "url": "{{queryBaseUrl}}/events/{{eventId}}",
+            "description": "Confirma que somente a primeira transição terminal devolveu a unidade."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Cancellation returns capacity exactly once', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.capacity).to.eql(10);",
-                  "  pm.expect(body.available).to.eql(10);",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta pós-cancelamento retorna 200', () => pm.response.to.have.status(200));",
+                "pm.test('capacidade volta a 2', () => pm.expect(pm.response.json().available).to.eql(2));"
+              ] }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "3. Contract errors",
-      "item": [
+        },
         {
-          "name": "Reject command without Idempotency-Key",
+          "name": "09 | Rejeitar comando sem Idempotency-Key",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json", "type": "text" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman sem chave\",\n  \"capacity\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Todo comando mutável exige Idempotency-Key; a API rejeita a requisição antes de criar o evento."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('chave ausente retorna 400', () => pm.response.to.have.status(400));",
+                "pm.test('erro usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "10 | Criar venda futura",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Idempotency-Key", "value": "{{futureEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Missing idempotency key\",\n  \"capacity\": 1\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "events"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - venda futura\",\n  \"capacity\": 1,\n  \"startsAt\": \"{{saleStartsAt}}\",\n  \"endsAt\": \"{{saleEndsAt}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Cria uma janela que abre dois minutos no futuro e retorna os instantes ISO-8601 persistidos."
           },
-          "response": [],
           "event": [
             {
               "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Mutable commands require an idempotency key', function () {",
-                  "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
-                  "  pm.expect(pm.response.json().code).to.eql('invalid-request');",
-                  "});",
-                  ""
-                ]
-              }
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cria venda futura com 201', () => pm.response.to.have.status(201));",
+                "const event = pm.response.json();",
+                "pm.test('retorna a janela solicitada', () => { pm.expect(event.startsAt).to.eql(pm.collectionVariables.get('saleStartsAt')); pm.expect(event.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt')); });",
+                "pm.collectionVariables.set('futureEventId', event.id);"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "11 | Rejeitar reserva antes da abertura",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{beforeStartKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Venda Futura\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{futureEventId}}/reservations",
+            "description": "Antes de startsAt, a janela é rejeitada pelo mesmo decremento condicional que protege a capacidade."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('reserva antes da abertura retorna 409', () => pm.response.to.have.status(409));",
+                "pm.test('erro de janela usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+              ] }
             }
           ]
         }
       ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "https://19b1ing1ee.execute-api.sa-east-1.amazonaws.com/demo",
-      "type": "string"
     },
     {
-      "key": "awsRegion",
-      "value": "sa-east-1",
-      "type": "string"
-    },
-    {
-      "key": "awsAccessKeyId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "awsSecretAccessKey",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "awsSessionToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "customerEmail",
-      "value": "moreiravinicius.job@gmail.com",
-      "type": "string"
-    },
-    {
-      "key": "runId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "eventId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "reservationId",
-      "value": "",
-      "type": "string"
+      "name": "AWS | fronteira e fluxo do case",
+      "description": "Esta pasta herda AWS Signature v4 da coleção. Preencha no ambiente AWS somente a URL temporária, credenciais da ApiInvokerRole e customerEmail aceito pelo SES. O primeiro request usa noauth intencionalmente e deve retornar 403; todos os demais são assinados.",
+      "item": [
+        {
+          "name": "00 | Rejeitar chamada sem SigV4",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{queryBaseUrl}}/events/00000000-0000-0000-0000-000000000000",
+            "description": "O API Gateway deve bloquear chamadas sem assinatura antes que elas atinjam o ALB ou a aplicação."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('borda sem assinatura retorna 403', () => pm.response.to.have.status(403));" ] }
+            }
+          ]
+        },
+        {
+          "name": "01 | Criar evento assinado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - AWS\",\n  \"capacity\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Inicia o fluxo assinado. A regra de negócio é idêntica à Local; a diferença é a fronteira IAM/SigV4."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = Date.now().toString();",
+                  "pm.collectionVariables.set('runId', runId);",
+                  "pm.collectionVariables.set('eventId', '');",
+                  "pm.collectionVariables.set('reservationId', '');",
+                  "pm.collectionVariables.set('createEventKey', `postman-${runId}-event`);",
+                  "pm.collectionVariables.set('reservationKey', `postman-${runId}-reservation`);",
+                  "pm.collectionVariables.set('insufficientCapacityKey', `postman-${runId}-insufficient`);",
+                  "pm.collectionVariables.set('cancelReservationKey', `postman-${runId}-cancel`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cria evento assinado com 201', () => pm.response.to.have.status(201));",
+                "const event = pm.response.json();",
+                "pm.test('evento AWS inicia com capacidade 2', () => { pm.expect(event.capacity).to.eql(2); pm.expect(event.available).to.eql(2); });",
+                "pm.collectionVariables.set('eventId', event.id);"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "02 | Consultar evento assinado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{queryBaseUrl}}/events/{{eventId}}",
+            "description": "Consulta assinada, roteada ao query-api pelo API Gateway e ALB internos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta assinada retorna 200', () => pm.response.to.have.status(200));",
+                "pm.test('disponibilidade inicial é 2', () => pm.expect(pm.response.json().available).to.eql(2));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "03 | Criar reserva assinada",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{reservationKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman AWS\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Cria uma reserva pelo caminho assinado. Em AWS, customerEmail precisa ser aceito pelo SES."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cria reserva assinada com 201', () => pm.response.to.have.status(201));",
+                "const reservation = pm.response.json();",
+                "pm.test('reserva AWS inicia pendente', () => pm.expect(reservation.status).to.eql('PENDING'));",
+                "pm.collectionVariables.set('reservationId', reservation.id);"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "04 | Repetir reserva assinada",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{reservationKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman AWS\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "O retry assinado usa a mesma chave e devolve a mesma reserva."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('replay assinado retorna 201', () => pm.response.to.have.status(201));",
+                "pm.test('replay devolve a mesma reserva', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId')));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "05 | Consultar reserva assinada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{queryBaseUrl}}/reservations/{{reservationId}}",
+            "description": "Confirma a reserva pelo query-api, sem depender do cache de disponibilidade."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta reserva assinada retorna 200', () => pm.response.to.have.status(200));",
+                "pm.test('reserva referencia o evento criado', () => pm.expect(pm.response.json().event.id).to.eql(pm.collectionVariables.get('eventId')));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "06 | Rejeitar capacidade insuficiente assinada",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{insufficientCapacityKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2,\n  \"customer\": { \"name\": \"Capacidade AWS\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Com apenas uma unidade restante, pedir duas retorna conflito e não autoriza oversell."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('conflito assinado retorna 409', () => pm.response.to.have.status(409));",
+                "pm.test('conflito é Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "07 | Cancelar reserva assinada",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Idempotency-Key", "value": "{{cancelReservationKey}}", "type": "text" } ],
+            "url": "{{commandBaseUrl}}/reservations/{{reservationId}}",
+            "description": "Cancela antes do prazo, devolve capacidade e registra CANCELLED_BY_REQUEST."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('cancelamento assinado retorna 200', () => pm.response.to.have.status(200));",
+                "const reservation = pm.response.json();",
+                "pm.test('cancelamento mantém motivo auditável', () => { pm.expect(reservation.status).to.eql('CANCELLED'); pm.expect(reservation.closureReason.code).to.eql('CANCELLED_BY_REQUEST'); });"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "08 | Confirmar capacidade devolvida assinada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{queryBaseUrl}}/events/{{eventId}}",
+            "description": "Confirma que o cancelamento devolveu a capacidade ao evento."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('consulta pós-cancelamento retorna 200', () => pm.response.to.have.status(200));",
+                "pm.test('capacidade AWS volta a 2', () => pm.expect(pm.response.json().available).to.eql(2));"
+              ] }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

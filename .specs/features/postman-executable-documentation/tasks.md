@@ -48,14 +48,14 @@ Phase 2: T04 -> T05 -> T06
 
 ### T02: Build the documented Postman collection
 
-**Status:** Pending
+**Status:** Complete
 
 **What:** Replace the AWS-only collection with a safe, documented collection containing Local and AWS flows and spec-derived Postman assertions.
 **Where:** `postman/flash-booking-aws.postman_collection.json`
 **Depends on:** T01
 **Requirement:** POSTMAN-01, POSTMAN-02, POSTMAN-03, POSTMAN-04, POSTMAN-05, POSTMAN-06
 **Tests:** static contract validation
-**Gate:** Quick
+**Gate:** `powershell -NoProfile -Command "Get-Content -LiteralPath 'postman/flash-booking-aws.postman_collection.json' -Raw | ConvertFrom-Json | Out-Null"`
 **Commit:** `test(postman): add executable local and aws flows`
 
 ### T03: Add the Local Postman environment
