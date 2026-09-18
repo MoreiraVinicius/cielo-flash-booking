@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -22,15 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Profile({"worker", "all"})
 @ConditionalOnProperty(prefix = "notification.consumer", name = "enabled", havingValue = "true")
 class SqsReservationCreatedConsumerConfiguration {
-
-    @Bean(name = "notificationTaskScheduler", destroyMethod = "destroy")
-    ThreadPoolTaskScheduler notificationTaskScheduler(NotificationConsumerProperties properties) {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(properties.poolSize());
-        scheduler.setThreadNamePrefix("notification-email-");
-        scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        return scheduler;
-    }
 
     @Bean
     @ConditionalOnProperty(prefix = "notification.email", name = "provider", havingValue = "smtp")

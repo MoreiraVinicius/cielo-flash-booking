@@ -10,20 +10,21 @@ import org.springframework.stereotype.Component;
 @Profile({"worker", "all"})
 public class ExpirationReconciler {
 
-    private static final int BATCH_SIZE = 100;
-
     private final ReservationReader reservationReader;
     private final ExpireReservationService expireReservationService;
+    private final ExpirationReconciliationProperties properties;
 
     public ExpirationReconciler(
             ReservationReader reservationReader,
-            ExpireReservationService expireReservationService) {
+            ExpireReservationService expireReservationService,
+            ExpirationReconciliationProperties properties) {
         this.reservationReader = reservationReader;
         this.expireReservationService = expireReservationService;
+        this.properties = properties;
     }
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelayString = "${reservation.expiration-reconciliation.fixed-delay:500ms}")
     public void reconcile() {
-        reservationReader.findExpiredPendingIds(BATCH_SIZE).forEach(expireReservationService::expire);
+        reservationReader.findExpiredPendingIds(properties.batchSize()).forEach(expireReservationService::expire);
     }
 }

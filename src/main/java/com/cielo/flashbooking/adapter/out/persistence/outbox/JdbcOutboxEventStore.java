@@ -3,6 +3,7 @@ package com.cielo.flashbooking.adapter.out.persistence.outbox;
 import com.cielo.flashbooking.application.outbox.OutboxEvent;
 import com.cielo.flashbooking.application.outbox.OutboxEventStore;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,5 +49,25 @@ public class JdbcOutboxEventStore implements OutboxEventStore {
                 SET published_at = ?
                 WHERE id = ? AND published_at IS NULL
                 """, Timestamp.from(publishedAt), eventId);
+    }
+
+    @Override
+    public int deletePublished(int limit, Duration retention) {
+        return jdbcTemplate.update("""
+                WITH published AS (
+                    SELECT id
+                    FROM outbox_event
+                    WHERE published_at < clock_timestamp() - make_interval(secs => ?)
+                      AND NOT EXISTS (
+                          SELECT 1 FROM notification_delivery
+                          WHERE notification_delivery.outbox_event_id = outbox_event.id)
+                    ORDER BY published_at, id
+                    LIMIT ?
+                    FOR UPDATE SKIP LOCKED
+                )
+                DELETE FROM outbox_event current_event
+                USING published
+                WHERE current_event.id = published.id
+                """, Math.toIntExact(retention.toSeconds()), limit);
     }
 }

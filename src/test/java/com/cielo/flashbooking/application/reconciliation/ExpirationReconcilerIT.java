@@ -83,7 +83,10 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
     void reconcile_whenTwoWorkersFindTheSameReservation_returnsCapacityOnlyOnce() throws Exception {
         UUID eventId = insertEvent(10, 7);
         UUID reservationId = insertPendingReservation(eventId, 3, databaseNow().minusMillis(10));
-        ExpirationReconciler secondWorker = new ExpirationReconciler(reservationReader, expireReservationService);
+        ExpirationReconciler secondWorker = new ExpirationReconciler(
+                reservationReader,
+                expireReservationService,
+                new ExpirationReconciliationProperties(null));
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             List<Callable<Void>> workers = List.of(

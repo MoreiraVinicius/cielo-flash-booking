@@ -29,7 +29,7 @@ public class SqsReservationCreatedConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @Scheduled(scheduler = "notificationTaskScheduler", fixedDelayString = "${notification.consumer.fixed-delay:1s}")
+    @Scheduled(fixedDelayString = "${notification.consumer.fixed-delay:1s}")
     public void poll() {
         sqsClient.receiveMessage(request -> request
                         .queueUrl(queueUrl)

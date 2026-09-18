@@ -122,7 +122,7 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
                 new JdbcNotificationDeliveryStore(jdbcTemplate),
                 reservationReader,
                 new SmtpReservationEmailSender(mailSender(), "reservas@example.com"),
-                new NotificationConsumerProperties(false, queueUrl, 3, 2));
+                new NotificationConsumerProperties(false, queueUrl, 3, java.time.Duration.ofMinutes(2)));
         return new SqsReservationCreatedConsumer(sqsClient, service, queueUrl, objectMapper);
     }
 

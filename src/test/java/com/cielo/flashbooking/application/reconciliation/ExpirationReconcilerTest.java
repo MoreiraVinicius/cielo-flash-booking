@@ -18,9 +18,10 @@ class ExpirationReconcilerTest {
         UUID secondReservationId = UUID.randomUUID();
         ReservationReader reader = mock(ReservationReader.class);
         ExpireReservationService expirationService = mock(ExpireReservationService.class);
-        when(reader.findExpiredPendingIds(100)).thenReturn(List.of(firstReservationId, secondReservationId));
+        when(reader.findExpiredPendingIds(1000)).thenReturn(List.of(firstReservationId, secondReservationId));
 
-        new ExpirationReconciler(reader, expirationService).reconcile();
+        new ExpirationReconciler(
+                reader, expirationService, new ExpirationReconciliationProperties(null)).reconcile();
 
         verify(expirationService).expire(firstReservationId);
         verify(expirationService).expire(secondReservationId);

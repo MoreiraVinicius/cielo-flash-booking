@@ -5,7 +5,6 @@ import com.cielo.flashbooking.reservation.application.ReservationReader;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
 
 public class ReservationEmailService {
 
@@ -27,17 +26,17 @@ public class ReservationEmailService {
         this.properties = properties;
     }
 
-    @Transactional
     public ProcessingResult process(UUID outboxEventId, UUID reservationId) {
-        NotificationDelivery delivery = notificationDeliveryStore.lockOrCreate(outboxEventId);
-        if (delivery.status() == NotificationDeliveryStatus.SENT) {
-            return ProcessingResult.acknowledgedResult();
-        }
-        if (delivery.status() == NotificationDeliveryStatus.FAILED) {
+        var claimed = notificationDeliveryStore.claim(
+                outboxEventId, properties.maximumAttempts(), properties.leaseDuration());
+        if (claimed.isEmpty()) {
+            if (notificationDeliveryStore.findStatus(outboxEventId) == NotificationDeliveryStatus.SENT) {
+                return ProcessingResult.acknowledgedResult();
+            }
             return ProcessingResult.retry("recipient unavailable");
         }
 
-        int attempts = notificationDeliveryStore.recordAttempt(outboxEventId);
+        int attempts = claimed.get().attempts();
         String maskedRecipient = "recipient unavailable";
         try {
             ReservationDetails reservation = reservationReader.findById(reservationId)
@@ -56,7 +55,10 @@ public class ReservationEmailService {
         } catch (Exception exception) {
             if (attempts >= properties.maximumAttempts()) {
                 notificationDeliveryStore.markFailed(outboxEventId);
+            } else {
+                notificationDeliveryStore.releaseForRetry(outboxEventId);
             }
+            LOGGER.warn("notification delivery failed outboxEventId={} attempt={}", outboxEventId, attempts, exception);
             return ProcessingResult.retry(maskedRecipient);
         }
     }

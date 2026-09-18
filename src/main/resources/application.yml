@@ -5,12 +5,14 @@ spring:
     redis:
       connect-timeout: 100ms
       timeout: 100ms
-  jpa:
-    open-in-view: false
   servlet:
     multipart:
       max-file-size: 64KB
       max-request-size: 64KB
+  task:
+    scheduling:
+      pool:
+        size: 4
 
 server:
   max-http-request-header-size: 16KB
@@ -37,9 +39,19 @@ flash-booking:
 
 reservation:
   hold-duration: 10m
+  expiration-reconciliation:
+    batch-size: 1000
+    fixed-delay: 500ms
 
 idempotency:
   cleanup:
     batch-size: 500
     fixed-delay: 5s
     initial-delay: 5s
+
+operational-data:
+  cleanup:
+    batch-size: 500
+    retention: 7d
+    fixed-delay: 1h
+    initial-delay: 1h
