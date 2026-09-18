@@ -96,13 +96,13 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| POSTMAN-01 | P1: Executar o fluxo local | Execute | Pending |
-| POSTMAN-02 | P1: Executar o fluxo local | Execute | Pending |
-| POSTMAN-03 | P1: Executar o fluxo local | Execute | Pending |
-| POSTMAN-04 | P1: Executar a demo AWS com segurança | Execute | Pending |
-| POSTMAN-05 | P1: Executar a demo AWS com segurança | Execute | Pending |
-| POSTMAN-06 | P2: Usar o Postman como referência de contrato | Execute | Pending |
-| POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Pending |
+| POSTMAN-01 | P1: Executar o fluxo local | Execute | Implementing |
+| POSTMAN-02 | P1: Executar o fluxo local | Execute | Implementing |
+| POSTMAN-03 | P1: Executar o fluxo local | Execute | Implementing |
+| POSTMAN-04 | P1: Executar a demo AWS com segurança | Execute | Implementing |
+| POSTMAN-05 | P1: Executar a demo AWS com segurança | Execute | Implementing |
+| POSTMAN-06 | P2: Usar o Postman como referência de contrato | Execute | Implementing |
+| POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Implementing |
 
 **Coverage:** 7 total, 0 mapped to tasks, 7 unmapped.
 

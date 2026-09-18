@@ -96,7 +96,7 @@ Phase 2: T04 -> T05 -> T06
 
 ### T06: Add structural Postman validation
 
-**Status:** Pending
+**Status:** Complete
 
 **What:** Add an executable repository check for the collection and both environments, then record feature validation evidence.
 **Where:** `scripts/validate-postman.ps1`
