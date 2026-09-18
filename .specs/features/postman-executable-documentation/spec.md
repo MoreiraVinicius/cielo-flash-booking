@@ -121,8 +121,8 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | POSTMAN-05 | P1: Executar a demo AWS com segurança | Execute | Verified |
 | POSTMAN-06 | P2: Usar o Postman como referência de contrato | Execute | Verified |
 | POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Verified |
-| POSTMAN-08 | P2: Demonstrar criação de massa e encadeamento | Execute | Implementing |
-| POSTMAN-09 | P2: Demonstrar criação de massa e encadeamento | Execute | Implementing |
+| POSTMAN-08 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
+| POSTMAN-09 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
 
 **Coverage:** 9 total, 0 mapped to tasks, 9 unmapped.
 
