@@ -143,13 +143,29 @@
 - **Trade-off:** O resultado de um burst não é previsível como `429`; a validação exige os limites efetivos e registra a distribuição observada. A entrega deixa explícita essa semântica em vez de ocultar o resultado real.
 - **Scope:** Contrato de borda, runbook e validação da demo.
 
+### AD-019 - PostgreSQL autoritativo para tempo e identidade persistidos
+
+- **Status:** active
+- **Decision:** Criação de reserva, expiração, janela idempotente e identidade reaproveitada de cliente usam valores persistidos e o relógio do PostgreSQL; chaves idempotentes têm limite de 128 caracteres na API e no schema.
+- **Reason:** Relógios de instâncias e objetos transitórios não podem decidir estado compartilhado, e entradas sem limite não devem falhar somente no índice do banco.
+- **Trade-off:** Os adaptadores JDBC expõem operações temporais explícitas e os testes de corretude exigem PostgreSQL real.
+- **Scope:** Persistência e contratos HTTP da demo e da arquitetura-alvo.
+
+### AD-020 - Persistência JDBC única e entrega de e-mail com lease
+
+- **Status:** active
+- **Decision:** Toda persistência de runtime usa Spring JDBC. O envio de e-mail adquire lease em transação curta, chama o provedor sem transação de banco aberta e registra o resultado depois; registros operacionais terminais são removidos em lotes após retenção.
+- **Reason:** Uma segunda tecnologia de persistência sem benefício aumenta o custo de leitura, enquanto uma chamada remota dentro de transação prolonga locks e conexões.
+- **Trade-off:** A entrega continua pelo menos uma vez em resultado ambíguo do provedor; o lease evita concorrência, mas não torna SES e PostgreSQL atomicamente coordenados.
+- **Scope:** Aplicação, worker e schema compartilhados.
+
 ## Handoff
 
-- **Feature**: `readme-visual-storytelling`
-- **Phase / Task**: T08 concluída; verificação independente PASS.
-- **Completed**: O README contém um SVG acessível que separa os targets de WAF/API Gateway dos resultados históricos das rajadas assinadas na demo AWS. O visual registra `80 × 503` em 80 GETs iniciados em 834 ms, `20 × 400` em 20 POSTs seguros e a omissão de DELETE com efeito persistente, sem alegar benchmark DDoS, `429` determinístico ou capacidade sustentável.
-- **In-progress**: Nenhum trabalho desta feature.
-- **Next step**: Se uma nova execução remota for autorizada, atualizar a evidência com sua proveniência; não substituir os resultados históricos por inferência.
-- **Blockers**: Nenhum para a documentação. A demo AWS não está ativa; novas medições exigem provisionamento e autorização separados.
+- **Feature**: `audit-remediation`
+- **Phase / Task**: Execução T01-T06; validação final em andamento.
+- **Completed**: Implementação Java, schema, Terraform, testes locais de módulos e documentação foram atualizados para as correções da auditoria.
+- **In-progress**: Gates finais, rastreabilidade e verificação independente.
+- **Next step**: Executar build/unitários, validação Terraform/README/specs e registrar a evidência final.
+- **Blockers**: A suíte PostgreSQL 16/Testcontainers depende do Docker Desktop, cujo serviço está indisponível neste host. Nenhum deploy AWS foi autorizado ou executado.
 - **Uncommitted files**: Somente `.tmp/outbox-scale-sensor-9f2666d/tasks.md`, arquivo de sensor de outra feature, permanece fora desta entrega.
 - **Branch**: `main`

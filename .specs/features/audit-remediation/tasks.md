@@ -49,7 +49,7 @@ T05 -> T06
 
 ### T01: Tornar tempo e identidade persistidos autoritativos
 
-**Status:** Pending
+**Status:** Implemented; Full gate blocked by unavailable Docker/Testcontainers.
 **What:** Obter o instante de criacao no PostgreSQL, usar timestamp estavel na busca de expirados, preservar o cliente ja persistido e limitar Idempotency-Key.
 **Where:** servico/ports/adaptador JDBC de reserva, migration V2, testes de persistencia
 **Depends on:** none
@@ -61,7 +61,7 @@ T05 -> T06
 
 ### T02: Reforcar fronteira HTTP e comportamento do cache
 
-**Status:** Pending
+**Status:** Complete; Build gate passed.
 **What:** Contar corpos transmitidos, reidratar correlation ID de replay, registrar throwable e separar cache miss de outage.
 **Where:** filtro HTTP, resposta idempotente, handler, cache e testes focados
 **Depends on:** T01
@@ -75,7 +75,7 @@ T05 -> T06
 
 ### T03: Limitar trabalho agendado e notificacoes
 
-**Status:** Pending
+**Status:** Implemented; Full gate blocked by unavailable Docker/Testcontainers.
 **What:** Configurar scheduler concorrente, reconciliacao com vazao suficiente, claim com lease fora da chamada SES e limpeza terminal limitada.
 **Where:** configuracao, reconciliador, notification store/service, cleaner, migration e testes
 **Depends on:** T01
@@ -87,7 +87,7 @@ T05 -> T06
 
 ### T04: Remover caminhos mortos de dominio e JPA
 
-**Status:** Pending
+**Status:** Complete; Build gate passed.
 **What:** Usar JDBC na persistencia de eventos, retirar JPA e remover transicoes em memoria sem consumidor de runtime.
 **Where:** persistencia de evento, dominio de reserva, pom, Dockerfile e testes afetados
 **Depends on:** T03
@@ -101,7 +101,7 @@ T05 -> T06
 
 ### T05: Reparar deploy e alarmes Terraform
 
-**Status:** Pending
+**Status:** Complete; Terraform gate passed.
 **What:** Declarar backend, ordenar bootstrap da imagem, adicionar health checks/autoscaling e alarmes SNS para sinais reais.
 **Where:** roots/modulos/testes Terraform e runbook
 **Depends on:** T03
@@ -113,7 +113,7 @@ T05 -> T06
 
 ### T06: Automatizar gates e alinhar evidencia
 
-**Status:** Pending
+**Status:** Complete; Build and documentation gates passed.
 **What:** Criar GitHub Actions, corrigir README/runbook e fechar rastreabilidade e validacao.
 **Where:** `.github/workflows`, README, docs e `.specs`
 **Depends on:** T02, T04, T05

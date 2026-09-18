@@ -59,7 +59,7 @@ A aplicação será um monólito modular empacotado uma vez. A mesma imagem inic
 
 - **Responsabilidade:** Persistir agregados e executar atualização condicional atômica.
 - **Local:** `src/main/java/.../adapter/out/persistence/`
-- **Dependências:** Spring Data JPA, JDBC e Flyway.
+- **Dependências:** Spring JDBC e Flyway. PostgreSQL e SQL explícito são a única pilha de persistência.
 
 ### Integração de mensageria
 
@@ -78,7 +78,7 @@ A aplicação será um monólito modular empacotado uma vez. A mesma imagem inic
 
 - **Responsabilidade:** Consumir `ReservationCreated` e enviar confirmação de reserva temporária.
 - **Local:** `src/main/java/.../notification/email/`.
-- **Dependências:** Amazon SES na AWS e Mailpit no Docker Compose.
+- **Dependências:** Amazon SES na AWS e Mailpit no Docker Compose. O consumidor adquire um lease curto no PostgreSQL, chama o provedor sem transação aberta e conclui o estado em outra transação curta. Registros terminais de notificação e outbox são removidos em lotes após a retenção.
 - **Contrato:** Falha de e-mail usa retry, DLQ e alarme, sem reverter a reserva; ADR 0011.
 - **Isolamento:** Timeout, executor e listener próprios impedem que lentidão do SES consuma as threads reservadas à expiração.
 
@@ -126,7 +126,7 @@ Um cliente realiza várias reservas; cada reserva pertence a exatamente um clien
 
 A configuração de limpeza usa `batch-size` entre 1 e 10.000, `fixed-delay` positivo e `initial-delay` não negativo. Valores ausentes usam 500 linhas e cinco segundos; valores explícitos inválidos impedem o startup. Overrides de ambiente usam `IDEMPOTENCY_CLEANUP_BATCHSIZE`, `IDEMPOTENCY_CLEANUP_FIXEDDELAY` e `IDEMPOTENCY_CLEANUP_INITIALDELAY`, com unidades explícitas de duração. Mudanças exigem reinício, sem refresh dinâmico.
 
-A seleção de limpeza compara `expires_at` com `statement_timestamp()`, um cutoff estável do banco que permite o acesso por índice. A exclusão revalida o vencimento e os locks são mantidos até o fim dessa única instrução atômica.
+A seleção de limpeza compara `expires_at` com `statement_timestamp()`, um cutoff estável do banco que permite o acesso por índice. A exclusão revalida o vencimento e os locks são mantidos até o fim dessa única instrução atômica. Criação de reserva e reaproveitamento de cliente também observam a identidade e o relógio persistidos no PostgreSQL.
 
 ### OutboxEvent
 
@@ -200,6 +200,7 @@ O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva
 ## Organização Terraform
 
 - `infra/bootstrap/`: bucket S3 criptografado e versionado para state.
+- `infra/environments/demo/`: root com backend S3 declarado, topologia da demo e tópico SNS de alarmes.
 - `infra/modules/network/`: VPC, sub-redes, rotas e NAT.
 - `infra/modules/data-plane/`: RDS, Valkey, SQS, DLQ, Secrets Manager e redrive.
 - `infra/modules/compute/`: ECR, ECS, ALB, API Gateway e IAM.

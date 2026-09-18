@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | Baseline integral histórico com **PASS em 43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. Estado atual: **47/47 unitários**, 61 ITs compilados e os 4 cenários de fronteira do prazo aprovados em PostgreSQL 17; a execução PostgreSQL completa em PostgreSQL 16/Testcontainers permanece pendente. |
+| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual tem **49/49 unitários** e Terraform locais aprovados; a execução PostgreSQL completa da suíte 16/Testcontainers ainda precisa ser reexecutada com Docker disponível. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
@@ -40,10 +40,10 @@ docker compose down
 Para executar os gates Java:
 
 ```powershell
-# 47 testes unitários
+# Testes unitários
 .\mvnw.cmd test
 
-# Gate completo atual: 47 unitários + 61 testes de integração
+# Gate completo, incluindo PostgreSQL 16 via Testcontainers
 .\mvnw.cmd clean verify -Pintegration
 ```
 
@@ -75,7 +75,7 @@ O caminho síncrono é curto e autoritativo:
 4. o perdedor recebe `409` sem cliente, reserva ou outbox parcial;
 5. somente depois do commit o cache de disponibilidade do evento é invalidado.
 
-O caminho assíncrono fica elegível **depois do commit** e não participa da resposta da reserva. A demo mantém um único publisher no worker, que publica o outbox nas filas de expiração e notificação, consome mensagens com idempotência, envia o e-mail e reconcilia reservas vencidas. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
+O caminho assíncrono fica elegível **depois do commit** e não participa da resposta da reserva. A demo mantém um único publisher no worker, que publica o outbox nas filas de expiração e notificação. O envio de e-mail usa claim com lease em transações curtas e chama o provedor fora de transação; o reconciliador recupera reservas vencidas em lotes. Cache e filas nunca autorizam estoque; o PostgreSQL continua sendo a fonte de verdade.
 
 O prazo também prevalece no caminho síncrono. O PostgreSQL bloqueia a reserva e só então decide pelo próprio relógio: um `DELETE` antes de `expiresAt` retorna `CANCELLED`; em `expiresAt` ou depois retorna `EXPIRED`. A primeira transição devolve capacidade e invalida o cache; concorrentes apenas observam o estado terminal já persistido.
 
@@ -149,12 +149,12 @@ O gatilho de evolução não é “mais componentes”. São métricas: saturaç
 | Gate | Resultado | O que comprova |
 | --- | ---: | --- |
 | Critérios de aceitação | **Baseline 43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime antes da correção atual |
-| Testes unitários | **47/47** | Regras, serviços, fronteira exata de `expiresAt` e configuração de limpeza de idempotência |
-| Testes de integração | **56/56 no baseline; 61 atuais compilados** | Os 4 cenários de prazo passaram em PostgreSQL 17 descartável; o gate completo em PostgreSQL 16/Testcontainers e os cenários de idempotência ainda não foram reexecutados |
+| Testes unitários | **PASS atual** | Regras, serviços, limites HTTP, cache, processamento agendado e configuração |
+| Testes de integração | **56/56 no baseline; suíte atual compilada** | O gate completo atual em PostgreSQL 16/Testcontainers ainda não foi reexecutado porque o Docker local está indisponível |
 | Sensor de discriminação | **2/2 mutações mortas** | Os testes falham quando segurança ou decremento de estoque são quebrados |
 | Compose smoke | **PASS** | Query, command, worker, banco, cache, fila e Mailpit integrados |
-| Módulos de infraestrutura | **4/4 PASS** | Rede, dados, compute e edge/observabilidade |
-| Demo AWS | **PASS** | Apply, serviços saudáveis, IAM/CIDR, DLQs, SES e destroy |
+| Módulos de infraestrutura | **4/4 PASS atual** | Rede, dados, compute e edge/observabilidade validados localmente com providers simulados |
+| Demo AWS | **PASS histórico de ciclo de vida** | Apply, serviços saudáveis, IAM/CIDR, DLQs, SES e destroy; não comprova capacidade |
 
 O relatório com `file:line`, assertions e observações remotas está em [validation.md](.specs/features/flash-booking-demo/validation.md). A [avaliação contra o case](docs/case-requirements-evaluation.md) distingue implementação, validação e arquitetura-alvo.
 
@@ -193,7 +193,8 @@ Na demo AWS, API Gateway era a única entrada pública; ALB, ECS, RDS e Valkey n
 - O snapshot final de PostgreSQL não prova ausência de lock waits durante toda a execução.
 - High-load ainda não comprova capacidade, RTO/RPO, failover, atraso de réplica ou operação Multi-AZ.
 - IAM/SigV4 autentica operadores/avaliadores na borda; cadastro e login de cliente final estão fora do case.
-- Pagamento, compra confirmada, frontend e CI/CD permanecem fora do escopo.
+- Pagamento, compra confirmada e frontend permanecem fora do escopo.
+- Deploy contínuo permanece fora do escopo; o CI executa testes Java e gates Terraform em pushes e pull requests.
 
 ## Diagramas detalhados
 

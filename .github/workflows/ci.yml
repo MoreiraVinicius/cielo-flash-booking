@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Unit and PostgreSQL integration tests
+        run: ./mvnw --batch-mode clean verify -Pintegration
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - infra/bootstrap
+          - infra/modules/network
+          - infra/modules/data-plane
+          - infra/modules/compute
+          - infra/modules/edge-observability
+          - infra/environments/demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.1
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+      - name: Initialize without remote backend
+        working-directory: ${{ matrix.directory }}
+        run: terraform init -backend=false -input=false
+      - name: Validate configuration
+        working-directory: ${{ matrix.directory }}
+        run: terraform validate
+      - name: Run module tests
+        if: startsWith(matrix.directory, 'infra/modules/')
+        working-directory: ${{ matrix.directory }}
+        run: terraform test -no-color

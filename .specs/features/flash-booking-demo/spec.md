@@ -18,7 +18,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Pagamento | Não consta no case. |
 | Cadastro, senha e login de cliente final | Não constam no case; a borda autentica apenas operadores e entrevistadores. |
 | Frontend | O desafio é backend. |
-| Pipeline de CI/CD | Não será avaliada nesta entrega. |
+| Deploy contínuo para AWS | Exige credenciais e autorização remota; o CI localiza falhas sem aplicar infraestrutura. |
 | Alta disponibilidade | Pertence ao plano de alta carga. |
 | EKS | Exige carga operacional incompatível com a demo individual. |
 
@@ -116,6 +116,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 3. The email SHALL state that it is a temporary reservation and does not confirm a purchase or payment.
 4. IF SES is unavailable THEN the system SHALL preserve the reservation, retry within a bound, and route an exhausted message to the notification DLQ.
 5. WHEN the database, queue, worker, and SES are healthy THEN the system SHALL request SES delivery within 30 seconds after the reservation commits.
+6. WHEN a worker processes a notification THEN it SHALL claim a bounded lease in a short database transaction and SHALL call the email provider outside a database transaction.
 
 **Teste independente:** Criar uma reserva no Docker Compose, localizar o e-mail no Mailpit e conferir dados e aviso de reserva temporária.
 
@@ -146,6 +147,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 4. WHEN the demo Terraform plan is applied with authorized credentials THEN the system SHALL create all AWS runtime resources.
 5. The system SHALL require zero manual resource creation through the AWS console.
 6. WHEN the demonstration reaches 1h30 THEN the runbook SHALL direct `terraform destroy` and verification of remaining resources.
+7. WHEN a push or pull request runs THEN CI SHALL execute the Java verification and Terraform format, validation, and module-test gates without applying AWS resources.
 
 **Teste independente:** Executar os gates locais, o cenário multiprocesso e gerar um `terraform plan` completo.
 
