@@ -60,14 +60,14 @@ Phase 2: T04 -> T05 -> T06
 
 ### T03: Add the Local Postman environment
 
-**Status:** Pending
+**Status:** Complete
 
 **What:** Add importable Local environment values for the split command/query APIs and non-personal test customer.
 **Where:** `postman/flash-booking.local.postman_environment.json`
 **Depends on:** T02
 **Requirement:** POSTMAN-01, POSTMAN-02, POSTMAN-03
 **Tests:** static contract validation
-**Gate:** Quick
+**Gate:** `powershell -NoProfile -Command "Get-Content -LiteralPath 'postman/flash-booking.local.postman_environment.json' -Raw | ConvertFrom-Json | Out-Null"`
 **Commit:** `test(postman): add local environment`
 
 ### T04: Add the safe AWS Postman environment
