@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Query API (local Compose)" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.cielo.flashbooking.FlashBookingApplication" />
-    <module name="cielo" />
+    <module name="flash-booking" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="SHORTEN_COMMAND_LINE" value="CLASSPATH_FILE" />
     <envs>

@@ -1,9 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Command API (local Compose)" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="com.cielo.flashbooking.FlashBookingApplication" />
-    <module name="cielo" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="SHORTEN_COMMAND_LINE" value="CLASSPATH_FILE" />
+    <option name="ALTERNATIVE_JRE_PATH" value="jdk-21.0.9.10-hotspot" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="command-api" />
       <env name="SERVER_PORT" value="8082" />
@@ -14,6 +12,13 @@
       <env name="SPRING_DATA_REDIS_HOST" value="localhost" />
       <env name="SPRING_DATA_REDIS_PORT" value="6379" />
     </envs>
+    <option name="MAIN_CLASS_NAME" value="com.cielo.flashbooking.FlashBookingApplication" />
+    <module name="flash-booking" />
+    <extension name="software.aws.toolkits.jetbrains.core.execution.JavaAwsConnectionExtension">
+      <option name="credential" />
+      <option name="region" />
+      <option name="useCurrentConnection" value="false" />
+    </extension>
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
