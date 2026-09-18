@@ -31,6 +31,7 @@ Implement these tasks with the `tlc-spec-driven` skill and its Execute flow. Eac
 Phase 1: T01 -> T02 -> T03 -> T04
 Phase 2: T04 -> T05 -> T06
 Phase 3: T07
+Phase 4: T08
 ```
 
 ## Task Breakdown
@@ -119,12 +120,25 @@ Phase 3: T07
 **Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
 **Commit:** `docs(postman): teach payload chaining`
 
+### T08: Add Local and AWS idempotency runner batteries
+
+**Status:** Complete
+
+**What:** Extend the existing Local and AWS folders with ordered, Runner-ready idempotency cases for replay, incompatible payload, incompatible target, missing or oversized key, and replayed capacity conflict. Document how to run the folders and enforce the cases structurally.
+**Where:** `postman/flash-booking-aws.postman_collection.json`, `postman/README.md`, `scripts/validate-postman.ps1`, `.specs/features/postman-executable-documentation/spec.md`, `.specs/features/postman-executable-documentation/tasks.md`
+**Depends on:** T07
+**Requirement:** POSTMAN-10 to POSTMAN-13
+**Tests:** static contract validation
+**Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
+**Commit:** `test(postman): add idempotency runner batteries`
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 -> T02 -> T03 -> T04
 Phase 2: T04 -> T05 -> T06
 Phase 3: T06 -> T07
+Phase 4: T07 -> T08
 ```
 
 ## Diagram-Definition Cross-Check
@@ -138,6 +152,7 @@ Phase 3: T06 -> T07
 | T05 | T04 | T04 -> T05 | ✅ Match |
 | T06 | T05 | T05 -> T06 | ✅ Match |
 | T07 | T06 | T06 -> T07 | ✅ Match |
+| T08 | T07 | T07 -> T08 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -150,3 +165,4 @@ Phase 3: T06 -> T07
 | T05 | Postman guide | documentation review | static contract validation | ✅ OK |
 | T06 | Validator | executable documentation test | static contract validation | ✅ OK |
 | T07 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |
+| T08 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |

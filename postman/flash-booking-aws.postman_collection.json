@@ -50,7 +50,7 @@
     },
     {
       "name": "Local | fluxo completo do case",
-      "description": "Command API: {{commandBaseUrl}}. Query API: {{queryBaseUrl}}. Esta pasta usa noauth porque Docker Compose não possui API Gateway/IAM.",
+      "description": "Command API: {{commandBaseUrl}}. Query API: {{queryBaseUrl}}. Esta pasta usa noauth porque Docker Compose não possui API Gateway/IAM. No Collection Runner, execute os requests 01 a 15 em ordem: 12 a 15 formam a bateria de erros e replay de idempotência.",
       "auth": { "type": "noauth" },
       "item": [
         {
@@ -82,6 +82,7 @@
                   "pm.collectionVariables.set('cancelReservationKey', `postman-${runId}-cancel`);",
                   "pm.collectionVariables.set('futureEventKey', `postman-${runId}-future-event`);",
                   "pm.collectionVariables.set('beforeStartKey', `postman-${runId}-before-start`);"
+                  ,"pm.collectionVariables.set('tooLongIdempotencyKey', 'x'.repeat(129));"
                 ]
               }
             },
@@ -309,12 +310,84 @@
               ] }
             }
           ]
+        },
+        {
+          "name": "12 | Rejeitar mesma chave com payload diferente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - evento incompatível\",\n  \"capacity\": 3\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Bateria do Runner: reutiliza `{{createEventKey}}` com Body diferente do request 01. A chave ativa deve bloquear a operação antes de criar outro evento."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('payload incompatível retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('payload incompatível retorna resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('payload incompatível usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "13 | Rejeitar mesma chave em outro endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Chave em outro endpoint\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Bateria do Runner: reutiliza a chave criada para POST /events em POST /events/{id}/reservations. O target normalizado incompatível deve retornar conflito."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('target incompatível retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('target incompatível retorna resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('target incompatível usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "14 | Repetir conflito de capacidade com a mesma chave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{insufficientCapacityKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2,\n  \"customer\": { \"name\": \"Capacidade Insuficiente\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Bateria do Runner: repete exatamente o conflito do request 06. Mesmo depois do cancelamento, a chave deve reproduzir o 409 persistido, sem executar a reserva novamente."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('replay do conflito retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('replay do conflito mantém resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('replay do conflito usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "15 | Rejeitar Idempotency-Key maior que 128 caracteres",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{tooLongIdempotencyKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman chave longa\",\n  \"capacity\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Bateria do Runner: `{{tooLongIdempotencyKey}}` é gerada com 129 caracteres no request 01. A API rejeita a chave antes de persistir o comando."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('chave longa retorna 400', () => pm.response.to.have.status(400));",
+            "pm.test('chave longa retorna invalid-request', () => pm.expect(pm.response.json().code).to.eql('invalid-request'));",
+            "pm.test('chave longa usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
         }
       ]
     },
     {
       "name": "AWS | fronteira e fluxo do case",
-      "description": "Esta pasta herda AWS Signature v4 da coleção. Preencha no ambiente AWS somente a URL temporária, credenciais da ApiInvokerRole e customerEmail aceito pelo SES. O primeiro request usa noauth intencionalmente e deve retornar 403; todos os demais são assinados. Os Bodies 01 e 03 são massas prontas. Assim como no fluxo Local, o Tests de 01 guarda `event.id` em `{{eventId}}` e o Tests de 03 guarda `reservation.id` em `{{reservationId}}`; as URLs seguintes interpolam essas variáveis automaticamente.",
+      "description": "Esta pasta herda AWS Signature v4 da coleção. Preencha no ambiente AWS somente a URL temporária, credenciais da ApiInvokerRole e customerEmail aceito pelo SES. O primeiro request usa noauth intencionalmente e deve retornar 403; todos os demais são assinados. Os Bodies 01 e 03 são massas prontas. Assim como no fluxo Local, o Tests de 01 guarda `event.id` em `{{eventId}}` e o Tests de 03 guarda `reservation.id` em `{{reservationId}}`; as URLs seguintes interpolam essas variáveis automaticamente. No Collection Runner, execute 00 a 13 em ordem: 09 a 13 são a bateria assinada de erros e replay de idempotência.",
       "item": [
         {
           "name": "00 | Rejeitar chamada sem SigV4",
@@ -358,6 +431,7 @@
                   "pm.collectionVariables.set('reservationKey', `postman-${runId}-reservation`);",
                   "pm.collectionVariables.set('insufficientCapacityKey', `postman-${runId}-insufficient`);",
                   "pm.collectionVariables.set('cancelReservationKey', `postman-${runId}-cancel`);"
+                  ,"pm.collectionVariables.set('tooLongIdempotencyKey', 'x'.repeat(129));"
                 ]
               }
             },
@@ -514,6 +588,93 @@
               ] }
             }
           ]
+        },
+        {
+          "name": "09 | Rejeitar comando assinado sem Idempotency-Key",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman AWS sem chave\",\n  \"capacity\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Bateria do Runner assinada: a IAM/SigV4 é válida, mas o comando não contém Idempotency-Key. A aplicação deve rejeitá-lo sem criar evento."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('comando AWS sem chave retorna 400', () => pm.response.to.have.status(400));",
+            "pm.test('comando AWS sem chave retorna invalid-request', () => pm.expect(pm.response.json().code).to.eql('invalid-request'));",
+            "pm.test('comando AWS sem chave usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "10 | Rejeitar chave AWS com payload diferente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - AWS incompatível\",\n  \"capacity\": 3\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Bateria do Runner assinada: muda o Body, mas repete a chave de criação do request 01. Deve retornar conflito sem criar outro evento."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('payload AWS incompatível retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('payload AWS incompatível retorna resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('payload AWS incompatível usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "11 | Rejeitar chave AWS em outro endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{createEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"AWS outro endpoint\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Bateria do Runner assinada: repete a chave do POST /events em POST /events/{id}/reservations. O target incompatível deve retornar conflito."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('target AWS incompatível retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('target AWS incompatível retorna resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('target AWS incompatível usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "12 | Repetir conflito de capacidade AWS",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{insufficientCapacityKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2,\n  \"customer\": { \"name\": \"Capacidade AWS\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
+            "description": "Bateria do Runner assinada: repete exatamente o conflito do request 06 e deve devolver o 409 persistido."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('replay AWS do conflito retorna 409', () => pm.response.to.have.status(409));",
+            "pm.test('replay AWS do conflito mantém resource-conflict', () => pm.expect(pm.response.json().code).to.eql('resource-conflict'));",
+            "pm.test('replay AWS do conflito usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "13 | Rejeitar Idempotency-Key AWS maior que 128 caracteres",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{tooLongIdempotencyKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman AWS chave longa\",\n  \"capacity\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events",
+            "description": "Bateria do Runner assinada: usa a variável com 129 caracteres gerada no request 01. A API deve rejeitá-la antes de persistir o comando."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('chave AWS longa retorna 400', () => pm.response.to.have.status(400));",
+            "pm.test('chave AWS longa retorna invalid-request', () => pm.expect(pm.response.json().code).to.eql('invalid-request'));",
+            "pm.test('chave AWS longa usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
         }
       ]
     }

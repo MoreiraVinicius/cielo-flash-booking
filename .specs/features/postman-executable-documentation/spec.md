@@ -11,6 +11,7 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 - [ ] Versionar ambientes seguros, sem endpoint ativo, credencial ou e-mail pessoal.
 - [ ] Explicar como executar, interpretar e estender a coleção.
 - [ ] Exibir massas de criação seguras e ensinar o encadeamento de respostas entre requests.
+- [ ] Oferecer baterias selecionáveis no Collection Runner para os erros de idempotência Local e AWS.
 
 ## Out of Scope
 
@@ -34,6 +35,7 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | Dados de ambiente | Valores secretos e endereço AWS permanecem vazios | Evita segredos, PII e endpoint temporário versionados. | yes |
 | Identidade de cliente padrão | `postman+flash-booking@example.test` | Endereço sintaticamente válido e não pessoal; em AWS deve ser substituído por destinatário SES verificado. | yes |
 | Encadeamento da apresentação | IDs são guardados em variáveis da coleção automaticamente | Evita copiar valores manualmente e deixa o fluxo visível no Postman. | yes |
+| Bateria de idempotência | Os folders Local e AWS continuam autocontidos e podem ser selecionados no Collection Runner | O histórico de Runs não é versionado no JSON; a sequência versionada e os assertions são. | yes |
 
 **Open questions:** none - all resolved or logged above.
 
@@ -103,12 +105,30 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 
 **Independent Test**: Abrir os requests 01, 03 e 10 da pasta Local, enviar 01 e 03, e conferir em Scripts/Tests e Collection variables que os IDs retornados foram armazenados para `{{eventId}}` e `{{reservationId}}`.
 
+---
+
+### P1: Executar a bateria de idempotência ⭐ MVP
+
+**User Story**: Como apresentador, quero executar uma pasta Local ou AWS no Collection Runner e demonstrar tanto o replay seguro quanto os erros de idempotência do contrato.
+
+**Why P1**: A regra é central para o case e precisa ser observável sem abrir os testes Java.
+
+**Acceptance Criteria**:
+
+1. WHEN a presenter runs either the Local or AWS folder in the Collection Runner THEN the collection SHALL include named requests for a replay with the same key and payload, a changed payload with the same key, and the same key used on another endpoint. <!-- event-driven -->
+2. WHEN an active `Idempotency-Key` is reused with a changed payload or normalized target THEN the collection SHALL assert `409`, `resource-conflict` and `application/problem+json` in both Local and signed AWS flows. <!-- event-driven -->
+3. IF a mutable request omits `Idempotency-Key` or sends a key longer than 128 characters THEN the collection SHALL assert `400`, `invalid-request` and `application/problem+json` in both Local and signed AWS flows. <!-- unwanted-behavior -->
+4. WHEN a capacity rejection is replayed with its original key and payload THEN the collection SHALL assert the persisted `409 resource-conflict` response in both Local and signed AWS flows. <!-- event-driven -->
+
+**Independent Test**: No Postman, iniciar Compose, selecionar **Flash Booking Local**, clicar em Run no folder Local e observar as requests de idempotência verdes; em uma demo AWS autorizada, preencher o ambiente e executar o folder AWS para observar os mesmos assertions assinados.
+
 ## Edge Cases
 
 - IF a user runs AWS requests with blank environment variables THEN Postman SHALL not contain fallback credentials or a default active endpoint.
 - WHEN the sale-window request chooses a start instant in the future THEN the collection SHALL create an event whose `startsAt` is asserted before testing the `409` reservation.
 - IF an API returns a problem response THEN collection tests SHALL assert the `application/problem+json` content type in addition to its status.
 - WHEN a presenter resends the first creation request THEN the collection SHALL reset the generated identifiers before it stores the identifiers from the new run.
+- IF a user runs a folder without preencher o ambiente AWS THEN the signed idempotency battery SHALL not fabricate credentials or a fallback URL.
 
 ## Requirement Traceability
 
@@ -123,8 +143,12 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Verified |
 | POSTMAN-08 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
 | POSTMAN-09 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
+| POSTMAN-10 | P1: Executar a bateria de idempotência | Execute | Implementing |
+| POSTMAN-11 | P1: Executar a bateria de idempotência | Execute | Implementing |
+| POSTMAN-12 | P1: Executar a bateria de idempotência | Execute | Implementing |
+| POSTMAN-13 | P1: Executar a bateria de idempotência | Execute | Implementing |
 
-**Coverage:** 9 total, 0 mapped to tasks, 9 unmapped.
+**Coverage:** 13 total, 0 mapped to tasks, 13 unmapped.
 
 ## Success Criteria
 
@@ -132,3 +156,4 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 - [ ] Um operador AWS tem instruções e ambiente seguro para SigV4 sem valores temporários no Git.
 - [ ] O repositório rejeita estruturalmente uma coleção ou ambiente incompletos.
 - [ ] Um apresentador encontra os Bodies de criação e explica o caminho `response.id` → variável → próximo request sem edição manual.
+- [ ] Um apresentador executa Local ou AWS no Collection Runner e mostra os quatro resultados de idempotência esperados.

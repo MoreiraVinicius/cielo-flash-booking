@@ -76,7 +76,11 @@ $expectedLocalRequests = @(
     '08 | Confirmar capacidade devolvida',
     '09 | Rejeitar comando sem Idempotency-Key',
     '10 | Criar venda futura',
-    '11 | Rejeitar reserva antes da abertura'
+    '11 | Rejeitar reserva antes da abertura',
+    '12 | Rejeitar mesma chave com payload diferente',
+    '13 | Rejeitar mesma chave em outro endpoint',
+    '14 | Repetir conflito de capacidade com a mesma chave',
+    '15 | Rejeitar Idempotency-Key maior que 128 caracteres'
 )
 
 $expectedAwsRequests = @(
@@ -88,7 +92,12 @@ $expectedAwsRequests = @(
     '05 | Consultar reserva assinada',
     '06 | Rejeitar capacidade insuficiente assinada',
     '07 | Cancelar reserva assinada',
-    '08 | Confirmar capacidade devolvida assinada'
+    '08 | Confirmar capacidade devolvida assinada',
+    '09 | Rejeitar comando assinado sem Idempotency-Key',
+    '10 | Rejeitar chave AWS com payload diferente',
+    '11 | Rejeitar chave AWS em outro endpoint',
+    '12 | Repetir conflito de capacidade AWS',
+    '13 | Rejeitar Idempotency-Key AWS maior que 128 caracteres'
 )
 
 $localNames = Get-RequestNames -Folder $localFolder
@@ -116,7 +125,7 @@ $requiredAssertions = @(
 foreach ($assertion in $requiredAssertions) {
     Assert-Condition ($collectionRaw.Contains($assertion)) "Collection assertion or contract text is missing: $assertion"
 }
-Assert-Condition (([regex]::Matches($collectionRaw, 'pm\.test\(')).Count -ge 40) 'Collection must contain at least 40 Postman assertions.'
+Assert-Condition (([regex]::Matches($collectionRaw, 'pm\.test\(')).Count -ge 67) 'Collection must contain at least 67 Postman assertions.'
 
 $immediateEvent = Find-Request -Folder $localFolder -Name '01 | Criar evento imediato'
 $reservation = Find-Request -Folder $localFolder -Name '03 | Criar reserva'
@@ -136,6 +145,9 @@ $requiredTeachingFragments = @(
     "pm.collectionVariables.set('eventId', event.id)",
     "pm.collectionVariables.set('reservationId', reservation.id)",
     "pm.collectionVariables.set('futureEventId', event.id)",
+    "'resource-conflict'",
+    "'invalid-request'",
+    'tooLongIdempotencyKey',
     '{{eventId}}',
     '{{reservationId}}',
     '{{futureEventId}}',
