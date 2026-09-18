@@ -72,7 +72,7 @@ foreach ($requiredTruth in @(
     'Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega',
     '43/43 critérios',
     '38 testes unitários + 56 de integração = 94 aprovados',
-    '49/49 unitários',
+    '50/50 unitários',
     'execução PostgreSQL completa',
     'arquitetura-alvo planejada',
     'não foi provisionada, benchmarkada nem validada remotamente',

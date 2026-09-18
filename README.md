@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual tem **49/49 unitários** e Terraform locais aprovados; a execução PostgreSQL completa da suíte 16/Testcontainers ainda precisa ser reexecutada com Docker disponível. |
+| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual tem **50/50 unitários** e Terraform locais aprovados; a execução PostgreSQL completa da suíte 16/Testcontainers ainda precisa ser reexecutada com Docker disponível. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
