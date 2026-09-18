@@ -143,10 +143,10 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Verified |
 | POSTMAN-08 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
 | POSTMAN-09 | P2: Demonstrar criação de massa e encadeamento | Execute | Verified |
-| POSTMAN-10 | P1: Executar a bateria de idempotência | Execute | Implementing |
-| POSTMAN-11 | P1: Executar a bateria de idempotência | Execute | Implementing |
-| POSTMAN-12 | P1: Executar a bateria de idempotência | Execute | Implementing |
-| POSTMAN-13 | P1: Executar a bateria de idempotência | Execute | Implementing |
+| POSTMAN-10 | P1: Executar a bateria de idempotência | Execute | Verified |
+| POSTMAN-11 | P1: Executar a bateria de idempotência | Execute | Verified |
+| POSTMAN-12 | P1: Executar a bateria de idempotência | Execute | Verified |
+| POSTMAN-13 | P1: Executar a bateria de idempotência | Execute | Verified |
 
 **Coverage:** 13 total, 0 mapped to tasks, 13 unmapped.
 
