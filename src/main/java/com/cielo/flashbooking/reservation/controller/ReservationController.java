@@ -74,7 +74,7 @@ public class ReservationController {
             if (result.status() >= 400) {
                 return ResponseEntity.status(result.status())
                         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                        .body(result.responseBody());
+                        .body(problemResponseFactory.withCurrentCorrelationId(result.responseBody(), servletRequest));
             }
             throw new IllegalStateException("could not read idempotency response location", exception);
         }

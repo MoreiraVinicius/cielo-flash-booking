@@ -180,6 +180,7 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
 
         String first = mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .header("Idempotency-Key", key)
+                        .header("X-Correlation-ID", "first-attempt")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
@@ -187,12 +188,15 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andReturn().getResponse().getContentAsString();
         String repeated = mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .header("Idempotency-Key", key)
+                        .header("X-Correlation-ID", "replayed-attempt")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.correlationId").value("replayed-attempt"))
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(objectMapper.readTree(repeated)).isEqualTo(objectMapper.readTree(first));
+        assertThat(objectMapper.readTree(first).get("code").asText()).isEqualTo("resource-conflict");
+        assertThat(objectMapper.readTree(repeated).get("code").asText()).isEqualTo("resource-conflict");
         assertThat(jdbcTemplate.queryForObject("SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
                 .isEqualTo(409);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
@@ -224,6 +228,19 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
         mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Missing key\",\"capacity\":10}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("invalid-request"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isZero();
+    }
+
+    @Test
+    void mutableCommand_whenIdempotencyKeyExceedsLimit_returnsBadRequestWithoutEffect() throws Exception {
+        mockMvc.perform(post("/events")
+                        .header("Idempotency-Key", "k".repeat(129))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Oversized key\",\"capacity\":10}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 

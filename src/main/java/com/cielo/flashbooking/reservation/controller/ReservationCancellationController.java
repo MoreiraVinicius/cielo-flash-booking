@@ -51,8 +51,11 @@ class ReservationCancellationController {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
                     return new IdempotencyResponse(problem.getStatus(), problem);
                 });
+        String responseBody = result.status() >= 400
+                ? problemResponseFactory.withCurrentCorrelationId(result.responseBody(), servletRequest)
+                : result.responseBody();
         return ResponseEntity.status(result.status())
                 .contentType(result.status() >= 400 ? MediaType.APPLICATION_PROBLEM_JSON : MediaType.APPLICATION_JSON)
-                .body(result.responseBody());
+                .body(responseBody);
     }
 }

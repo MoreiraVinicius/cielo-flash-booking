@@ -24,7 +24,7 @@ final class CacheFailureCircuit {
     }
 
     synchronized void recordSuccess() {
-        removeExpiredFailures();
+        failures.clear();
     }
 
     synchronized void recordFailure() {

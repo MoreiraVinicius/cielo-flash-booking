@@ -62,6 +62,9 @@ class EventCommandController {
                 throw new IllegalStateException("could not read idempotency response location", exception);
             }
         }
-        return builder.body(result.responseBody());
+        String responseBody = result.status() >= 400
+                ? problemResponseFactory.withCurrentCorrelationId(result.responseBody(), servletRequest)
+                : result.responseBody();
+        return builder.body(responseBody);
     }
 }

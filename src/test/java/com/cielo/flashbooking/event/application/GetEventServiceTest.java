@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +58,33 @@ class GetEventServiceTest {
         assertThat(result).isSameAs(stored);
         verify(reader).findById(id);
         verify(cache).put(stored);
+    }
+
+    @Test
+    void cacheMiss_doesNotConsumeOutageFallbackPermit() {
+        UUID id = UUID.randomUUID();
+        Event stored = event(id);
+        EventReader reader = ignored -> Optional.of(stored);
+        EventAvailabilityCache cache = mock(EventAvailabilityCache.class);
+        when(cache.findById(id)).thenReturn(Optional.empty());
+        GetEventService service = new GetEventService(
+                reader, cache, new CacheFailureCircuit(CLOCK), new Semaphore(0));
+
+        assertThat(service.get(id)).isSameAs(stored);
+        verify(cache).put(stored);
+    }
+
+    @Test
+    void successfulCacheOperation_resetsPriorFailureWindow() {
+        CacheFailureCircuit circuit = new CacheFailureCircuit(CLOCK);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            circuit.recordFailure();
+        }
+        assertThat(circuit.allowsRequest()).isFalse();
+
+        circuit.recordSuccess();
+
+        assertThat(circuit.allowsRequest()).isTrue();
     }
 
     @Test

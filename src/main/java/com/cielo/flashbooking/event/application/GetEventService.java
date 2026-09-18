@@ -63,19 +63,26 @@ public class GetEventService {
     }
 
     private Event loadFallback(UUID id, boolean cacheAvailable) {
+        if (cacheAvailable) {
+            return loadFromDatabase(id, true);
+        }
         if (!fallbackPermits.tryAcquire()) {
             throw new ServiceUnavailableException("event fallback capacity exhausted");
         }
         try {
-            Event event = eventReader.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("event not found: " + id));
-            if (cacheAvailable) {
-                writeCache(event);
-            }
-            return event;
+            return loadFromDatabase(id, false);
         } finally {
             fallbackPermits.release();
         }
+    }
+
+    private Event loadFromDatabase(UUID id, boolean populateCache) {
+        Event event = eventReader.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("event not found: " + id));
+        if (populateCache) {
+            writeCache(event);
+        }
+        return event;
     }
 
     private void writeCache(Event event) {

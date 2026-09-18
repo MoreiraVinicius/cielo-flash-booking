@@ -75,7 +75,8 @@ public final class ApiExceptionHandler {
         LOGGER.error(
                 "Unexpected request failure correlationId={} exceptionType={}",
                 problemResponseFactory.correlationId(request),
-                exception.getClass().getSimpleName());
+                exception.getClass().getSimpleName(),
+                exception);
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error",
