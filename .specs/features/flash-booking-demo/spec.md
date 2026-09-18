@@ -10,6 +10,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] Garantir consistência dos comandos sob concorrência.
 - [x] Executar localmente por Docker Compose.
 - [x] Provisionar todo o runtime AWS por Terraform.
+- [x] Permitir programar a abertura e o encerramento opcional de uma flash sale.
 
 ## Out of Scope
 
@@ -27,6 +28,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Tema | Decisão | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
 | Duração da reserva | 10 minutos configuráveis | Compatível com SQS message timer e comum para checkout. | yes |
+| Janela comercial do evento | `startsAt` e `endsAt` opcionais, decididos pelo PostgreSQL | Sem início a venda vale imediatamente; sem fim não há encerramento temporal; a regra permanece consistente entre tasks. | yes |
 | Aceitação da reserva | Síncrona, com estado PENDING | Bloqueio temporário, sem compra definitiva; ADR 0002. | yes |
 | Liberação após vencimento | Até expiresAt + 5 segundos com banco e processamento saudáveis | Limita estoque temporariamente bloqueado; ADR 0003. | yes |
 | Encerramento | Persistir código e descrição do motivo em CANCELLED e EXPIRED | O catálogo e o formato de consulta estão definidos no ADR 0006. | yes |
@@ -49,12 +51,14 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Acceptance Criteria:**
 
-1. WHEN `POST /events` receives a name and positive capacity THEN the system SHALL create the event and return `201`.
+1. WHEN `POST /events` receives a name, positive capacity and optional valid `startsAt`/`endsAt` THEN the system SHALL create the event and return `201` with the persisted window values or nulls.
 2. IF creation receives invalid data THEN the system SHALL return `400` as `application/problem+json`.
 3. WHEN `GET /events/{id}` finds the event THEN the system SHALL return total and available capacity.
 4. IF the event does not exist THEN the system SHALL return `404`.
 5. WHEN `GET /events/{id}` finds a valid cache entry THEN the system SHALL return the displayed availability without querying PostgreSQL; on a cache miss, the system SHALL query PostgreSQL and populate the cache for at most one second.
 6. IF `POST /events/{id}/reservations` references a nonexistent event THEN the system SHALL return `404` without persisting a customer, reservation, or outbox event, and SHALL record that final response in the idempotency contract.
+7. IF `startsAt` is at or before database `createdAt`, IF `endsAt` is at or before `startsAt`, or IF an end-only event has `endsAt` before database `createdAt + 10 minutes`, THEN the system SHALL return `400 application/problem+json` without persisting an event.
+8. WHEN `GET /events/{id}` finds a cached or persisted event THEN the system SHALL return the persisted `startsAt` and `endsAt` ISO-8601 values or nulls.
 
 **Teste independente:** Criar um evento e consultá-lo pelo identificador retornado.
 
@@ -70,6 +74,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, quantity, expiry, customer, closure reason, and the event reference containing only `id` and `name`.
 5. WHEN `GET /reservations/{id}` is called THEN the system SHALL query PostgreSQL directly and SHALL NOT depend on Valkey availability.
 6. IF the customer's name or email is invalid THEN the system SHALL return `400` without reserving capacity.
+7. WHILE a reservation command evaluates an event, the system SHALL atomically require sufficient capacity, `startsAt` absent or reached, and `endsAt` absent or not reached; outside that window it SHALL return `409` without customer, reservation, outbox or availability changes.
 
 **Teste independente:** Disparar reservas concorrentes acima da capacidade por ao menos dois processos de comandos e comprovar que a soma aceita não ultrapassa a capacidade.
 
@@ -158,6 +163,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - SE `DELETE` e o worker de expiração concorrerem antes do prazo, ENTÃO somente a primeira transição DEVE liberar capacidade; SE o lock for obtido em `expiresAt` ou depois, ENTÃO o estado terminal DEVE ser `EXPIRED`, independentemente de qual caminho materializar o encerramento.
 - SE a publicação no SQS atrasar, ENTÃO o reconciliador DEVE expirar a reserva pelo horário persistido.
 - SE o banco estiver indisponível, ENTÃO o sistema DEVE falhar sem confirmar reserva.
+- SE a hora PostgreSQL for igual a `startsAt`, ENTÃO uma reserva com capacidade DEVE ser aceita; SE for igual a `endsAt`, ENTÃO a reserva DEVE retornar `409` e preservar disponibilidade.
 - SE o cache de evento falhar, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL com timeout de cache de 100 ms, no máximo 5 fallbacks simultâneos por task e circuito aberto após 5 falhas em 10 segundos.
 - SE o SQS entregar uma mensagem duplicada, ENTÃO o consumidor DEVE produzir o mesmo estado final.
 - SE o envio de e-mail for duplicado após resposta ambígua do provedor, ENTÃO a reserva DEVE permanecer inalterada e a ocorrência DEVE ser observável.
@@ -174,8 +180,9 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-05 | Executar e provisionar | Execute | Validated |
 | DEMO-06 | Notificar a reserva | Execute | Validated |
 | DEMO-07 | Proteger a API e limitar abuso | Execute | Validated |
+| DEMO-08 | Janela comercial do evento | Execute | Verified |
 
-**Cobertura:** 7 requisitos, 7 mapeados ao design, nenhum sem mapeamento.
+**Cobertura:** 8 requisitos, 8 mapeados ao design, nenhum sem mapeamento.
 
 ## Success Criteria
 
@@ -186,6 +193,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] CANCELLED e EXPIRED preservam código e descrição do motivo de encerramento.
 - [x] `GET /events/{id}` usa cache Valkey com TTL máximo de um segundo e invalidação pós-commit; `GET /reservations/{id}` consulta PostgreSQL sem depender do cache.
 - [x] Toda reserva possui cliente ligado por chave estrangeira e envia notificação assíncrona sem prometer compra.
+- [x] Evento expõe janela opcional e o PostgreSQL bloqueia reservas antes da abertura ou no fim/depois do encerramento.
 - [x] Consultas e comandos executam em serviços separados usando a mesma imagem e as mesmas regras de negócio.
 - [x] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.
 - [x] Docker Compose inicia a solução completa.

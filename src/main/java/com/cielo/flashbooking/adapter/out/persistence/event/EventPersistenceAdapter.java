@@ -3,6 +3,7 @@ package com.cielo.flashbooking.adapter.out.persistence.event;
 import com.cielo.flashbooking.domain.event.Event;
 import com.cielo.flashbooking.event.application.EventReader;
 import com.cielo.flashbooking.event.application.EventWriter;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.sql.Timestamp;
@@ -21,21 +22,28 @@ class EventPersistenceAdapter implements EventWriter, EventReader {
     @Override
     public Event save(Event event) {
         jdbcTemplate.update("""
-                INSERT INTO event (id, name, capacity, available, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 event.id(),
                 event.name(),
                 event.capacity(),
                 event.available(),
-                Timestamp.from(event.createdAt()));
+                Timestamp.from(event.createdAt()),
+                event.startsAt() == null ? null : Timestamp.from(event.startsAt()),
+                event.endsAt() == null ? null : Timestamp.from(event.endsAt()));
         return event;
+    }
+
+    @Override
+    public Instant currentTime() {
+        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
     }
 
     @Override
     public Optional<Event> findById(UUID id) {
         return jdbcTemplate.query("""
-                SELECT id, name, capacity, available, created_at
+                SELECT id, name, capacity, available, created_at, starts_at, ends_at
                 FROM event
                 WHERE id = ?
                 """, resultSet -> resultSet.next()
@@ -44,7 +52,13 @@ class EventPersistenceAdapter implements EventWriter, EventReader {
                         resultSet.getString("name"),
                         resultSet.getInt("capacity"),
                         resultSet.getInt("available"),
-                        resultSet.getTimestamp("created_at").toInstant()))
+                        resultSet.getTimestamp("created_at").toInstant(),
+                        timestampOrNull(resultSet.getTimestamp("starts_at")),
+                        timestampOrNull(resultSet.getTimestamp("ends_at"))))
                 : Optional.empty(), id);
+    }
+
+    private Instant timestampOrNull(Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 }

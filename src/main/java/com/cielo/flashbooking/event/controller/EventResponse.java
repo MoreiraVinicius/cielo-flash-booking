@@ -4,7 +4,8 @@ import com.cielo.flashbooking.domain.event.Event;
 import java.time.Instant;
 import java.util.UUID;
 
-public record EventResponse(UUID id, String name, int capacity, int available, Instant createdAt) {
+public record EventResponse(
+        UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {
 
     static EventResponse from(Event event) {
         return new EventResponse(
@@ -12,6 +13,8 @@ public record EventResponse(UUID id, String name, int capacity, int available, I
                 event.name(),
                 event.capacity(),
                 event.available(),
-                event.createdAt());
+                event.createdAt(),
+                event.startsAt(),
+                event.endsAt());
     }
 }

@@ -199,10 +199,52 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
     }
 
+    @Test
+    void create_whenSaleHasNotStarted_replaysConflictWithoutPartialEffects() throws Exception {
+        UUID eventId = insertEvent(10, 10);
+        String key = UUID.randomUUID().toString();
+        jdbcTemplate.update("UPDATE event SET starts_at = clock_timestamp() + interval '10 minutes' WHERE id = ?", eventId);
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mockMvc.perform(post("/events/{eventId}/reservations", eventId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", key)
+                            .content(validRequest(1)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("resource-conflict"));
+        }
+
+        assertWindowRejectionHasNoReservationEffects(eventId, 10);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void create_whenSaleHasEnded_returnsConflictWithoutPartialEffects() throws Exception {
+        UUID eventId = insertEvent(10, 10);
+        jdbcTemplate.update("UPDATE event SET ends_at = clock_timestamp() WHERE id = ?", eventId);
+
+        mockMvc.perform(post("/events/{eventId}/reservations", eventId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content(validRequest(1)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("resource-conflict"));
+
+        assertWindowRejectionHasNoReservationEffects(eventId, 10);
+    }
+
     private String validRequest(int quantity) throws Exception {
         return objectMapper.writeValueAsString(Map.of(
                 "quantity", quantity,
                 "customer", Map.of("name", "Ana", "email", "ana@example.com")));
+    }
+
+    private void assertWindowRejectionHasNoReservationEffects(UUID eventId, int expectedAvailable) {
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(expectedAvailable);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
     }
 
     private UUID insertEvent(int capacity, int available) {

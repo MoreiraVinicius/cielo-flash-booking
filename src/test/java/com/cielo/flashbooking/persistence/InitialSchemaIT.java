@@ -104,6 +104,26 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
         assertThatCode(() -> insertIdempotencyRecord("k".repeat(128))).doesNotThrowAnyException();
     }
 
+    @Test
+    void rejectsInvalidEventSaleWindowsAndAcceptsAValidOne() {
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO event (id, name, capacity, available, created_at, starts_at)
+                VALUES ('%s', 'Invalid start', 1, 1, clock_timestamp(), clock_timestamp() - interval '1 second')
+                """.formatted(UUID.randomUUID()))).isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO event (id, name, capacity, available, created_at, ends_at)
+                VALUES ('%s', 'Short end', 1, 1, clock_timestamp(), clock_timestamp() + interval '9 minutes')
+                """.formatted(UUID.randomUUID()))).isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at)
+                VALUES ('%s', 'Inverted', 1, 1, clock_timestamp(), clock_timestamp() + interval '2 hours', clock_timestamp() + interval '1 hour')
+                """.formatted(UUID.randomUUID()))).isInstanceOf(SQLException.class);
+        assertThatCode(() -> execute("""
+                INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at)
+                VALUES ('%s', 'Valid', 1, 1, clock_timestamp(), clock_timestamp() + interval '1 hour', clock_timestamp() + interval '2 hours')
+                """.formatted(UUID.randomUUID()))).doesNotThrowAnyException();
+    }
+
     private Connection connection() throws SQLException {
         return java.sql.DriverManager.getConnection(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
     }

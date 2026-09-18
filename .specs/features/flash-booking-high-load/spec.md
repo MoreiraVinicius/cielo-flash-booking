@@ -35,6 +35,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | Serviços | `query-api`, `command-api` e `worker` construídos da mesma base Java | Escala independente sem duplicar regras; adaptadores operacionais da evolução permanecem no mesmo repositório e artefato; ADR 0013. | yes |
 | Segurança | API Gateway REST único, IAM/SigV4, WAF e throttling | Protege antes dos containers e preserva o mesmo contrato da demo; ADR 0012. | yes |
 | Notificação | Mesmos eventos, filas, consumidores e SES da demo, com claim/lease no publisher compartilhado antes do scale-out | Consumidores continuam idempotentes, mas múltiplos publishers não devem reler simultaneamente o mesmo lote; ADR 0011. | yes |
+| Janela comercial | `startsAt`/`endsAt` continuam campos do evento e a reserva usa o decremento temporal condicional do PostgreSQL | Pré-escala prepara capacidade, mas não abre nem encerra vendas e não pode contornar a regra autoritativa. | yes |
 | Gatilhos | SLO e percentual do envelope medido | TPS absoluto é volátil e específico do ambiente. | yes |
 
 **Open questions:** none. SLOs, capacidade máxima e limites de custo são valores inicialmente provisórios, a substituir pelo baseline da demo antes de qualquer `apply`; a ausência de medição não autoriza promover a arquitetura.
@@ -67,6 +68,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 3. ENQUANTO múltiplas tasks reservarem o mesmo evento, o sistema DEVE manter disponibilidade entre zero e a capacidade total.
 4. SE conexões crescerem com as tasks, ENTÃO o serviço de comandos DEVE usar o endpoint read-write do RDS Proxy para limitar churn no banco.
 5. SE lock waits ou p99 ultrapassarem o SLO, ENTÃO o API Gateway DEVE aplicar controle de admissão antes de aumentar o máximo de tasks.
+6. ENQUANTO command-api for pré-escalado ou escalado horizontalmente, o sistema DEVE preservar a elegibilidade de `startsAt`/`endsAt` no mesmo decremento condicional de capacidade decidido pelo PostgreSQL.
 
 **Teste independente futuro:** Aplicar pico abrupto e verificar escala independente, latência e oversell zero. Nesta entrega, revisar o plano e validar Terraform sem aplicar recursos AWS.
 

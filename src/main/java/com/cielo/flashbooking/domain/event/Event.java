@@ -13,8 +13,17 @@ public final class Event {
     private final int capacity;
     private final int available;
     private final Instant createdAt;
+    private final Instant startsAt;
+    private final Instant endsAt;
 
-    private Event(UUID id, String name, int capacity, int available, Instant createdAt) {
+    private Event(
+            UUID id,
+            String name,
+            int capacity,
+            int available,
+            Instant createdAt,
+            Instant startsAt,
+            Instant endsAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.name = normalizeName(name);
         validateCapacity(capacity);
@@ -22,14 +31,33 @@ public final class Event {
         validateAvailable(available, capacity);
         this.available = available;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
+        validateSaleWindow(createdAt, startsAt, endsAt);
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
     }
 
     public static Event create(UUID id, String name, int capacity, Instant createdAt) {
-        return new Event(id, name, capacity, capacity, createdAt);
+        return create(id, name, capacity, createdAt, null, null);
+    }
+
+    public static Event create(
+            UUID id, String name, int capacity, Instant createdAt, Instant startsAt, Instant endsAt) {
+        return new Event(id, name, capacity, capacity, createdAt, startsAt, endsAt);
     }
 
     public static Event restore(UUID id, String name, int capacity, int available, Instant createdAt) {
-        return new Event(id, name, capacity, available, createdAt);
+        return restore(id, name, capacity, available, createdAt, null, null);
+    }
+
+    public static Event restore(
+            UUID id,
+            String name,
+            int capacity,
+            int available,
+            Instant createdAt,
+            Instant startsAt,
+            Instant endsAt) {
+        return new Event(id, name, capacity, available, createdAt, startsAt, endsAt);
     }
 
     public UUID id() {
@@ -52,6 +80,14 @@ public final class Event {
         return createdAt;
     }
 
+    public Instant startsAt() {
+        return startsAt;
+    }
+
+    public Instant endsAt() {
+        return endsAt;
+    }
+
     private static String normalizeName(String name) {
         var normalized = Objects.requireNonNull(name, "name must not be null").trim();
         if (normalized.isEmpty() || normalized.length() > MAX_NAME_LENGTH) {
@@ -69,6 +105,21 @@ public final class Event {
     private static void validateAvailable(int available, int capacity) {
         if (available < 0 || available > capacity) {
             throw new IllegalArgumentException("available must be between zero and capacity");
+        }
+    }
+
+    private static void validateSaleWindow(Instant createdAt, Instant startsAt, Instant endsAt) {
+        if (startsAt != null && !startsAt.isAfter(createdAt)) {
+            throw new IllegalArgumentException("startsAt must be after createdAt");
+        }
+        if (endsAt == null) {
+            return;
+        }
+        if (startsAt != null && !endsAt.isAfter(startsAt)) {
+            throw new IllegalArgumentException("endsAt must be after startsAt");
+        }
+        if (startsAt == null && endsAt.isBefore(createdAt.plusSeconds(600))) {
+            throw new IllegalArgumentException("end-only event must end at least ten minutes after createdAt");
         }
     }
 }

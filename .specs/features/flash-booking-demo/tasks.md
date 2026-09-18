@@ -73,6 +73,7 @@ T25 -> T26
 T26 -> T27
 T27 -> T28
 T28 -> T29
+T29 -> T30
 
 ```
 
@@ -437,6 +438,18 @@ T28 -> T29
 **Gate:** Build + Infra
 **Commit:** `test: validate flash booking demo`
 
+### T30: Implementar janela comercial do evento
+
+**Status:** Complete
+**What:** Atualizar a demo com a janela opcional de flash sale e validar sua criação, leitura em cache, bloqueio autoritativo de reserva e documentação operacional.
+**Where:** `.specs/features/flash-sale-window/`, `src/main/`, `src/test/`, `docs/`, `postman/` e scripts de execução relevantes.
+**Depends on:** T29
+**Requirement:** DEMO-08
+**Done when:** `startsAt` e `endsAt` opcionais respeitam os limites decididos pelo PostgreSQL; reservas fora da janela não causam efeito parcial; cache, contrato HTTP, documentação e coleção Postman expõem a janela; todos os gates da feature passam.
+**Tests:** unit, integration, cache, HTTP e migration
+**Gate:** Build
+**Commit:** `feat(event): add flash sale window`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -445,7 +458,7 @@ T28 -> T29
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T29 | Hardening precede benchmark; benchmark precede docs; docs precedem validação contra o case. Match. |
+| Quality | T26-T30 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada. Match. |
 
 ## Test Co-location Validation
 
@@ -458,3 +471,4 @@ T28 -> T29
 | T26-T27 | Security/performance | integration/performance | Tests in same task | OK |
 | T28 | Docs | build/review | No deferred production tests | OK |
 | T29 | Verification | all | Fresh verifier | OK |
+| T30 | Event window | unit/integration/cache/HTTP/migration | Feature plan mantém os testes junto da implementação | OK |

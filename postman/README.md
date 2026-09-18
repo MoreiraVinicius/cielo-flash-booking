@@ -10,6 +10,6 @@ The collection points to the deployed API Gateway demo URL and signs authenticat
 
 Do not commit populated credentials. The collection intentionally leaves all credential values empty.
 
-The run covers the five case endpoints, IAM enforcement, event and reservation lifecycle, persistent idempotency, capacity conflict, capacity return on cancellation, and the standard error contract. It sends one reservation notification to the verified `customerEmail` address.
+The run covers the five case endpoints, IAM enforcement, an immediate event with an end-only flash-sale window, event and reservation lifecycle, persistent idempotency, capacity conflict, capacity return on cancellation, and the standard error contract. It sends one reservation notification to the verified `customerEmail` address.
 
 The URL is a short-lived demo endpoint. If Terraform creates a new API later, replace `baseUrl` with the new `api_invoke_url` output before running the collection.

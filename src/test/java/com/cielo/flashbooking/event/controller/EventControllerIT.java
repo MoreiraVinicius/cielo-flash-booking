@@ -84,6 +84,8 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(jsonPath("$.capacity").value(120))
                 .andExpect(jsonPath("$.available").value(120))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.startsAt").isEmpty())
+                .andExpect(jsonPath("$.endsAt").isEmpty())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -123,14 +125,18 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
     @Test
     @Order(3)
     void returnsAndCachesAvailabilityWithoutASecondPostgresqlQuery() throws Exception {
-        UUID id = insertEvent(100, 42);
+        Instant startsAt = Instant.parse("2026-09-09T13:00:00Z");
+        Instant endsAt = Instant.parse("2026-09-09T14:00:00Z");
+        UUID id = insertEvent(100, 42, startsAt, endsAt);
 
         mockMvc.perform(get("/events/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.name").value("Cached event"))
                 .andExpect(jsonPath("$.capacity").value(100))
-                .andExpect(jsonPath("$.available").value(42));
+                .andExpect(jsonPath("$.available").value(42))
+                .andExpect(jsonPath("$.startsAt").value(startsAt.toString()))
+                .andExpect(jsonPath("$.endsAt").value(endsAt.toString()));
 
         Long ttlMillis = redisTemplate.getExpire("event-availability:" + id, java.util.concurrent.TimeUnit.MILLISECONDS);
         assertThat(ttlMillis).isNotNull().isPositive().isLessThanOrEqualTo(1_000L);
@@ -138,7 +144,9 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("DELETE FROM event WHERE id = ?", id);
         mockMvc.perform(get("/events/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.available").value(42));
+                .andExpect(jsonPath("$.available").value(42))
+                .andExpect(jsonPath("$.startsAt").value(startsAt.toString()))
+                .andExpect(jsonPath("$.endsAt").value(endsAt.toString()));
     }
 
     @Test
@@ -169,15 +177,48 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
         assertThat(Duration.ofNanos(System.nanoTime() - startedAt)).isLessThan(Duration.ofSeconds(2));
     }
 
+    @Test
+    @Order(6)
+    void createsAndRejectsSaleWindowsAccordingToTheDatabaseCreationTime() throws Exception {
+        Instant start = Instant.now().plusSeconds(3600);
+        Instant end = start.plusSeconds(3600);
+        mockMvc.perform(post("/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content("""
+                                {"name":"Scheduled show","capacity":10,"startsAt":"%s","endsAt":"%s"}
+                                """.formatted(start, end)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.startsAt").value(start.toString()))
+                .andExpect(jsonPath("$.endsAt").value(end.toString()));
+
+        mockMvc.perform(post("/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content("""
+                                {"name":"Short sale","capacity":10,"endsAt":"%s"}
+                                """.formatted(Instant.now().plusSeconds(599))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("invalid-request"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isEqualTo(1);
+    }
+
     private UUID insertEvent(int capacity, int available) {
+        return insertEvent(capacity, available, null, null);
+    }
+
+    private UUID insertEvent(int capacity, int available, Instant startsAt, Instant endsAt) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO event (id, name, capacity, available, created_at) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 id,
                 "Cached event",
                 capacity,
                 available,
-                java.sql.Timestamp.from(Instant.parse("2026-09-09T12:00:00Z")));
+                java.sql.Timestamp.from(Instant.parse("2026-09-09T12:00:00Z")),
+                startsAt == null ? null : java.sql.Timestamp.from(startsAt),
+                endsAt == null ? null : java.sql.Timestamp.from(endsAt));
         return id;
     }
 }

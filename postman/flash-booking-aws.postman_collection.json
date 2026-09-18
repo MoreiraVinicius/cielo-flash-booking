@@ -44,6 +44,7 @@
           "if (!pm.collectionVariables.get('runId')) {",
           "  pm.collectionVariables.set('runId', Date.now().toString());",
           "}",
+          "pm.collectionVariables.set('saleEndsAt', new Date(Date.now() + 11 * 60 * 1000).toISOString());",
           ""
         ]
       }
@@ -110,7 +111,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"AWS case validation {{runId}}\",\n  \"capacity\": 10\n}",
+              "raw": "{\n  \"name\": \"AWS case validation {{runId}}\",\n  \"capacity\": 10,\n  \"endsAt\": \"{{saleEndsAt}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -141,6 +142,8 @@
                   "  pm.expect(body.id).to.be.a('string');",
                   "  pm.expect(body.capacity).to.eql(10);",
                   "  pm.expect(body.available).to.eql(10);",
+                  "  pm.expect(body.startsAt).to.eql(null);",
+                  "  pm.expect(body.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt'));",
                   "  pm.collectionVariables.set('eventId', body.id);",
                   "});",
                   ""
@@ -172,12 +175,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Event exposes total and available capacity', function () {",
+                  "pm.test('Event exposes capacity and immediate sale window', function () {",
                   "  pm.response.to.have.status(200);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.id).to.eql(pm.collectionVariables.get('eventId'));",
                   "  pm.expect(body.capacity).to.eql(10);",
                   "  pm.expect(body.available).to.eql(10);",
+                  "  pm.expect(body.startsAt).to.eql(null);",
+                  "  pm.expect(body.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt'));",
                   "});",
                   ""
                 ]

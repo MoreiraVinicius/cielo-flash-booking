@@ -20,7 +20,7 @@ docker compose up --build --detach
 docker compose --profile concurrency down
 ```
 
-O smoke testa o fluxo entre serviços: cria evento pelo `command-api` em `http://localhost:8082`, consulta-o pelo `query-api` em `http://localhost:8081`, cria e consulta uma reserva e espera o e-mail aparecer no Mailpit em `http://localhost:8025`.
+O smoke testa o fluxo entre serviços: cria pelo `command-api` um evento imediatamente válido com fim opcional a mais de dez minutos, consulta-o pelo `query-api` em `http://localhost:8081`, cria e consulta uma reserva e espera o e-mail aparecer no Mailpit em `http://localhost:8025`.
 
 Para medir concorrência entre processos, use:
 
@@ -102,7 +102,7 @@ Uma chamada sem assinatura válida, sem `execute-api:Invoke` ou fora do CIDR dev
 ## Roteiro de Case Review
 
 1. Mostre os cinco endpoints e o fluxo local composto.
-2. Explique que a atualização condicional do PostgreSQL e as constraints decidem o estoque. Mais réplicas não mudam essa regra e não permitem oversell.
+2. Explique que a atualização condicional do PostgreSQL e as constraints decidem estoque e janela comercial. Mais réplicas não mudam essa regra e não permitem oversell nem reserva antes/depois da venda.
 3. Mostre a transação que inclui idempotência, cliente, inventário, reserva e outbox. Explique a janela idempotente de 24 horas pelo relógio do banco, a reutilização atômica após o vencimento, a limpeza limitada no worker, o consumidor duplicado e o reconciliador de expiração.
 4. Diferencie reserva temporária de compra. O e-mail é assíncrono, usa SES em AWS e Mailpit localmente e não reverte a reserva quando falha.
 5. Mostre cache-aside de no máximo um segundo e invalidação após commit. PostgreSQL continua sendo a fonte de verdade.

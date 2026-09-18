@@ -34,7 +34,7 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
         try {
             CacheEntry entry = objectMapper.readValue(value, CacheEntry.class);
             return Optional.of(Event.restore(
-                    entry.id(), entry.name(), entry.capacity(), entry.available(), entry.createdAt()));
+                    entry.id(), entry.name(), entry.capacity(), entry.available(), entry.createdAt(), entry.startsAt(), entry.endsAt()));
         } catch (JsonProcessingException invalidCacheEntry) {
             throw new IllegalStateException("invalid event cache entry", invalidCacheEntry);
         }
@@ -43,7 +43,7 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
     @Override
     public void put(Event event) {
         CacheEntry entry = new CacheEntry(
-                event.id(), event.name(), event.capacity(), event.available(), event.createdAt());
+                event.id(), event.name(), event.capacity(), event.available(), event.createdAt(), event.startsAt(), event.endsAt());
         try {
             redisTemplate.opsForValue().set(
                     key(event.id()), objectMapper.writeValueAsString(entry), TTL);
@@ -61,6 +61,7 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
         return KEY_PREFIX + id;
     }
 
-    private record CacheEntry(UUID id, String name, int capacity, int available, Instant createdAt) {
+    private record CacheEntry(
+            UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {
     }
 }

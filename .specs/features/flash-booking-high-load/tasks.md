@@ -192,11 +192,11 @@ T20 -> T21
 
 ### T11: Configurar pré-escala de flash sale
 
-**What:** Criar scheduled scaling do command-api antes e depois da janela conhecida de abertura da venda.
+**What:** Criar scheduled scaling do command-api antes e depois da janela conhecida de abertura da venda, sem usar a agenda de infraestrutura para autorizar reservas.
 **Where:** `infra/modules/compute/scheduled-scaling.tf`
 **Depends on:** T10
 **Requirement:** SCALE-02
-**Done when:** Capacidade mínima somente do command-api sobe antes da venda e retorna após cooldown configurado, sem alteração de imagem ou regra de negócio.
+**Done when:** Capacidade mínima somente do command-api sobe antes da venda e retorna após cooldown configurado, sem alteração de imagem ou regra de negócio; o teste/documentação confirma que `startsAt` e `endsAt` continuam verificados pelo decremento condicional no PostgreSQL.
 **Tests:** terraform test, incluído
 **Gate:** Infra
 **Commit:** `infra: prescale scheduled flash sales`

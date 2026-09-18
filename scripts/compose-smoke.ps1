@@ -42,10 +42,13 @@ function Wait-ForApiHealth {
 Wait-ForApiHealth -Name 'command-api' -Uri 'http://localhost:8082/actuator/health'
 Wait-ForApiHealth -Name 'query-api' -Uri 'http://localhost:8081/actuator/health'
 
-$event = Invoke-JsonRequest -Method POST -Uri 'http://localhost:8082/events' -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ name = 'Compose smoke event'; capacity = 2 }
+$saleEndsAt = (Get-Date).ToUniversalTime().AddMinutes(11).ToString('o')
+$event = Invoke-JsonRequest -Method POST -Uri 'http://localhost:8082/events' -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ name = 'Compose smoke event'; capacity = 2; endsAt = $saleEndsAt }
 $eventId = $event.id
+if ($event.startsAt -ne $null -or $event.endsAt -ne $saleEndsAt) { throw 'command-api did not preserve the immediate sale window' }
 $queriedEvent = Invoke-JsonRequest -Method GET -Uri "http://localhost:8081/events/$eventId"
 if ($queriedEvent.id -ne $eventId) { throw 'query-api did not expose the created event' }
+if ($queriedEvent.startsAt -ne $null -or $queriedEvent.endsAt -ne $saleEndsAt) { throw 'query-api did not expose the sale window' }
 
 $reservation = Invoke-JsonRequest -Method POST -Uri "http://localhost:8082/events/$eventId/reservations" -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ quantity = 1; customer = @{ name = 'Compose smoke'; email = 'compose-smoke@example.com' } }
 $reservationId = $reservation.id

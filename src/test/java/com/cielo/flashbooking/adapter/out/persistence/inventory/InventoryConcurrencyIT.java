@@ -77,6 +77,23 @@ class InventoryConcurrencyIT extends LocalIntegrationInfrastructure {
         }
     }
 
+    @Test
+    void refusesDecrementBeforeStartAndAtOrAfterEnd() {
+        UUID id = insertEvent(10, 10);
+        jdbcTemplate.update("UPDATE event SET starts_at = clock_timestamp() + interval '10 minutes' WHERE id = ?", id);
+
+        assertThat(inventory.decrement(id, 1)).isFalse();
+        assertThat(available(id)).isEqualTo(10);
+
+        jdbcTemplate.update("""
+                UPDATE event
+                SET created_at = clock_timestamp() - interval '11 minutes', starts_at = NULL, ends_at = clock_timestamp()
+                WHERE id = ?
+                """, id);
+        assertThat(inventory.decrement(id, 1)).isFalse();
+        assertThat(available(id)).isEqualTo(10);
+    }
+
     private boolean result(java.util.concurrent.Future<Boolean> future) {
         try {
             return future.get();

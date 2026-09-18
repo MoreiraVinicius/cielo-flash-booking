@@ -21,13 +21,14 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 - RDS PostgreSQL 16 Single-AZ será a infraestrutura autoritativa da demo; ver [ADR 0004](../../../docs/adr/0004-postgresql-como-fonte-autoritativa.md).
 - A reserva será aceita de forma síncrona como bloqueio temporário PENDING, sem confirmação de compra; ver [ADR 0002](../../../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md).
 - A disponibilidade nunca será usada para autorizar a reserva; a transação de reserva decide.
+- Evento pode receber `startsAt` e `endsAt` opcionais. Sem início, a venda é imediata; sem fim, permanece elegível enquanto houver capacidade. O PostgreSQL decide a criação e a janela no mesmo decremento de inventário. Início informado é posterior ao instante de criação; fim com início é posterior ao início; fim sem início é no mínimo 10 minutos posterior à criação.
 - Reservas pendentes expiram em 10 minutos, valor configurável.
 - Com banco e processamento saudáveis, a devolução de capacidade deve concluir até expiresAt + 5 segundos, sem estender a validade; ver [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md).
 - Antes de `expiresAt`, `DELETE /reservations/{id}` encerra uma reserva pendente como `CANCELLED`. Em `expiresAt` ou depois, o prazo prevalece e a mesma chamada materializa `EXPIRED`; o PostgreSQL decide após conquistar o lock da reserva.
 - CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP do [ADR 0006](../../../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
 - Idempotência dos comandos usa uma janela de 24 horas no PostgreSQL: a validade é decidida atomicamente pelo relógio do banco e o worker remove registros vencidos em lotes, conforme o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
 - A elegibilidade de expiração usa o relógio do PostgreSQL conforme o [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md).
-- `GET /events/{id}` usa ElastiCache for Valkey compartilhado, com TTL máximo de um segundo. `GET /reservations/{id}` consulta PostgreSQL e retorna somente `{id, name}` como referência do evento. O cache não autoriza reservas; ver [ADR 0005](../../../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
+- `GET /events/{id}` usa ElastiCache for Valkey compartilhado, com TTL máximo de um segundo, e retorna também a janela persistida. `GET /reservations/{id}` consulta PostgreSQL e retorna somente `{id, name}` como referência do evento. O cache não autoriza reservas; ver [ADR 0005](../../../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
 - Toda reserva pertence a um `Customer`. O Java trata o e-mail antes da busca e persiste somente a forma canônica na coluna `email`, conforme [ADR 0010](../../../docs/adr/0010-cliente-como-entidade-da-reserva.md) e [modelagem de dados](../../../docs/data-model.md).
 - Reserva criada emite `ReservationCreated` por outbox e envia e-mail assíncrono pelo SES; o texto não confirma compra, conforme [ADR 0011](../../../docs/adr/0011-notificacao-assincrona-de-reserva-por-email.md).
 

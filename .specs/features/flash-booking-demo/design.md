@@ -92,7 +92,11 @@ A modelagem completa, relações, constraints, índices e contrato HTTP estão e
 - `name: String`
 - `capacity: int`
 - `available: int`
-- `createdAt: Instant`
+- `startsAt: Instant?`, onde `null` representa venda imediata
+- `endsAt: Instant?`, onde `null` representa venda sem encerramento temporal
+- `createdAt: Instant`, decidido pelo PostgreSQL
+
+`startsAt` precisa ser posterior a `createdAt`. Com início, `endsAt` precisa ser posterior ao início; sem início, fim precisa ser no mínimo dez minutos posterior à criação. A criação devolve os valores persistidos e `GET /events/{id}` os preserva no cache de evento.
 
 ### Reservation
 
@@ -169,7 +173,7 @@ O caminho de capacidade insuficiente não deixa a chave em aberto: após a tenta
 
 A proteção não depende de sincronização Java, quantidade de containers, cache ou ordem de chegada no API Gateway. Ela pertence ao PostgreSQL:
 
-1. Cada reserva tenta decrementar `available` com uma única atualização condicional que exige `available >= quantity`.
+1. Cada reserva tenta decrementar `available` com uma única atualização condicional que exige `available >= quantity`, início ausente ou alcançado, e fim ausente ou ainda não alcançado pelo relógio PostgreSQL.
 2. O banco conquista lock sobre a linha do evento e reavalia a condição depois de aguardar outra transação; somente operações que ainda cabem alteram uma linha.
 3. Cliente, reserva, outbox e decremento são confirmados juntos. Qualquer erro desfaz todos os efeitos.
 4. A constraint `0 <= available <= capacity` oferece uma segunda barreira contra valores impossíveis.

@@ -12,20 +12,20 @@ A fonte consolidada da demo é a [validação independente](../.specs/features/f
 
 | Área | Demo entregue | High-load alvo |
 | --- | --- | --- |
-| Estado | **Baseline PASS — 43/43 critérios**; regra atual de prazo comprovada em PostgreSQL 17 e gate completo PostgreSQL 16 ainda pendente | **Planejada — sem provisionamento remoto** |
+| Estado | **Baseline PASS — 43/43 critérios**; versão atual inclui janela de flash sale e passou no gate PostgreSQL 16/Testcontainers | **Planejada — sem provisionamento remoto** |
 | Código Java | Implementado e compartilhado entre três modos | Preserva domínio, contratos e schema; adaptadores operacionais pertencem à evolução futura |
 | Execução local | Compose e smoke test validados | Não é um segundo produto local |
 | AWS | Plan/apply, probes e destroy concluídos; state final vazio | Topologia Multi-AZ descrita, não aplicada |
-| Testes | Baseline: 38 unitários + 56 de integração = **94 aprovados**. Atual: 47 unitários aprovados, 61 ITs compilados e 4 cenários de prazo aprovados em PostgreSQL 17; gate completo PostgreSQL 16 pendente. | Reutiliza gates da demo; falha/capacidade remotas pendentes |
+| Testes | Baseline: 38 unitários + 56 de integração = **94 aprovados**. Atual: **53 unitários + 68 integrações = 121 aprovados** no gate PostgreSQL 16/Testcontainers. | Reutiliza gates da demo; falha/capacidade remotas pendentes |
 | Desempenho | Baseline local curto; não representa capacidade de produção | Sem benchmark ou SLO comprovado |
 
 ## Requisitos funcionais
 
 | Rota do case | Comportamento entregue | Evidência principal |
 | --- | --- | --- |
-| `POST /events` | Cria evento com capacidade positiva; erros usam Problem Details e idempotência obrigatória. | `EventControllerIT` e `IdempotencyControllerIT` |
-| `GET /events/{id}` | Retorna capacidade total/disponível com cache-aside de até 1 segundo. | `EventControllerIT` |
-| `POST /events/{id}/reservations` | Persiste cliente e reserva `PENDING`, decrementa estoque e grava outbox na mesma transação. | `ReservationControllerIT` e testes de concorrência |
+| `POST /events` | Cria evento com capacidade positiva e `startsAt`/`endsAt` opcionais; erros usam Problem Details e idempotência obrigatória. | `EventControllerIT` e `IdempotencyControllerIT` |
+| `GET /events/{id}` | Retorna capacidade, janela configurada e disponibilidade com cache-aside de até 1 segundo. | `EventControllerIT` |
+| `POST /events/{id}/reservations` | Persiste cliente e reserva `PENDING`, decrementa estoque e grava outbox na mesma transação, somente durante a janela comercial. | `ReservationControllerIT` e testes de concorrência |
 | `GET /reservations/{id}` | Retorna a reserva, o cliente e a referência estável do evento `{id, name}` diretamente do PostgreSQL. | `ReservationQueryControllerIT` |
 | `DELETE /reservations/{id}` | Antes do prazo encerra como CANCELLED; no prazo ou depois materializa EXPIRED; devolve estoque exatamente uma vez. | `ReservationQueryControllerIT` e testes de corrida/lock |
 
@@ -36,6 +36,7 @@ O domínio entregue é de **reserva temporária**. Não há pagamento, compra co
 | Requisito | Mecanismo | Evidência e limite |
 | --- | --- | --- |
 | Oversell zero | Decremento condicional no PostgreSQL e constraints; criação da reserva ocorre na mesma transação. | Testes concorrentes aceitam no máximo a capacidade. O benchmark não é a prova dessa propriedade. |
+| Janela de flash sale | `startsAt`/`endsAt` opcionais no evento; PostgreSQL combina relógio, capacidade e janela no mesmo decremento. | Início é inclusivo, fim é exclusivo; antes/depois retorna `409` sem efeito parcial. |
 | Múltiplas instâncias | `query-api`, `command-api` e `worker` iniciam a mesma imagem em modos separados; perfil local cria duas réplicas adicionais de comandos. | Configuração e harness local; a demo AWS econômica usou uma task por serviço. |
 | Expiração automática | Outbox, SQS com atraso, consumidor idempotente e reconciliador pelo relógio do banco. | Integração e probe remoto; devolução saudável até `expiresAt + 5s`. |
 | Idempotência | Resultado final persistido no PostgreSQL por uma janela de 24 horas, ligado a operação, alvo e hash do payload; aquisição e vencimento usam o relógio do banco. | Dentro da janela, repetição igual devolve a mesma resposta e conflito recebe `409`; após ela, a chave pode ser reivindicada atomicamente. O worker limpa somente vencidos em lotes. |

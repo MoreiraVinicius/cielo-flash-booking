@@ -21,7 +21,10 @@ class JdbcInventoryOperations implements InventoryOperations {
         int affected = jdbcTemplate.update("""
                 UPDATE event
                 SET available = available - ?
-                WHERE id = ? AND available >= ?
+                WHERE id = ?
+                  AND available >= ?
+                  AND (starts_at IS NULL OR starts_at <= clock_timestamp())
+                  AND (ends_at IS NULL OR clock_timestamp() < ends_at)
                 """, quantity, eventId, quantity);
         return affected == 1;
     }

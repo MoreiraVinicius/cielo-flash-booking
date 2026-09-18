@@ -61,7 +61,7 @@ Mostre também “ECS Fargate worker, 2..N tasks”, sem exposição pelo ALB, e
 
 Represente as políticas de escala como caixas de controle conectadas ao respectivo serviço:
 - query-api: requisições, p95, CPU e cache hit rate;
-- command-api: requisições, p95, CPU, conexões e pré-escala agendada antes da flash sale;
+- command-api: requisições, p95, CPU, conexões e pré-escala agendada antes da flash sale; essa agenda prepara tasks e não autoriza a venda;
 - worker: backlog por task e idade da mensagem mais antiga, separando expiração e notificação.
 Indique scale-out agressivo, cooldown de scale-in maior e máximos limitados pelo envelope validado do banco. Se lock waits ou p99 ultrapassarem o SLO, o sistema deve aplicar admissão/429/503 em vez de aumentar indefinidamente command-api.
 
@@ -76,7 +76,7 @@ Desenhe os fluxos de dados com precisão:
 - GET /reservations/{id} usa o endpoint read-write do RDS Proxy para evitar 404 transitório após criação;
 - command-api e worker usam o endpoint read-write do RDS Proxy e o Aurora writer;
 - command-api invalida o Valkey somente após commit;
-- o cache nunca autoriza reserva; o decremento condicional e as constraints no Aurora impedem oversell;
+- o cache nunca autoriza reserva; o decremento condicional e as constraints no Aurora exigem capacidade e janela (`startsAt` alcançado e `endsAt` futuro), impedindo oversell e reservas fora da venda;
 - em falha de cache, fallback ao PostgreSQL é limitado por timeout, circuito e no máximo cinco fallbacks simultâneos por task; excedentes recebem 503.
 
 Na camada assíncrona, mantenha duas filas Amazon SQS independentes e criptografadas: “Expiration Queue” e “Notification Queue”, cada uma com sua DLQ e alarmes próprios. O worker lê a transactional outbox no Aurora, publica e consome mensagens, reconcilia reservas vencidas e envia e-mails via Amazon SES. Expiração e notificação devem ter listeners, limites de concorrência e métricas separados para que SES lento não retenha capacidade de expiração.

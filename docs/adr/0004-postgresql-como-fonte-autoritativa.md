@@ -29,4 +29,4 @@ Aurora Serverless é reservado para alta capacidade porque permite variar ACUs v
 
 ## Consequências
 
-O hot row de um evento continua sendo o limite conhecido. Medir lock waits e p95 de reserva; somente se esse limite violar o SLO após tuning, abrir ADR de evolução para DynamoDB. O cache não se torna fonte de verdade e não participa da autorização de reservas.
+O hot row de um evento continua sendo o limite conhecido. O mesmo `UPDATE` condicional exige capacidade e janela comercial (`starts_at` ausente ou alcançado; `ends_at` ausente ou futuro) pelo relógio PostgreSQL. Medir lock waits e p95 de reserva; somente se esse limite violar o SLO após tuning, abrir ADR de evolução para DynamoDB. O cache não se torna fonte de verdade e não participa da autorização de reservas.

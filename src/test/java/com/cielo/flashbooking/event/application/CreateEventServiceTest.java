@@ -7,9 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cielo.flashbooking.domain.event.Event;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -20,7 +18,8 @@ class CreateEventServiceTest {
         EventWriter writer = mock(EventWriter.class);
         when(writer.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
         Instant now = Instant.parse("2026-09-09T12:00:00Z");
-        CreateEventService service = new CreateEventService(writer, Clock.fixed(now, ZoneOffset.UTC));
+        when(writer.currentTime()).thenReturn(now);
+        CreateEventService service = new CreateEventService(writer);
 
         Event result = service.create("  Flash sale  ", 50);
 
@@ -32,5 +31,22 @@ class CreateEventServiceTest {
         assertThat(saved.getValue().available()).isEqualTo(50);
         assertThat(saved.getValue().createdAt()).isEqualTo(now);
         assertThat(result).isSameAs(saved.getValue());
+    }
+
+    @Test
+    void createsAnEventWithAnOptionalSaleWindowUsingPersistenceTime() {
+        EventWriter writer = mock(EventWriter.class);
+        when(writer.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Instant createdAt = Instant.parse("2026-09-09T12:00:00Z");
+        Instant startsAt = createdAt.plusSeconds(60);
+        Instant endsAt = startsAt.plusSeconds(60);
+        when(writer.currentTime()).thenReturn(createdAt);
+        CreateEventService service = new CreateEventService(writer);
+
+        Event result = service.create("Flash sale", 50, startsAt, endsAt);
+
+        assertThat(result.createdAt()).isEqualTo(createdAt);
+        assertThat(result.startsAt()).isEqualTo(startsAt);
+        assertThat(result.endsAt()).isEqualTo(endsAt);
     }
 }

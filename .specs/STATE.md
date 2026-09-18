@@ -159,13 +159,21 @@
 - **Trade-off:** A entrega continua pelo menos uma vez em resultado ambíguo do provedor; o lease evita concorrência, mas não torna SES e PostgreSQL atomicamente coordenados.
 - **Scope:** Aplicação, worker e schema compartilhados.
 
+### AD-021 - Janela comercial autoritativa no evento
+
+- **Status:** active
+- **Decision:** Eventos podem ter `startsAt` e `endsAt` opcionais; a ausência de início torna a venda imediata e a ausência de fim não a encerra por tempo. O PostgreSQL decide a criação e a elegibilidade temporal no mesmo decremento condicional de inventário.
+- **Reason:** Abertura e encerramento de flash sale precisam permanecer corretos entre tasks concorrentes sem transformar cache, worker ou relógios locais em autoridade de reserva.
+- **Trade-off:** O evento não recebe estado comercial persistido nem endpoint de edição; consumidores calculam sua elegibilidade no comando e consultas podem ficar defasadas pelo TTL de cache.
+- **Scope:** Domínio `Event`, contrato HTTP, schema Flyway, reserva, cache e as arquiteturas demo/high-load.
+
 ## Handoff
 
-- **Feature**: `audit-remediation`
-- **Phase / Task**: T01-T06 localmente validadas; evidencia de CI remoto pendente.
-- **Completed**: Implementação Java, schema, Terraform, documentação, 50 testes unitários e 63 testes de integração PostgreSQL/Testcontainers foram aprovados.
-- **In-progress**: Execução do workflow GitHub Actions após push/PR e revisão independente final.
-- **Next step**: Publicar a alteração e registrar o resultado do CI; nenhum deploy AWS está autorizado.
-- **Blockers**: Nenhum bloqueio local. O Docker Desktop está saudável; a falha anterior era permissão do contexto restrito para o pipe Docker. Falta apenas evidência externa do CI.
-- **Uncommitted files**: `.tmp/` é conteúdo de outra feature e permanece fora desta entrega.
+- **Feature**: `flash-sale-window`
+- **Phase / Task**: T01-T06 concluídas e verificadas.
+- **Completed**: Janela comercial opcional implementada em Java, migration Flyway, contrato HTTP, cache, reserva, documentação, Postman, smoke e áudio. O gate local registrou 53 testes unitários e 68 integrações PostgreSQL/Testcontainers aprovados; o sensor matou a remoção do predicado de término.
+- **In-progress**: Nenhum trabalho de flash-sale-window em andamento.
+- **Next step**: Nenhum; a feature `flash-sale-window` está encerrada. Nenhum deploy AWS foi autorizado ou executado.
+- **Blockers**: Nenhum.
+- **Uncommitted files**: `.tmp/` e artefatos locais de áudio permanecem fora desta entrega; a feature `flash-sale-window` está versionada no commit desta entrega.
 - **Branch**: `main`

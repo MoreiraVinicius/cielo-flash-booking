@@ -149,4 +149,6 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 
 A arquitetura parte da [modelagem da demo](../../../docs/data-model.md) e mantém um único schema Flyway para os dois ambientes. A promoção acrescenta ao `outbox_event` apenas estado operacional de claim, com token opaco e `lease_until TIMESTAMPTZ`, além de um acesso indexável aos eventos não publicados elegíveis. O adaptador adquire um lote limitado com `FOR UPDATE SKIP LOCKED` e atualiza token, lease e tentativas em uma transação curta. `markPublished` exige o mesmo token e limpa o claim. Não existe tabela ou modelo de negócio exclusivo do ambiente high-load.
 
+O mesmo schema compartilhado mantém `event.starts_at` e `event.ends_at`. Mesmo com pré-escala ou scale-out de `command-api`, somente o `UPDATE` condicional PostgreSQL autoriza a reserva, exigindo capacidade, início ausente ou alcançado e fim ausente ou futuro. Agendar capacidade não muda a janela comercial.
+
 O índice da aquisição deve filtrar `published_at IS NULL` e começar pelo instante de elegibilidade do lease, seguido de `occurred_at` e `id` para ordenação determinística. O predicado temporal usa `clock_timestamp()` na consulta, não no predicado do índice. A migration e o plano de consulta serão validados no PostgreSQL suportado antes da promoção.

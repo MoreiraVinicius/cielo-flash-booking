@@ -48,7 +48,8 @@ class EventCommandController {
         IdempotencyResult result = idempotencyService.execute(
                 IdempotencyCommand.from(idempotencyKey, "POST", "/events", request, objectMapper),
                 () -> new IdempotencyResponse(
-                        201, EventResponse.from(createEventService.create(request.name(), request.capacity()))),
+                        201, EventResponse.from(createEventService.create(
+                                request.name(), request.capacity(), request.startsAt(), request.endsAt()))),
                 exception -> {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
                     return new IdempotencyResponse(problem.getStatus(), problem);

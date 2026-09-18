@@ -25,6 +25,8 @@ erDiagram
         integer capacity
         integer available
         timestamptz created_at
+        timestamptz starts_at
+        timestamptz ends_at
     }
 
     RESERVATION {
@@ -82,8 +84,10 @@ O cliente não é o usuário IAM que invoca a API. O primeiro é o titular da re
 - `capacity: int` maior que zero e imutável após a criação.
 - `available: int` entre zero e `capacity`.
 - `createdAt: Instant`.
+- `startsAt: Instant?`: início opcional; `null` torna a venda imediatamente elegível.
+- `endsAt: Instant?`: fim opcional; `null` não encerra a venda por tempo.
 
-`available` é o estoque autoritativo. O valor em Valkey é apenas disponibilidade exibida e nunca participa da autorização da reserva.
+`available` é o estoque autoritativo. `startsAt` precisa ser estritamente posterior a `createdAt`; com início, `endsAt` precisa ser posterior ao início; sem início, o fim precisa estar a pelo menos dez minutos de `createdAt`. O valor em Valkey é apenas disponibilidade exibida e nunca participa da autorização da reserva.
 
 ### Reservation
 
@@ -106,6 +110,8 @@ Uma reserva pertence a exatamente um cliente e um evento. Um cliente pode realiz
 
 - `event.capacity > 0`.
 - `event.available >= 0 AND event.available <= event.capacity`.
+- `event.starts_at IS NULL OR event.starts_at > event.created_at`.
+- `event.ends_at` é nulo, posterior a `starts_at`, ou, sem início, ao menos `event.created_at + 10 minutos`.
 - `reservation.quantity > 0`.
 - `reservation.expires_at > reservation.created_at`.
 - `PENDING` exige motivo nulo; `CANCELLED` e `EXPIRED` exigem código e descrição não vazios.
@@ -126,11 +132,23 @@ Uma reserva pertence a exatamente um cliente e um evento. Um cliente pode realiz
 
 ## Escritas concorrentes e prevenção de oversell
 
-Criar uma reserva executa, na mesma transação, o upsert do cliente e uma atualização condicional equivalente a `UPDATE event SET available = available - :quantity WHERE id = :eventId AND available >= :quantity`, seguida do vínculo `Reservation -> Event -> Customer` e do outbox. Se nenhuma linha for atualizada, a transação inteira é desfeita, retorna `409` e não persiste cliente, reserva nem evento de outbox.
+Criar uma reserva executa, na mesma transação, o upsert do cliente e uma atualização condicional equivalente a `UPDATE event SET available = available - :quantity WHERE id = :eventId AND available >= :quantity AND (starts_at IS NULL OR starts_at <= clock_timestamp()) AND (ends_at IS NULL OR clock_timestamp() < ends_at)`, seguida do vínculo `Reservation -> Event -> Customer` e do outbox. Se nenhuma linha for atualizada, a transação inteira é desfeita, retorna `409` e não persiste cliente, reserva nem evento de outbox. O início é inclusivo e o fim é exclusivo.
 
 O encerramento primeiro bloqueia a reserva PENDING e depois observa o relógio PostgreSQL. `DELETE` antes de `expires_at` escolhe CANCELLED; `DELETE`, consumidor ou reconciliador em `expires_at` ou depois escolhem EXPIRED. Somente a transação que alterar uma linha incrementa `available` pela quantidade reservada. Repetição, entrega duplicada, cancelamento concorrente e disputa entre cancelamento e expiração afetam zero linhas e não devolvem ingressos novamente. O banco serializa alterações na mesma linha da reserva e do evento; em carga extrema a latência pode crescer, mas o estoque não fica negativo nem supera a capacidade.
 
 ## Contrato HTTP relevante
+
+Criação de evento imediato com encerramento opcional:
+
+```json
+{
+  "name": "Lote relâmpago",
+  "capacity": 100,
+  "endsAt": "2026-09-18T15:00:00Z"
+}
+```
+
+Para agendar, envie também `startsAt`; a API devolve os dois campos, ou `null` quando ausentes.
 
 Corpo mínimo de criação de reserva:
 

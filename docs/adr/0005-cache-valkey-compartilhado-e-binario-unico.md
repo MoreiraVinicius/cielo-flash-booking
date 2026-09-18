@@ -17,7 +17,7 @@ Na demo, usar nó Valkey econômico parametrizado. Na arquitetura de alta capaci
 
 ## Contrato de cache
 
-- `GET /events/{id}` usa `event-availability:{id}` com TTL máximo de um segundo.
+- `GET /events/{id}` usa `event-availability:{id}` com TTL máximo de um segundo e preserva `startsAt`/`endsAt` junto de capacidade e disponibilidade.
 - Reserva criada, cancelada ou expirada invalida a chave do evento depois do commit.
 - Falha de invalidação é observável; o TTL limita a defasagem.
 - Cache miss ou indisponibilidade em `GET /events/{id}` consulta PostgreSQL. Timeout de cache: 100 ms; circuito abre após 5 falhas em 10 segundos; há no máximo 5 leituras de fallback simultâneas por task.
