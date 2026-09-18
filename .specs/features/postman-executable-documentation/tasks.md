@@ -30,6 +30,7 @@ Implement these tasks with the `tlc-spec-driven` skill and its Execute flow. Eac
 ```text
 Phase 1: T01 -> T02 -> T03 -> T04
 Phase 2: T04 -> T05 -> T06
+Phase 3: T07
 ```
 
 ## Task Breakdown
@@ -106,11 +107,24 @@ Phase 2: T04 -> T05 -> T06
 **Gate:** Full
 **Commit:** `test(postman): validate executable documentation`
 
+### T07: Teach sample payloads and response chaining
+
+**Status:** Complete
+
+**What:** Make the existing collection visibly explain its safe creation payloads, automatic ID capture and the variable interpolation used by later requests. Enforce the teaching contract in the static validator.
+**Where:** `postman/flash-booking-aws.postman_collection.json`, `postman/README.md`, `scripts/validate-postman.ps1`, `.specs/features/postman-executable-documentation/spec.md`, `.specs/features/postman-executable-documentation/tasks.md`
+**Depends on:** T06
+**Requirement:** POSTMAN-08, POSTMAN-09
+**Tests:** static contract validation
+**Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
+**Commit:** `docs(postman): teach payload chaining`
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 -> T02 -> T03 -> T04
 Phase 2: T04 -> T05 -> T06
+Phase 3: T06 -> T07
 ```
 
 ## Diagram-Definition Cross-Check
@@ -123,6 +137,7 @@ Phase 2: T04 -> T05 -> T06
 | T04 | T03 | T03 -> T04 | ✅ Match |
 | T05 | T04 | T04 -> T05 | ✅ Match |
 | T06 | T05 | T05 -> T06 | ✅ Match |
+| T07 | T06 | T06 -> T07 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -134,3 +149,4 @@ Phase 2: T04 -> T05 -> T06
 | T04 | AWS environment | static contract validation | static contract validation | ✅ OK |
 | T05 | Postman guide | documentation review | static contract validation | ✅ OK |
 | T06 | Validator | executable documentation test | static contract validation | ✅ OK |
+| T07 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |

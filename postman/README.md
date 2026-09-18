@@ -38,6 +38,25 @@ O ambiente Local separa os endereços porque a aplicação executa dois modos HT
 
 Todos os testes devem ficar verdes. A requisição 01 inicia uma execução nova e recria identificadores e chaves idempotentes. Depois da requisição 03, o e-mail de reserva pode ser conferido no Mailpit em http://localhost:8025.
 
+## Criar massa e reutilizar respostas na apresentação
+
+Os requests de criação já possuem um **Body** seguro e editável. Use-os como massa inicial da apresentação:
+
+| Request | Body demonstrado | O que você pode alterar |
+| --- | --- | --- |
+| 01 | Criar evento imediato | `name` e `capacity: 2` | nome e capacidade do evento |
+| 03 | Criar reserva | `quantity: 1` e `customer` | quantidade, nome e e-mail do cliente |
+| 10 | Criar venda futura | evento, capacidade, `startsAt` e `endsAt` | nome e capacidade; os horários são gerados automaticamente |
+
+O encadeamento é automático. Não copie o ID da resposta:
+
+1. Envie **01 | Criar evento imediato**. Em **Scripts > Post-response**, o código salva `event.id` em `eventId`.
+2. Os requests 02, 03, 04, 06 e 08 usam `{{eventId}}` na URL. O Postman substitui a variável antes de enviar.
+3. Envie **03 | Criar reserva**. O código salva `reservation.id` em `reservationId`.
+4. Os requests 05 e 07 usam `{{reservationId}}`. O request 10 salva o novo ID em `futureEventId`, que o 11 usa.
+
+Para mostrar isso ao vivo, abra a coleção no Postman, escolha **Variables** e observe a coluna **Current value** após cada envio. Os testes também exibem `guarda eventId...` e `guarda reservationId...` em verde, provando que a captura ocorreu.
+
 O fluxo cobre:
 
 | Requests | Resultado esperado |

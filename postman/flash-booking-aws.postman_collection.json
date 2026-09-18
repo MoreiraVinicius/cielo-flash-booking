@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a79db9d6-9874-41cb-a631-a5391769bc25",
     "name": "Flash Booking | Guia executável",
-    "description": "Esta é a única coleção Postman do projeto. Ela é uma documentação executável: execute Local após iniciar Docker Compose, ou AWS após preencher URL temporária, credenciais IAM/SigV4 e destinatário SES verificado. Os requests precisam ser enviados em ordem.",
+    "description": "Esta é a única coleção Postman do projeto. Ela é uma documentação executável: execute Local após iniciar Docker Compose, ou AWS após preencher URL temporária, credenciais IAM/SigV4 e destinatário SES verificado. Os requests precisam ser enviados em ordem. Os Bodies de criação já são massas seguras e editáveis. Após cada criação, o script Tests guarda o ID retornado em uma variável da coleção; os requests seguintes usam {{eventId}}, {{reservationId}} ou {{futureEventId}} automaticamente.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -45,7 +45,7 @@
   "item": [
     {
       "name": "00 | Como usar esta coleção",
-      "description": "1. Importe esta coleção e um ambiente de postman/. 2. Local: execute docker compose up --build --detach, selecione Flash Booking Local e rode a pasta Local. 3. AWS: selecione Flash Booking AWS, preencha somente os valores do ambiente ativo e rode AWS. A coleção guarda IDs e chaves de idempotência em variáveis próprias durante cada fluxo.",
+      "description": "1. Importe esta coleção e um ambiente de postman/. 2. Local: execute docker compose up --build --detach, selecione Flash Booking Local e rode a pasta Local. 3. AWS: selecione Flash Booking AWS, preencha somente os valores do ambiente ativo e rode AWS.\n\n## Massa de demonstração\nOs Bodies dos requests 01, 03 e 10 já podem ser enviados como estão. Edite somente `name`, `capacity`, `quantity` ou o customer se quiser explicar uma variação. `{{runId}}` evita colisão de nomes e `{{customerEmail}}` vem do ambiente.\n\n## Como uma resposta vira parâmetro\n1. Envie `01 | Criar evento imediato`. Em **Scripts > Post-response**, `event.id` é guardado com `pm.collectionVariables.set('eventId', event.id)`.\n2. O request 02 e a URL do request 03 usam `{{eventId}}` automaticamente.\n3. Envie `03 | Criar reserva`. O mesmo padrão guarda `reservation.id` em `{{reservationId}}`, usado pelos requests 05 e 07.\n4. O request 10 guarda o evento futuro em `{{futureEventId}}`, usado pelo 11.\n\nPara ver os valores durante a apresentação, abra a coleção, entre em **Variables** e observe a coluna **Current value** depois de enviar cada request. Não copie IDs manualmente.",
       "item": []
     },
     {
@@ -63,7 +63,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - evento imediato\",\n  \"capacity\": 2\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events",
-            "description": "Reinicia as variáveis do fluxo. Evento sem janela aceita reservas imediatamente quando possui capacidade."
+            "description": "Massa pronta de evento: `name` identifica a execução e `capacity` define o estoque inicial. Antes do envio, o Pre-request Script limpa IDs antigos e cria chaves idempotentes. Depois de 201, o Tests salva `event.id` em `{{eventId}}`; os requests 02, 03, 04, 06 e 08 usam essa variável."
           },
           "event": [
             {
@@ -94,7 +94,8 @@
                   "const event = pm.response.json();",
                   "pm.test('evento inicia com a capacidade disponível', () => { pm.expect(event.capacity).to.eql(2); pm.expect(event.available).to.eql(2); });",
                   "pm.test('evento imediato não possui janela configurada', () => { pm.expect(event.startsAt).to.eql(null); pm.expect(event.endsAt).to.eql(null); });",
-                  "pm.collectionVariables.set('eventId', event.id);"
+                  "pm.collectionVariables.set('eventId', event.id);",
+                  "pm.test('guarda eventId para os próximos requests', () => pm.expect(pm.collectionVariables.get('eventId')).to.eql(event.id));"
                 ]
               }
             }
@@ -106,7 +107,7 @@
             "method": "GET",
             "header": [],
             "url": "{{queryBaseUrl}}/events/{{eventId}}",
-            "description": "A Query API pode responder via cache-aside ou PostgreSQL. O contrato deve retornar a mesma capacidade."
+            "description": "A URL contém `{{eventId}}`, preenchido automaticamente pela resposta do request 01. A Query API pode responder via cache-aside ou PostgreSQL; o contrato deve retornar a mesma capacidade."
           },
           "event": [
             {
@@ -128,7 +129,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman Smoke\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
-            "description": "Command API reserva uma unidade. Inventário, cliente, reserva, idempotência e outbox pertencem à mesma transação."
+            "description": "Massa pronta de reserva: `quantity` solicita unidades e `customer` cria ou reutiliza o cliente pelo e-mail. A URL usa `{{eventId}}` capturado no request 01. Depois de 201, o Tests salva `reservation.id` em `{{reservationId}}`, usado pelos requests 05 e 07. Inventário, cliente, reserva, idempotência e outbox pertencem à mesma transação."
           },
           "event": [
             {
@@ -137,7 +138,8 @@
                 "pm.test('cria reserva com 201', () => pm.response.to.have.status(201));",
                 "const reservation = pm.response.json();",
                 "pm.test('reserva inicia pendente com uma unidade', () => { pm.expect(reservation.status).to.eql('PENDING'); pm.expect(reservation.quantity).to.eql(1); });",
-                "pm.collectionVariables.set('reservationId', reservation.id);"
+                  "pm.collectionVariables.set('reservationId', reservation.id);",
+                  "pm.test('guarda reservationId para consulta e cancelamento', () => pm.expect(pm.collectionVariables.get('reservationId')).to.eql(reservation.id));"
               ] }
             }
           ]
@@ -170,7 +172,7 @@
             "method": "GET",
             "header": [],
             "url": "{{queryBaseUrl}}/reservations/{{reservationId}}",
-            "description": "A consulta de reserva lê PostgreSQL diretamente e referencia o evento como { id, name }."
+            "description": "A URL contém `{{reservationId}}`, preenchido automaticamente pela resposta do request 03. A consulta lê PostgreSQL diretamente e referencia o evento como { id, name }."
           },
           "event": [
             {
@@ -271,7 +273,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - venda futura\",\n  \"capacity\": 1,\n  \"startsAt\": \"{{saleStartsAt}}\",\n  \"endsAt\": \"{{saleEndsAt}}\"\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events",
-            "description": "Cria uma janela que abre dois minutos no futuro e retorna os instantes ISO-8601 persistidos."
+            "description": "Massa pronta de evento com janela: `startsAt` e `endsAt` são gerados no Pre-request Script da coleção. Depois de 201, o Tests salva `event.id` em `{{futureEventId}}`; o request 11 usa essa variável."
           },
           "event": [
             {
@@ -280,7 +282,8 @@
                 "pm.test('cria venda futura com 201', () => pm.response.to.have.status(201));",
                 "const event = pm.response.json();",
                 "pm.test('retorna a janela solicitada', () => { pm.expect(event.startsAt).to.eql(pm.collectionVariables.get('saleStartsAt')); pm.expect(event.endsAt).to.eql(pm.collectionVariables.get('saleEndsAt')); });",
-                "pm.collectionVariables.set('futureEventId', event.id);"
+                  "pm.collectionVariables.set('futureEventId', event.id);",
+                  "pm.test('guarda futureEventId para a reserva antes da abertura', () => pm.expect(pm.collectionVariables.get('futureEventId')).to.eql(event.id));"
               ] }
             }
           ]
@@ -295,7 +298,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Venda Futura\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events/{{futureEventId}}/reservations",
-            "description": "Antes de startsAt, a janela é rejeitada pelo mesmo decremento condicional que protege a capacidade."
+            "description": "A URL contém `{{futureEventId}}`, preenchido automaticamente pela resposta do request 10. Antes de startsAt, a janela é rejeitada pelo mesmo decremento condicional que protege a capacidade."
           },
           "event": [
             {
@@ -311,7 +314,7 @@
     },
     {
       "name": "AWS | fronteira e fluxo do case",
-      "description": "Esta pasta herda AWS Signature v4 da coleção. Preencha no ambiente AWS somente a URL temporária, credenciais da ApiInvokerRole e customerEmail aceito pelo SES. O primeiro request usa noauth intencionalmente e deve retornar 403; todos os demais são assinados.",
+      "description": "Esta pasta herda AWS Signature v4 da coleção. Preencha no ambiente AWS somente a URL temporária, credenciais da ApiInvokerRole e customerEmail aceito pelo SES. O primeiro request usa noauth intencionalmente e deve retornar 403; todos os demais são assinados. Os Bodies 01 e 03 são massas prontas. Assim como no fluxo Local, o Tests de 01 guarda `event.id` em `{{eventId}}` e o Tests de 03 guarda `reservation.id` em `{{reservationId}}`; as URLs seguintes interpolam essas variáveis automaticamente.",
       "item": [
         {
           "name": "00 | Rejeitar chamada sem SigV4",
@@ -339,7 +342,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman {{runId}} - AWS\",\n  \"capacity\": 2\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events",
-            "description": "Inicia o fluxo assinado. A regra de negócio é idêntica à Local; a diferença é a fronteira IAM/SigV4."
+            "description": "Massa pronta de evento para a demo AWS. Depois de 201, o Tests salva `event.id` em `{{eventId}}`, consumido pelos requests AWS 02, 03, 04, 06 e 08. A regra de negócio é idêntica à Local; a diferença é a fronteira IAM/SigV4."
           },
           "event": [
             {
@@ -364,7 +367,8 @@
                 "pm.test('cria evento assinado com 201', () => pm.response.to.have.status(201));",
                 "const event = pm.response.json();",
                 "pm.test('evento AWS inicia com capacidade 2', () => { pm.expect(event.capacity).to.eql(2); pm.expect(event.available).to.eql(2); });",
-                "pm.collectionVariables.set('eventId', event.id);"
+                  "pm.collectionVariables.set('eventId', event.id);",
+                  "pm.test('guarda eventId AWS para os próximos requests', () => pm.expect(pm.collectionVariables.get('eventId')).to.eql(event.id));"
               ] }
             }
           ]
@@ -397,7 +401,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Postman AWS\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
             "url": "{{commandBaseUrl}}/events/{{eventId}}/reservations",
-            "description": "Cria uma reserva pelo caminho assinado. Em AWS, customerEmail precisa ser aceito pelo SES."
+            "description": "Massa pronta de reserva assinada. A URL usa `{{eventId}}` do request 01; depois de 201, o Tests salva `reservation.id` em `{{reservationId}}`, usado pelos requests 05 e 07. Em AWS, customerEmail precisa ser aceito pelo SES."
           },
           "event": [
             {
@@ -406,7 +410,8 @@
                 "pm.test('cria reserva assinada com 201', () => pm.response.to.have.status(201));",
                 "const reservation = pm.response.json();",
                 "pm.test('reserva AWS inicia pendente', () => pm.expect(reservation.status).to.eql('PENDING'));",
-                "pm.collectionVariables.set('reservationId', reservation.id);"
+                  "pm.collectionVariables.set('reservationId', reservation.id);",
+                  "pm.test('guarda reservationId AWS para consulta e cancelamento', () => pm.expect(pm.collectionVariables.get('reservationId')).to.eql(reservation.id));"
               ] }
             }
           ]

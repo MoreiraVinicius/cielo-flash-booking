@@ -10,6 +10,7 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 - [ ] Cobrir os cinco endpoints do case e os cenários críticos de contrato.
 - [ ] Versionar ambientes seguros, sem endpoint ativo, credencial ou e-mail pessoal.
 - [ ] Explicar como executar, interpretar e estender a coleção.
+- [ ] Exibir massas de criação seguras e ensinar o encadeamento de respostas entre requests.
 
 ## Out of Scope
 
@@ -32,6 +33,7 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | Autenticação AWS | AWS Signature v4 herdada da coleção | A borda AWS exige IAM/SigV4 para cada endpoint. | yes |
 | Dados de ambiente | Valores secretos e endereço AWS permanecem vazios | Evita segredos, PII e endpoint temporário versionados. | yes |
 | Identidade de cliente padrão | `postman+flash-booking@example.test` | Endereço sintaticamente válido e não pessoal; em AWS deve ser substituído por destinatário SES verificado. | yes |
+| Encadeamento da apresentação | IDs são guardados em variáveis da coleção automaticamente | Evita copiar valores manualmente e deixa o fluxo visível no Postman. | yes |
 
 **Open questions:** none - all resolved or logged above.
 
@@ -86,11 +88,27 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 
 **Independent Test**: Rodar `powershell -File scripts/validate-postman.ps1` e inspecionar os requests documentados no Postman.
 
+---
+
+### P2: Demonstrar criação de massa e encadeamento
+
+**User Story**: Como apresentador do case, quero mostrar corpos de criação preenchidos e como uma resposta alimenta o próximo request para explicar a demo sem copiar IDs manualmente.
+
+**Why P2**: A coleção precisa ensinar o fluxo enquanto é apresentada, não apenas executá-lo.
+
+**Acceptance Criteria**:
+
+1. WHEN a presenter opens each event or reservation creation request THEN the collection SHALL show an editable JSON body with the required fields and only safe fixture values or declared variables. <!-- event-driven -->
+2. WHEN a create response returns an identifier THEN the collection SHALL save `event.id`, `reservation.id` or future `event.id` in a named collection variable and document the exact variable reference consumed by the next request. <!-- event-driven -->
+
+**Independent Test**: Abrir os requests 01, 03 e 10 da pasta Local, enviar 01 e 03, e conferir em Scripts/Tests e Collection variables que os IDs retornados foram armazenados para `{{eventId}}` e `{{reservationId}}`.
+
 ## Edge Cases
 
 - IF a user runs AWS requests with blank environment variables THEN Postman SHALL not contain fallback credentials or a default active endpoint.
 - WHEN the sale-window request chooses a start instant in the future THEN the collection SHALL create an event whose `startsAt` is asserted before testing the `409` reservation.
 - IF an API returns a problem response THEN collection tests SHALL assert the `application/problem+json` content type in addition to its status.
+- WHEN a presenter resends the first creation request THEN the collection SHALL reset the generated identifiers before it stores the identifiers from the new run.
 
 ## Requirement Traceability
 
@@ -103,11 +121,14 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | POSTMAN-05 | P1: Executar a demo AWS com segurança | Execute | Verified |
 | POSTMAN-06 | P2: Usar o Postman como referência de contrato | Execute | Verified |
 | POSTMAN-07 | P2: Usar o Postman como referência de contrato | Execute | Verified |
+| POSTMAN-08 | P2: Demonstrar criação de massa e encadeamento | Execute | Implementing |
+| POSTMAN-09 | P2: Demonstrar criação de massa e encadeamento | Execute | Implementing |
 
-**Coverage:** 7 total, 0 mapped to tasks, 7 unmapped.
+**Coverage:** 9 total, 0 mapped to tasks, 9 unmapped.
 
 ## Success Criteria
 
 - [ ] Um usuário local executa os cinco endpoints e os cenários de erro principais pelo Postman.
 - [ ] Um operador AWS tem instruções e ambiente seguro para SigV4 sem valores temporários no Git.
 - [ ] O repositório rejeita estruturalmente uma coleção ou ambiente incompletos.
+- [ ] Um apresentador encontra os Bodies de criação e explica o caminho `response.id` → variável → próximo request sem edição manual.

@@ -41,6 +41,15 @@ function Get-RequestNames {
     return @($Folder.item | ForEach-Object { $_.name })
 }
 
+function Find-Request {
+    param(
+        [object]$Folder,
+        [string]$Name
+    )
+
+    return @($Folder.item | Where-Object { $_.name -eq $Name })[0]
+}
+
 $collectionRaw = Get-Content -LiteralPath $collectionPath -Raw
 $collection = $collectionRaw | ConvertFrom-Json
 $local = Get-EnvironmentValues -Path $localEnvironmentPath
@@ -108,6 +117,39 @@ foreach ($assertion in $requiredAssertions) {
     Assert-Condition ($collectionRaw.Contains($assertion)) "Collection assertion or contract text is missing: $assertion"
 }
 Assert-Condition (([regex]::Matches($collectionRaw, 'pm\.test\(')).Count -ge 40) 'Collection must contain at least 40 Postman assertions.'
+
+$immediateEvent = Find-Request -Folder $localFolder -Name '01 | Criar evento imediato'
+$reservation = Find-Request -Folder $localFolder -Name '03 | Criar reserva'
+$futureEvent = Find-Request -Folder $localFolder -Name '10 | Criar venda futura'
+$immediateEventBody = $immediateEvent.request.body.raw | ConvertFrom-Json
+$reservationBody = $reservation.request.body.raw | ConvertFrom-Json
+$futureEventBody = $futureEvent.request.body.raw | ConvertFrom-Json
+
+Assert-Condition ($immediateEventBody.capacity -eq 2) 'Local event request must provide the safe capacity-2 sample body.'
+Assert-Condition ($immediateEventBody.name -like 'Postman {{runId}}*') 'Local event request must use runId in its sample name.'
+Assert-Condition ($reservationBody.quantity -eq 1) 'Local reservation request must provide the safe quantity-1 sample body.'
+Assert-Condition ($reservationBody.customer.email -eq '{{customerEmail}}') 'Local reservation body must use the environment customer email.'
+Assert-Condition ($futureEventBody.startsAt -eq '{{saleStartsAt}}') 'Future event body must use the generated start instant.'
+Assert-Condition ($futureEventBody.endsAt -eq '{{saleEndsAt}}') 'Future event body must use the generated end instant.'
+
+$requiredTeachingFragments = @(
+    "pm.collectionVariables.set('eventId', event.id)",
+    "pm.collectionVariables.set('reservationId', reservation.id)",
+    "pm.collectionVariables.set('futureEventId', event.id)",
+    '{{eventId}}',
+    '{{reservationId}}',
+    '{{futureEventId}}',
+    'Como uma resposta vira parâmetro',
+    'Current value'
+)
+foreach ($fragment in $requiredTeachingFragments) {
+    Assert-Condition ($collectionRaw.Contains($fragment)) "Collection must teach payloads and response chaining: $fragment"
+}
+
+$guideRaw = Get-Content -LiteralPath 'postman/README.md' -Raw
+foreach ($fragment in @('Criar massa e reutilizar respostas na apresentação', '{{eventId}}', '{{reservationId}}', 'Scripts > Post-response', 'Current value')) {
+    Assert-Condition ($guideRaw.Contains($fragment)) "Postman guide must explain response chaining: $fragment"
+}
 
 $requiredEnvironmentKeys = @(
     'commandBaseUrl',
