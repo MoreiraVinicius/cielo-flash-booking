@@ -37,44 +37,12 @@ class ReservationTest {
     }
 
     @Test
-    void startsPendingAndCancelsOnceWithTheFixedClosureReason() {
+    void startsPendingBecauseTerminalTransitionsArePersistedAtomicallyByPostgresql() {
         var reservation = reservation();
 
-        var returnedCapacity = reservation.cancel(CREATED_AT.plusSeconds(1));
-
-        assertThat(returnedCapacity).isTrue();
-        assertThat(reservation.status()).isEqualTo(ReservationStatus.CANCELLED);
-        assertThat(reservation.closureReason()).isEqualTo(ClosureReason.CANCELLED_BY_REQUEST);
-        assertThat(reservation.closureReason().code()).isEqualTo("CANCELLED_BY_REQUEST");
-        assertThat(reservation.closureReason().description()).isEqualTo("Reserva cancelada por solicitação");
-        assertThat(reservation.cancel(CREATED_AT.plusSeconds(2))).isFalse();
-        assertThat(reservation.status()).isEqualTo(ReservationStatus.CANCELLED);
-    }
-
-    @Test
-    void cancel_whenDeadlineIsReached_expiresWithTheDeadlineReason() {
-        var reservation = reservation();
-
-        var returnedCapacity = reservation.cancel(EXPIRES_AT);
-
-        assertThat(returnedCapacity).isTrue();
-        assertThat(reservation.status()).isEqualTo(ReservationStatus.EXPIRED);
-        assertThat(reservation.closureReason()).isEqualTo(ClosureReason.RESERVATION_DEADLINE_REACHED);
-        assertThat(reservation.closureReason().code()).isEqualTo("RESERVATION_DEADLINE_REACHED");
-        assertThat(reservation.closureReason().description()).isEqualTo("Prazo da reserva encerrado");
-    }
-
-    @Test
-    void expiresOnceWithTheFixedClosureReason() {
-        var reservation = reservation();
-
-        var returnedCapacity = reservation.expire(EXPIRES_AT);
-
-        assertThat(returnedCapacity).isTrue();
-        assertThat(reservation.status()).isEqualTo(ReservationStatus.EXPIRED);
-        assertThat(reservation.closureReason()).isEqualTo(ClosureReason.RESERVATION_DEADLINE_REACHED);
-        assertThat(reservation.closureReason().description()).isEqualTo("Prazo da reserva encerrado");
-        assertThat(reservation.expire(EXPIRES_AT.plusSeconds(1))).isFalse();
+        assertThat(reservation.status()).isEqualTo(ReservationStatus.PENDING);
+        assertThat(reservation.closureReason()).isNull();
+        assertThat(reservation.updatedAt()).isEqualTo(CREATED_AT);
     }
 
     @Test

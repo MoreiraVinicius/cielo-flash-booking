@@ -5,34 +5,46 @@ import com.cielo.flashbooking.event.application.EventReader;
 import com.cielo.flashbooking.event.application.EventWriter;
 import java.util.Optional;
 import java.util.UUID;
+import java.sql.Timestamp;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 class EventPersistenceAdapter implements EventWriter, EventReader {
 
-    private final EventJpaRepository repository;
+    private final JdbcTemplate jdbcTemplate;
 
-    EventPersistenceAdapter(EventJpaRepository repository) {
-        this.repository = repository;
+    EventPersistenceAdapter(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public Event save(Event event) {
-        EventEntity entity = new EventEntity(
-                event.id(), event.name(), event.capacity(), event.available(), event.createdAt());
-        repository.save(entity);
+        jdbcTemplate.update("""
+                INSERT INTO event (id, name, capacity, available, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                event.id(),
+                event.name(),
+                event.capacity(),
+                event.available(),
+                Timestamp.from(event.createdAt()));
         return event;
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Event> findById(UUID id) {
-        return repository.findById(id).map(EventPersistenceAdapter::toDomain);
-    }
-
-    private static Event toDomain(EventEntity entity) {
-        return Event.restore(
-                entity.id(), entity.name(), entity.capacity(), entity.available(), entity.createdAt());
+        return jdbcTemplate.query("""
+                SELECT id, name, capacity, available, created_at
+                FROM event
+                WHERE id = ?
+                """, resultSet -> resultSet.next()
+                ? Optional.of(Event.restore(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getString("name"),
+                        resultSet.getInt("capacity"),
+                        resultSet.getInt("available"),
+                        resultSet.getTimestamp("created_at").toInstant()))
+                : Optional.empty(), id);
     }
 }

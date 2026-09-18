@@ -12,9 +12,6 @@ public final class Reservation {
     private final int quantity;
     private final Instant expiresAt;
     private final Instant createdAt;
-    private ReservationStatus status;
-    private ClosureReason closureReason;
-    private Instant updatedAt;
 
     private Reservation(
             UUID id,
@@ -35,25 +32,11 @@ public final class Reservation {
         if (!expiresAt.isAfter(createdAt)) {
             throw new IllegalArgumentException("expiresAt must be after createdAt");
         }
-        this.status = ReservationStatus.PENDING;
-        this.updatedAt = createdAt;
     }
 
     public static Reservation pending(
             UUID id, UUID eventId, Customer customer, int quantity, Instant expiresAt, Instant createdAt) {
         return new Reservation(id, eventId, Objects.requireNonNull(customer, "customer must not be null").id(), quantity, expiresAt, createdAt);
-    }
-
-    public boolean cancel(Instant changedAt) {
-        Objects.requireNonNull(changedAt, "changedAt must not be null");
-        ClosureReason reason = changedAt.isBefore(expiresAt)
-                ? ClosureReason.CANCELLED_BY_REQUEST
-                : ClosureReason.RESERVATION_DEADLINE_REACHED;
-        return close(reason, changedAt);
-    }
-
-    public boolean expire(Instant changedAt) {
-        return close(ClosureReason.RESERVATION_DEADLINE_REACHED, changedAt);
     }
 
     public UUID id() {
@@ -73,7 +56,7 @@ public final class Reservation {
     }
 
     public ReservationStatus status() {
-        return status;
+        return ReservationStatus.PENDING;
     }
 
     public Instant expiresAt() {
@@ -81,7 +64,7 @@ public final class Reservation {
     }
 
     public ClosureReason closureReason() {
-        return closureReason;
+        return null;
     }
 
     public Instant createdAt() {
@@ -89,17 +72,6 @@ public final class Reservation {
     }
 
     public Instant updatedAt() {
-        return updatedAt;
-    }
-
-    private boolean close(ClosureReason reason, Instant changedAt) {
-        Objects.requireNonNull(changedAt, "changedAt must not be null");
-        if (status != ReservationStatus.PENDING) {
-            return false;
-        }
-        status = reason.terminalStatus();
-        closureReason = reason;
-        updatedAt = changedAt;
-        return true;
+        return createdAt;
     }
 }
