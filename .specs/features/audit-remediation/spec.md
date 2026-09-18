@@ -110,12 +110,12 @@ A revisao tecnica encontrou falhas de corretude, operacao e reprodutibilidade no
 
 | ID | Story | Task | Status |
 | --- | --- | --- | --- |
-| REM-01 | Persistencia temporal correta | T01 | Implemented; PostgreSQL runtime gate blocked |
+| REM-01 | Persistencia temporal correta | T01 | Validated locally, including PostgreSQL integration |
 | REM-02 | Fronteira HTTP resiliente | T02 | Validated locally |
-| REM-03 | Processamento operacional seguro | T03 | Implemented; PostgreSQL runtime gate blocked |
+| REM-03 | Processamento operacional seguro | T03 | Validated locally, including PostgreSQL integration |
 | REM-04 | Implementacao proporcional | T04 | Validated locally |
 | REM-05 | AWS reproduzivel e observavel | T05 | Validated locally |
-| REM-06 | Evidencia automatizada | T06 | Validated locally |
+| REM-06 | Evidencia automatizada | T06 | Validated locally; remote CI execution pending |
 
 **Coverage:** 6 total, 6 mapped, 0 unmapped.
 

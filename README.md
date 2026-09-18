@@ -12,7 +12,7 @@ Backend para **reserva temporária de ingressos em flash sales**, desenvolvido c
 | --- | --- |
 | O que foi entregue? | Cinco endpoints, três modos do mesmo Java, PostgreSQL, Valkey, mensageria, e-mail, Compose e uma demo AWS completa. |
 | Como não ocorre oversell? | O PostgreSQL faz um decremento condicional dentro da mesma transação que persiste cliente, reserva e outbox. |
-| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual tem **50/50 unitários** e Terraform locais aprovados; a execução PostgreSQL completa da suíte 16/Testcontainers ainda precisa ser reexecutada com Docker disponível. |
+| Qual é a evidência? | O baseline histórico teve **43/43 critérios** e **38 testes unitários + 56 de integração = 94 aprovados**. A correção atual passou com **50/50 unitários + 63 de integração = 113**, além dos gates Terraform locais; a execução PostgreSQL completa da suíte atual passou e a execução remota do GitHub Actions ainda depende de push/PR. |
 | A AWS continua ativa? | Não. A demo foi aplicada, observada e destruída; 106 recursos removidos e state final vazio. |
 | E a arquitetura high-load? | É uma **arquitetura-alvo planejada**, Multi-AZ e com escala independente; não foi provisionada, benchmarkada nem validada remotamente. |
 
@@ -150,7 +150,7 @@ O gatilho de evolução não é “mais componentes”. São métricas: saturaç
 | --- | ---: | --- |
 | Critérios de aceitação | **Baseline 43/43 PASS** | Cinco rotas, erros, idempotência, cache, expiração, notificação, segurança e runtime antes da correção atual |
 | Testes unitários | **PASS atual** | Regras, serviços, limites HTTP, cache, processamento agendado e configuração |
-| Testes de integração | **56/56 no baseline; suíte atual compilada** | O gate completo atual em PostgreSQL 16/Testcontainers ainda não foi reexecutado porque o Docker local está indisponível |
+| Testes de integração | **63/63 PASS atual** | Gate completo atual em PostgreSQL 16/Testcontainers, com PostgreSQL, Valkey, Mailpit e LocalStack |
 | Sensor de discriminação | **2/2 mutações mortas** | Os testes falham quando segurança ou decremento de estoque são quebrados |
 | Compose smoke | **PASS** | Query, command, worker, banco, cache, fila e Mailpit integrados |
 | Módulos de infraestrutura | **4/4 PASS atual** | Rede, dados, compute e edge/observabilidade validados localmente com providers simulados |

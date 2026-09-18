@@ -314,24 +314,18 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
         UUID eventId = insertEvent(10, 7);
         UUID customerId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
-        Instant createdAt = Instant.parse("2026-09-09T12:00:00Z");
         jdbcTemplate.update(
-                "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, clock_timestamp(), clock_timestamp())",
                 customerId,
                 "Ana",
-                "ana@example.com",
-                java.sql.Timestamp.from(createdAt),
-                java.sql.Timestamp.from(createdAt));
+                "ana@example.com");
         jdbcTemplate.update("""
                 INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
-                VALUES (?, ?, ?, 3, 'PENDING', ?, ?, ?)
+                VALUES (?, ?, ?, 3, 'PENDING', clock_timestamp() + interval '10 minutes', clock_timestamp(), clock_timestamp())
                 """,
                 reservationId,
                 eventId,
-                customerId,
-                java.sql.Timestamp.from(createdAt.plusSeconds(600)),
-                java.sql.Timestamp.from(createdAt),
-                java.sql.Timestamp.from(createdAt));
+                customerId);
         return reservationId;
     }
 }

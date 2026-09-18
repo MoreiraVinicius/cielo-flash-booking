@@ -5,7 +5,7 @@
 Executar em ordem. Cada tarefa termina com o gate indicado, atualiza rastreabilidade e gera commit atomico.
 
 **Design:** `.specs/features/audit-remediation/design.md`
-**Status:** In progress
+**Status:** Locally validated; remote CI evidence pending
 **Task count:** 6
 
 ## Test Coverage Matrix
@@ -49,7 +49,7 @@ T05 -> T06
 
 ### T01: Tornar tempo e identidade persistidos autoritativos
 
-**Status:** Implemented; Full gate blocked by unavailable Docker/Testcontainers.
+**Status:** Complete; Full gate passed.
 **What:** Obter o instante de criacao no PostgreSQL, usar timestamp estavel na busca de expirados, preservar o cliente ja persistido e limitar Idempotency-Key.
 **Where:** servico/ports/adaptador JDBC de reserva, migration V2, testes de persistencia
 **Depends on:** none
@@ -75,7 +75,7 @@ T05 -> T06
 
 ### T03: Limitar trabalho agendado e notificacoes
 
-**Status:** Implemented; Full gate blocked by unavailable Docker/Testcontainers.
+**Status:** Complete; Full gate passed.
 **What:** Configurar scheduler concorrente, reconciliacao com vazao suficiente, claim com lease fora da chamada SES e limpeza terminal limitada.
 **Where:** configuracao, reconciliador, notification store/service, cleaner, migration e testes
 **Depends on:** T01
@@ -113,7 +113,7 @@ T05 -> T06
 
 ### T06: Automatizar gates e alinhar evidencia
 
-**Status:** Complete; Build and documentation gates passed.
+**Status:** Complete locally; remote CI execution pending.
 **What:** Criar GitHub Actions, corrigir README/runbook e fechar rastreabilidade e validacao.
 **Where:** `.github/workflows`, README, docs e `.specs`
 **Depends on:** T02, T04, T05

@@ -162,10 +162,10 @@
 ## Handoff
 
 - **Feature**: `audit-remediation`
-- **Phase / Task**: Execução T01-T06; validação final em andamento.
-- **Completed**: Implementação Java, schema, Terraform, testes locais de módulos e documentação foram atualizados para as correções da auditoria.
-- **In-progress**: Gates finais, rastreabilidade e verificação independente.
-- **Next step**: Executar build/unitários, validação Terraform/README/specs e registrar a evidência final.
-- **Blockers**: A suíte PostgreSQL 16/Testcontainers depende do Docker Desktop, cujo serviço está indisponível neste host. Nenhum deploy AWS foi autorizado ou executado.
-- **Uncommitted files**: Somente `.tmp/outbox-scale-sensor-9f2666d/tasks.md`, arquivo de sensor de outra feature, permanece fora desta entrega.
+- **Phase / Task**: T01-T06 localmente validadas; evidencia de CI remoto pendente.
+- **Completed**: Implementação Java, schema, Terraform, documentação, 50 testes unitários e 63 testes de integração PostgreSQL/Testcontainers foram aprovados.
+- **In-progress**: Execução do workflow GitHub Actions após push/PR e revisão independente final.
+- **Next step**: Publicar a alteração e registrar o resultado do CI; nenhum deploy AWS está autorizado.
+- **Blockers**: Nenhum bloqueio local. O Docker Desktop está saudável; a falha anterior era permissão do contexto restrito para o pipe Docker. Falta apenas evidência externa do CI.
+- **Uncommitted files**: `.tmp/` é conteúdo de outra feature e permanece fora desta entrega.
 - **Branch**: `main`
