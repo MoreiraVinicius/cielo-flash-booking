@@ -1,8 +1,8 @@
 # Audit Remediation Validation
 
-**Date**: 2026-09-17  
-**Spec**: `.specs/features/audit-remediation/spec.md`  
-**Diff range**: `c0a2eaf..3f1d76f`  
+**Date**: 2026-09-17
+**Spec**: `.specs/features/audit-remediation/spec.md`
+**Diff range**: `c0a2eaf..e005e66`
 **Verifier**: independent sub-agent (author != verifier)
 
 ---
