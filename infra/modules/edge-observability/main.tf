@@ -500,6 +500,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   period              = 60
   evaluation_periods  = 1
   threshold           = 1
+  alarm_actions       = compact([var.alarm_topic_arn])
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   dimensions = {
@@ -508,15 +509,16 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "api_throttle" {
-  alarm_name          = "${var.name}-api-throttle"
-  alarm_description   = "API Gateway throttled requests."
+resource "aws_cloudwatch_metric_alarm" "api_4xx" {
+  alarm_name          = "${var.name}-api-4xx"
+  alarm_description   = "API Gateway returned client errors, including throttling responses."
   namespace           = "AWS/ApiGateway"
-  metric_name         = "Throttle"
+  metric_name         = "4XXError"
   statistic           = "Sum"
   period              = 60
   evaluation_periods  = 1
   threshold           = 1
+  alarm_actions       = compact([var.alarm_topic_arn])
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   dimensions = {
@@ -534,6 +536,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
   period              = 60
   evaluation_periods  = 1
   threshold           = 1
+  alarm_actions       = compact([var.alarm_topic_arn])
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   dimensions = {
@@ -550,11 +553,11 @@ resource "aws_cloudwatch_dashboard" "demo" {
         width  = 12
         height = 6
         properties = {
-          title   = "API Gateway errors and throttles"
+          title   = "API Gateway client and server errors"
           region  = var.aws_region
           stat    = "Sum"
           period  = 60
-          metrics = [["AWS/ApiGateway", "5XXError", "ApiName", aws_api_gateway_rest_api.this.name, "Stage", aws_api_gateway_stage.demo.stage_name], [".", "Throttle", ".", ".", ".", "."]]
+          metrics = [["AWS/ApiGateway", "5XXError", "ApiName", aws_api_gateway_rest_api.this.name, "Stage", aws_api_gateway_stage.demo.stage_name], [".", "4XXError", ".", ".", ".", "."]]
         }
       },
       {

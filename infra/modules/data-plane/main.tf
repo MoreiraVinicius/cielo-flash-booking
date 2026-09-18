@@ -109,3 +109,61 @@ resource "aws_sesv2_email_identity" "sender" {
 
   tags = merge(local.tags, { Name = "${var.name}-sender" })
 }
+
+resource "aws_cloudwatch_metric_alarm" "database_cpu" {
+  alarm_name          = "${var.name}-database-cpu"
+  alarm_description   = "PostgreSQL CPU remained above 80 percent."
+  namespace           = "AWS/RDS"
+  metric_name         = "CPUUtilization"
+  statistic           = "Average"
+  period              = 300
+  evaluation_periods  = 2
+  threshold           = 80
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "missing"
+  alarm_actions       = compact([var.alarm_topic_arn])
+
+  dimensions = { DBInstanceIdentifier = aws_db_instance.postgres.identifier }
+}
+
+resource "aws_cloudwatch_metric_alarm" "queue_age" {
+  for_each = {
+    expiration   = aws_sqs_queue.expiration.name
+    notification = aws_sqs_queue.notification.name
+  }
+
+  alarm_name          = "${var.name}-${each.key}-queue-age"
+  alarm_description   = "A worker queue has messages older than the processing target."
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 2
+  threshold           = 30
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = compact([var.alarm_topic_arn])
+
+  dimensions = { QueueName = each.value }
+}
+
+resource "aws_cloudwatch_metric_alarm" "dead_letter_messages" {
+  for_each = {
+    expiration   = aws_sqs_queue.expiration_dlq.name
+    notification = aws_sqs_queue.notification_dlq.name
+  }
+
+  alarm_name          = "${var.name}-${each.key}-dlq-messages"
+  alarm_description   = "A dead-letter queue contains failed messages."
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = compact([var.alarm_topic_arn])
+
+  dimensions = { QueueName = each.value }
+}

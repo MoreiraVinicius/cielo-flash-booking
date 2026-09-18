@@ -4,7 +4,7 @@ Este roteiro permite que outra pessoa reproduza a demo localmente, valide o Terr
 
 ## Pré-requisitos
 
-- JDK 21, Docker Desktop com o engine em execução, Terraform 1.8 ou superior e AWS CLI 2.32 ou superior.
+- JDK 21, Docker Desktop com o engine em execução, Terraform 1.16.x e AWS CLI 2.32 ou superior.
 - `k6` somente para repetir o benchmark local.
 - Uma conta AWS autorizada, um perfil temporário e um remetente SES verificado somente para `plan` ou `apply` remoto. Nenhuma chave AWS deve entrar em `demo.tfvars`, imagem Docker, repositório ou contêiner.
 
@@ -37,13 +37,20 @@ Estes comandos não criam recursos. Os testes dos módulos usam `mock_provider`.
 ```powershell
 terraform -chdir=infra/bootstrap init -backend=false
 terraform -chdir=infra/bootstrap validate
+terraform fmt -check -recursive
+terraform -chdir=infra/modules/network init -backend=false
 terraform -chdir=infra/modules/network test
+terraform -chdir=infra/modules/data-plane init -backend=false
 terraform -chdir=infra/modules/data-plane test
+terraform -chdir=infra/modules/compute init -backend=false
 terraform -chdir=infra/modules/compute test
+terraform -chdir=infra/modules/edge-observability init -backend=false
 terraform -chdir=infra/modules/edge-observability test
 terraform -chdir=infra/environments/demo init -backend=false
 terraform -chdir=infra/environments/demo validate
 ```
+
+O workflow `.github/workflows/ci.yml` repete esses gates e a suíte Java em pushes e pull requests. Ele não possui credenciais e não executa `plan` ou `apply` remoto.
 
 ## Demonstração AWS autorizada
 
@@ -51,7 +58,7 @@ O ambiente é a demo, em `sa-east-1`. Ele é limitado a 1h30 e deve ser destruí
 
 1. Autentique o perfil temporário no host. Para AWS CLI 2.32 ou superior, execute `aws login --profile flash-booking-demo`; em organizações com IAM Identity Center, use o fluxo existente, por exemplo `aws sso login --profile flash-booking-demo`.
 2. Confirme a identidade, sem expor tokens: `aws sts get-caller-identity --profile flash-booking-demo`.
-3. Copie `infra/environments/demo/demo.tfvars.example` para o arquivo ignorado `demo.tfvars`. Preencha um CIDR público restrito, o e-mail de alerta, o remetente SES verificado, a tag imutável da imagem já publicada no ECR e a role que pode assumir a role de invocação. Não use `0.0.0.0/0`.
+3. Copie `infra/environments/demo/demo.tfvars.example` para o arquivo ignorado `demo.tfvars`. Preencha um CIDR público restrito, o e-mail de alerta, o remetente SES verificado, uma tag imutável nova para a imagem e a role que pode assumir a role de invocação. Não use `0.0.0.0/0`.
 4. Crie uma vez o bucket de state. Escolha um nome globalmente único:
 
 ```powershell
@@ -59,15 +66,32 @@ terraform -chdir=infra/bootstrap init
 terraform -chdir=infra/bootstrap apply -var='state_bucket_name=nome-unico-do-state' -var='aws_region=sa-east-1'
 ```
 
-5. Inicialize o ambiente apontando ao bucket retornado. O arquivo de backend é local e não deve conter credenciais:
+5. Inicialize o ambiente apontando ao bucket retornado. O root declara `backend "s3"`; os argumentos abaixo fornecem somente seus valores e não contêm credenciais:
 
 ```powershell
 terraform -chdir=infra/environments/demo init -backend-config='bucket=nome-unico-do-state' -backend-config='key=flash-booking/demo.tfstate' -backend-config='region=sa-east-1'
+```
+
+6. Crie primeiro apenas o repositório ECR. Depois publique a mesma tag configurada em `demo.tfvars`. Este passo elimina a dependência circular do primeiro deploy, porque ECS só será criado depois que a imagem existir:
+
+```powershell
+terraform -chdir=infra/environments/demo apply -var-file=demo.tfvars -target=module.compute.aws_ecr_repository.application -target=module.compute.aws_ecr_lifecycle_policy.application
+$repository = terraform -chdir=infra/environments/demo output -raw ecr_repository_url
+$registry = $repository.Substring(0, $repository.IndexOf('/'))
+$imageTag = 'use-a-mesma-tag-de-demo.tfvars'
+aws ecr get-login-password --region sa-east-1 --profile flash-booking-demo | docker login --username AWS --password-stdin $registry
+docker build --tag "${repository}:${imageTag}" .
+docker push "${repository}:${imageTag}"
+```
+
+7. Gere um plano completo, revise e aplique:
+
+```powershell
 terraform -chdir=infra/environments/demo plan -var-file=demo.tfvars
 terraform -chdir=infra/environments/demo apply -var-file=demo.tfvars
 ```
 
-O `plan` e o `apply` usam o campo `aws_profile` de `demo.tfvars` para escolher o perfil local. Revise o plano antes de aplicar. Terraform cria a rede, RDS PostgreSQL, Valkey, filas e DLQs, ECR, ECS Fargate, ALB interno, API Gateway REST, WAF, logs, alarmes e Budget. Não há criação manual pelo console.
+O `plan` e o `apply` usam o campo `aws_profile` de `demo.tfvars` para escolher o perfil local. Revise o plano antes de aplicar. Terraform cria a rede, RDS PostgreSQL, Valkey, filas e DLQs, ECR, ECS Fargate, ALB interno, API Gateway REST, WAF, logs, alarmes e Budget. As APIs têm health check no container e autoscaling entre uma e quatro tasks; alarmes de API, target, worker, filas, DLQs e banco apontam ao tópico SNS. Confirme a assinatura enviada ao e-mail de alerta, pois criar a subscription não confirma o destinatário automaticamente. Não há criação manual pelo console.
 
 ## Invocar a API
 
@@ -96,17 +120,13 @@ terraform -chdir=infra/environments/demo destroy -var-file=demo.tfvars
 terraform -chdir=infra/environments/demo state list
 ```
 
-O `state list` deve ficar vazio após a destruição. O bucket de state é bootstrap deliberadamente separado; somente destrua-o se não precisar mais do histórico:
-
-```powershell
-terraform -chdir=infra/bootstrap destroy -var='state_bucket_name=nome-unico-do-state' -var='aws_region=sa-east-1'
-```
+O `state list` deve ficar vazio após a destruição. O bucket versionado de state é bootstrap deliberadamente separado e possui `prevent_destroy`; preserve-o para auditoria. Sua remoção exige uma mudanca consciente dessa protecao, esvaziamento de todas as versoes e uma operacao separada, portanto nao faz parte do encerramento normal da demo.
 
 ## Trade-offs aceitos
 
 - RDS Single-AZ e NAT único reduzem custo e operação na demo. A evolução para alta carga altera a topologia, não o domínio.
 - Uma linha de inventário muito disputada aumenta latência e lock waits. A proteção é rejeitar ou esperar sem aceitar acima da capacidade; o benchmark local define o ponto de promoção.
-- VPC Link V2 foi validado com AWS provider 5.100.0 e URI do ALB. O provider 6.x exige Terraform Windows 64-bit para permitir a validação remota do formato `integration_target` mais novo.
+- O código usa AWS provider 6.x e Terraform 1.16.x. A validação local usa providers simulados; validar o VPC Link contra AWS exige uma demonstração remota autorizada.
 - Alertas e throttling reduzem risco de custo, mas não garantem teto absoluto. A proteção operacional final é a janela curta e `terraform destroy`.
 
 ## Uso de IA

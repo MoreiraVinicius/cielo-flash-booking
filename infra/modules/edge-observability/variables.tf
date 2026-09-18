@@ -41,3 +41,9 @@ variable "waf_rate_limit" {
     error_message = "waf_rate_limit must be between 100 and 2000000000."
   }
 }
+
+variable "alarm_topic_arn" {
+  description = "SNS topic that receives operational alarms."
+  type        = string
+  default     = null
+}

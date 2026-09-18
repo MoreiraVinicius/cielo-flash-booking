@@ -147,13 +147,13 @@ resource "aws_iam_role_policy" "worker_messaging" {
       {
         Sid      = "ConsumeWorkerQueues"
         Effect   = "Allow"
-        Action   = ["sqs:ChangeMessageVisibility", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]
+        Action   = ["sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]
         Resource = [var.expiration_queue_arn, var.notification_queue_arn]
       },
       {
         Sid      = "SendReservationEmail"
         Effect   = "Allow"
-        Action   = ["ses:SendEmail", "ses:SendRawEmail"]
+        Action   = ["ses:SendEmail"]
         Resource = ["*"]
         Condition = {
           StringEquals = { "ses:FromAddress" = var.ses_sender_email }
@@ -218,12 +218,21 @@ resource "aws_ecs_task_definition" "query_api" {
     }]
     environment = concat(local.common_environment, [{ name = "SPRING_PROFILES_ACTIVE", value = "query-api" }])
     secrets     = local.database_secrets
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 30
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
         awslogs-group         = aws_cloudwatch_log_group.query_api.name
         awslogs-region        = var.aws_region
         awslogs-stream-prefix = "ecs"
+        mode                  = "non-blocking"
+        max-buffer-size       = "25m"
       }
     }
   }])
@@ -250,12 +259,21 @@ resource "aws_ecs_task_definition" "command_api" {
     }]
     environment = concat(local.common_environment, [{ name = "SPRING_PROFILES_ACTIVE", value = "command-api" }])
     secrets     = local.database_secrets
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 30
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
         awslogs-group         = aws_cloudwatch_log_group.command_api.name
         awslogs-region        = var.aws_region
         awslogs-stream-prefix = "ecs"
+        mode                  = "non-blocking"
+        max-buffer-size       = "25m"
       }
     }
   }])
@@ -291,12 +309,21 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "NOTIFICATION_EMAIL_REGION", value = var.aws_region }
     ])
     secrets = local.database_secrets
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 30
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
         awslogs-group         = aws_cloudwatch_log_group.worker.name
         awslogs-region        = var.aws_region
         awslogs-stream-prefix = "ecs"
+        mode                  = "non-blocking"
+        max-buffer-size       = "25m"
       }
     }
   }])
@@ -329,6 +356,10 @@ resource "aws_ecs_service" "query_api" {
     container_port   = 8080
   }
 
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
   tags = local.tags
 }
 
@@ -357,6 +388,10 @@ resource "aws_ecs_service" "command_api" {
     container_port   = 8080
   }
 
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
   tags = local.tags
 }
 
@@ -379,4 +414,73 @@ resource "aws_ecs_service" "worker" {
   }
 
   tags = local.tags
+}
+
+resource "aws_appautoscaling_target" "query_api" {
+  max_capacity       = 4
+  min_capacity       = 1
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.query_api.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "query_api_cpu" {
+  name               = "${var.name}-query-api-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.query_api.resource_id
+  scalable_dimension = aws_appautoscaling_target.query_api.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.query_api.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 60
+    scale_in_cooldown  = 120
+    scale_out_cooldown = 30
+  }
+}
+
+resource "aws_appautoscaling_target" "command_api" {
+  max_capacity       = 4
+  min_capacity       = 1
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.command_api.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "command_api_cpu" {
+  name               = "${var.name}-command-api-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.command_api.resource_id
+  scalable_dimension = aws_appautoscaling_target.command_api.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.command_api.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 60
+    scale_in_cooldown  = 120
+    scale_out_cooldown = 30
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "worker_running_tasks" {
+  alarm_name          = "${var.name}-worker-running-tasks"
+  alarm_description   = "The worker service has no running task."
+  namespace           = "ECS/ContainerInsights"
+  metric_name         = "RunningTaskCount"
+  statistic           = "Minimum"
+  period              = 60
+  evaluation_periods  = 2
+  threshold           = 1
+  comparison_operator = "LessThanThreshold"
+  treat_missing_data  = "breaching"
+  alarm_actions       = compact([var.alarm_topic_arn])
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.this.name
+    ServiceName = aws_ecs_service.worker.name
+  }
 }

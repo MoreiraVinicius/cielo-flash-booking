@@ -11,6 +11,16 @@ provider "aws" {
   }
 }
 
+resource "aws_sns_topic" "operational_alerts" {
+  name = "${var.name}-operational-alerts"
+}
+
+resource "aws_sns_topic_subscription" "operational_email" {
+  topic_arn = aws_sns_topic.operational_alerts.arn
+  protocol  = "email"
+  endpoint  = var.budget_alert_email
+}
+
 module "network" {
   source             = "../../modules/network"
   name               = var.name
@@ -25,6 +35,7 @@ module "data_plane" {
   rds_security_group_id    = module.network.rds_security_group_id
   valkey_security_group_id = module.network.valkey_security_group_id
   ses_sender_email         = var.ses_sender_email
+  alarm_topic_arn          = aws_sns_topic.operational_alerts.arn
 }
 
 module "compute" {
@@ -45,6 +56,7 @@ module "compute" {
   notification_queue_arn      = module.data_plane.notification_queue_arn
   notification_queue_url      = module.data_plane.notification_queue_url
   ses_sender_email            = module.data_plane.ses_sender_email
+  alarm_topic_arn             = aws_sns_topic.operational_alerts.arn
 }
 
 module "edge_observability" {
@@ -60,4 +72,5 @@ module "edge_observability" {
   trusted_principal_arns     = var.trusted_principal_arns
   allowed_cidrs              = var.allowed_cidrs
   budget_alert_email         = var.budget_alert_email
+  alarm_topic_arn            = aws_sns_topic.operational_alerts.arn
 }

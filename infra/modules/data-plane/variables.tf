@@ -60,3 +60,9 @@ variable "queue_visibility_timeout_seconds" {
     error_message = "queue_visibility_timeout_seconds must be between 30 seconds and 12 hours."
   }
 }
+
+variable "alarm_topic_arn" {
+  description = "SNS topic that receives operational alarms."
+  type        = string
+  default     = null
+}

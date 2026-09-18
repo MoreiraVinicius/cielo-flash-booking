@@ -51,6 +51,7 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     trusted_principal_arns     = ["arn:aws:iam::123456789012:role/operator"]
     allowed_cidrs              = ["203.0.113.10/32"]
     budget_alert_email         = "alerts@example.com"
+    alarm_topic_arn            = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
   assert {
@@ -95,5 +96,11 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   assert {
     condition     = aws_api_gateway_deployment.this.triggers["api_policy"] == local.api_resource_policy
     error_message = "A resource-policy change must redeploy the API stage."
+  }
+
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.api_4xx.metric_name == "4XXError" && contains(aws_cloudwatch_metric_alarm.api_4xx.alarm_actions, var.alarm_topic_arn) && contains(aws_cloudwatch_metric_alarm.api_5xx.alarm_actions, var.alarm_topic_arn) && contains(aws_cloudwatch_metric_alarm.unhealthy_targets.alarm_actions, var.alarm_topic_arn)
+    error_message = "Edge alarms must use published API Gateway metrics and notify SNS."
   }
 }

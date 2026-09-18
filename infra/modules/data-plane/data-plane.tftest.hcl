@@ -10,6 +10,7 @@ run "keeps_data_private_encrypted_and_message_paths_isolated" {
     rds_security_group_id    = "sg-rds"
     valkey_security_group_id = "sg-valkey"
     ses_sender_email         = "demo@example.com"
+    alarm_topic_arn          = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
   assert {
@@ -30,5 +31,11 @@ run "keeps_data_private_encrypted_and_message_paths_isolated" {
   assert {
     condition     = aws_sqs_queue.expiration.sqs_managed_sse_enabled && aws_sqs_queue.notification.sqs_managed_sse_enabled
     error_message = "Worker queues must use SQS-managed server-side encryption."
+  }
+
+
+  assert {
+    condition     = contains(aws_cloudwatch_metric_alarm.database_cpu.alarm_actions, var.alarm_topic_arn) && alltrue([for alarm in aws_cloudwatch_metric_alarm.queue_age : contains(alarm.alarm_actions, var.alarm_topic_arn)]) && alltrue([for alarm in aws_cloudwatch_metric_alarm.dead_letter_messages : contains(alarm.alarm_actions, var.alarm_topic_arn)])
+    error_message = "Database, queue-age, and DLQ alarms must notify the operational SNS topic."
   }
 }
