@@ -2,7 +2,11 @@ package com.cielo.flashbooking.controller.error;
 
 import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.application.error.ResourceNotFoundException;
-import static org.hamcrest.Matchers.matchesPattern;
+import static org.assertj.core.api.Assertions.assertThat;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.cielo.flashbooking.config.security.RequestPayloadLimitFilter;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,7 +18,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -25,7 +32,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.cielo.flashbooking.config.security.RequestPayloadLimitFilter;
 
 @WebMvcTest(ErrorTestController.class)
 @Import({ApiExceptionHandler.class, ProblemResponseFactory.class, CorrelationIdFilter.class, RequestPayloadLimitFilter.class, ErrorTestController.class})
@@ -33,6 +39,21 @@ class ApiExceptionHandlerIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    private final Logger apiExceptionLogger = (Logger) LoggerFactory.getLogger(ApiExceptionHandler.class);
+    private final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+
+    @BeforeEach
+    void attachLogCapture() {
+        logAppender.start();
+        apiExceptionLogger.addAppender(logAppender);
+    }
+
+    @AfterEach
+    void detachLogCapture() {
+        apiExceptionLogger.detachAppender(logAppender);
+        logAppender.stop();
+    }
 
     @Test
     void returnsStableBadRequestProblem() throws Exception {
@@ -61,20 +82,24 @@ class ApiExceptionHandlerIT {
     }
 
     @Test
-    void hidesUnexpectedErrorDetailsAndGeneratesCorrelationId() throws Exception {
-        mockMvc.perform(get("/__test/errors/unexpected"))
+    void unexpectedError_logsThrowableWithCorrelationIdAndHidesItsDetails() throws Exception {
+        mockMvc.perform(get("/__test/errors/unexpected")
+                        .header(CorrelationIdFilter.HEADER_NAME, "unexpected-request"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(header().string(
-                        CorrelationIdFilter.HEADER_NAME,
-                        matchesPattern("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
+                .andExpect(header().string(CorrelationIdFilter.HEADER_NAME, "unexpected-request"))
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.title").value("Internal server error"))
                 .andExpect(jsonPath("$.detail").value("An unexpected error occurred."))
                 .andExpect(jsonPath("$.code").value("internal-error"))
-                .andExpect(jsonPath("$.correlationId", matchesPattern(
-                        "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
+                .andExpect(jsonPath("$.correlationId").value("unexpected-request"))
                 .andExpect(content().string(not(containsString("database-password"))));
+
+        assertThat(logAppender.list).singleElement().satisfies(event -> {
+            assertThat(event.getFormattedMessage()).contains("correlationId=unexpected-request");
+            assertThat(event.getThrowableProxy().getClassName()).isEqualTo(IllegalStateException.class.getName());
+            assertThat(event.getThrowableProxy().getMessage()).isEqualTo("database-password");
+        });
     }
 
     @Test

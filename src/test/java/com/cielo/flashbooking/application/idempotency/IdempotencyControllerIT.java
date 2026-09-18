@@ -3,6 +3,7 @@ package com.cielo.flashbooking.application.idempotency;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -193,6 +194,7 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                         .content(request))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.correlationId").value("replayed-attempt"))
+                .andExpect(header().string("X-Correlation-ID", "replayed-attempt"))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(objectMapper.readTree(first).get("code").asText()).isEqualTo("resource-conflict");
