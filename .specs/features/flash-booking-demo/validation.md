@@ -261,3 +261,86 @@ No SQL mutation was attempted: without an executed PostgreSQL test, a fabricated
 3. **P1 test-specificity gap — no cleanup-versus-reclaim race.** `PersistentIdempotencyIT.java:68-86` proves bounded sequential deletion and preservation of an already-active row, but does not race cleanup with reactivation. The SQL is statically safe at `JdbcIdempotencyStore.java:84-95`; add synchronized PostgreSQL coverage for both lock orders and confirm the refreshed record survives.
 
 No implementation defect was confirmed in `30ca0f4^..f86f6ed`. Gaps 1-3 are verification gaps. The orchestrator recorded the reusable test-specificity findings as candidate lessons `L-001` and `L-002` after this independent review.
+
+## Independent verification — DEMO-09 / T31 operational dashboard
+
+- **Verifier date:** 2026-09-20
+- **Reviewed commit:** `2504e3d98e8b3f5eaa67e1a9924b6bbd2ac15886`
+- **Verifier:** independent sub-agent (author != verifier)
+- **Scope:** DEMO-09, T31, the CloudWatch dashboard resource and its Terraform module test. The AWS checks were read-only; no apply or infrastructure mutation was performed.
+
+### Verdict
+
+**Overall:** PASS — all 6 DEMO-09 acceptance criteria match the versioned dashboard and the dashboard published as `flash-booking-demo-demo` in `sa-east-1`.
+
+T31 is marked `Complete` at `tasks.md:454`. The reviewed diff changes only the dashboard implementation, its structural test, and the corresponding spec/design/state artifacts. No unrelated production behavior was added.
+
+### Spec-anchored acceptance criteria
+
+| Criterion | Spec-defined outcome | Evidence (`file:line`, assertion, or dated remote observation) | Result |
+| --- | --- | --- | --- |
+| DEMO-09 AC1 | Separate charts show API Gateway volume/errors and p50/p95/p99 latency. | `main.tf:569` defines the request/error chart with `Count`, `4XXError` and `5XXError`; `main.tf:588` defines `Latency` p50/p95/p99 and `IntegrationLatency` p95. `edge-observability.tftest.hcl:117` asserts the required titles are a subset of the generated dashboard titles. Remote 2026-09-20 returned both charts and exactly those metrics/statistics. | PASS |
+| DEMO-09 AC2 | Desired/running task count and separate CPU/memory series exist for query, command and worker. | `main.tf:653`, `main.tf:675` and `main.tf:697` define the three charts and all three services. `edge-observability.tftest.hcl:144` asserts the ECS service dimension in the generated JSON. Remote 2026-09-20 returned `RunningTaskCount`/`DesiredTaskCount` plus CPU and memory series for `query-api`, `command-api` and `worker`. | PASS |
+| DEMO-09 AC3 | Query and command target groups expose healthy/unhealthy targets and target latency with published ALB dimensions. | `main.tf:607` and `main.tf:626` define health and latency with `TargetGroup + LoadBalancer`; `edge-observability.tftest.hcl:143` asserts the target-group suffix in the generated dashboard. Remote 2026-09-20 returned the actual query and command target-group suffixes and the internal ALB suffix. `aws cloudwatch list-metrics` also returned `HealthyHostCount` and `UnHealthyHostCount` for the query target group. | PASS |
+| DEMO-09 AC4 | PostgreSQL, Valkey, SQS queues and DLQs expose the stated capacity and activity signals. | `main.tf:727`, `main.tf:748`, `main.tf:765`, `main.tf:787`, `main.tf:805` and `main.tf:825` define the RDS, Valkey and SQS charts. `edge-observability.tftest.hcl:117` asserts all six chart titles and `edge-observability.tftest.hcl:145` asserts the SQS `QueueName` dimension. Remote 2026-09-20 returned RDS CPU/connections/free memory/free storage, Valkey CPU/memory/connections/hits/misses, queue depth/age and both DLQs; `list-metrics` confirmed the Valkey dimensions are currently published. | PASS |
+| DEMO-09 AC5 | Two Logs Insights widgets investigate API 4xx/5xx and errors from all three ECS services using existing groups. | `main.tf:854` and `main.tf:865` define the two table queries. `edge-observability.tftest.hcl:150` asserts the API access group and all three ECS log groups are present. Remote 2026-09-20 returned both queries with `/apigateway/flash-booking-demo/access`, `/ecs/flash-booking-demo/query-api`, `/ecs/flash-booking-demo/command-api` and `/ecs/flash-booking-demo/worker`. | PASS |
+| DEMO-09 AC6 | Only existing AWS telemetry is used; every metric widget uses 60 seconds; no custom metric, new alarm or retention change is introduced. | Remote 2026-09-20 returned 13/13 metric widgets with `period = 60` and only `AWS/ApiGateway`, `AWS/ApplicationELB`, `AWS/ECS`, `ECS/ContainerInsights`, `AWS/RDS`, `AWS/ElastiCache` and `AWS/SQS`. A before/after static count for `2504e3d` remained 3 alarms, 0 log metric filters, 1 log group and one 7-day retention declaration; the unchanged retention is at `main.tf:353`. | PASS |
+
+**Spec-anchored status:** 6/6 ACs match the precise outcomes in `spec.md:165` through `spec.md:170`; no spec-precision gap was found.
+
+### Remote dashboard observation
+
+The read-only check used account `581645023528` through the assumed `FlashBookingDemoProvisioner` role in `sa-east-1` on 2026-09-20.
+
+| Check | Observed result |
+| --- | --- |
+| Dashboard identity | `flash-booking-demo-demo` |
+| Widget inventory | 19 total: 4 text, 13 metric, 2 log |
+| Required titles | All 15 non-section titles from `edge-observability.tftest.hcl:118` through `edge-observability.tftest.hcl:134` present |
+| Metric period | 13/13 metric widgets use 60 seconds |
+| Metric namespaces | Only seven existing AWS namespaces listed in AC6 |
+| Log sources | Existing API access group and all three ECS service groups |
+| Reconciliation evidence | `post-dashboard.plan`, generated 2026-09-20 19:54:12 with Terraform 1.16.1, records `module.edge_observability.aws_cloudwatch_dashboard.demo` as `no-op`; its only non-no-op resource is the pre-existing API Gateway policy canonicalization update |
+
+### Gate evidence
+
+| Gate | Result |
+| --- | --- |
+| `TF_CLI_CONFIG_FILE=NUL terraform fmt -check -recursive infra` | PASS, exit 0 |
+| `TF_CLI_CONFIG_FILE=NUL terraform test` in `infra/modules/edge-observability` | PASS — 1 run passed, 0 failed |
+| `TF_CLI_CONFIG_FILE=NUL terraform validate` in `infra/environments/demo` | PASS — configuration valid |
+| `validate_spec.py .specs/features/flash-booking-demo/spec.md` | PASS — 0 errors, 0 warnings |
+| `validate_tasks.py .specs/features/flash-booking-demo/tasks.md --strict` | PASS — 0 errors, 0 warnings |
+| `git diff --check 2504e3d^ 2504e3d` | PASS |
+
+**Test integrity:** the edge module keeps one Terraform test run and grows from 8 to 12 `assert` blocks (+4). No assertion was removed or weakened in the reviewed commit.
+
+### Discrimination sensor
+
+The sensor copied only `infra/modules/edge-observability` to a unique directory under the system temporary folder; the real worktree was never modified. In the scratch copy, the `Recent application errors` widget type was changed from `log` to `text`, removing one required log investigation.
+
+| Mutation | Targeted assertion | Outcome |
+| --- | --- | --- |
+| Change the second failure-investigation widget from `log` to `text` | `edge-observability.tftest.hcl:108` — requires exactly 4 text, 13 metric and 2 log widgets | KILLED — `terraform test` failed with 0 passed and 1 failed, reporting the exact structural assertion |
+
+**Sensor result:** 1/1 mutation killed, 0 survived. The temporary copy was removed. Real-tree porcelain after cleanup exactly matched the baseline: `docs/intellij-debug.md` deleted, `scripts/compose-smoke.ps1` modified, and the pre-existing `.tmp/`, `docs/research/`, `docs/rodar-localmente.md` and `scripts/generate-interview-audio.ps1` untracked; none belongs to T31.
+
+### Code quality and gaps
+
+| Check | Result |
+| --- | --- |
+| Minimum, surgical change | PASS — one existing dashboard resource was expanded; no new abstraction or telemetry resource |
+| Existing Terraform style | PASS — stable resource-name conventions and AWS metric dimensions are reused |
+| Tests map to DEMO-09 | PASS — structure, required coverage, critical dimensions and log sources are asserted; the remote read confirms the precise metric/stat values |
+| Unclaimed tests or scope creep | PASS — the four new assertions belong directly to DEMO-09/T31 |
+| Documented project guidance | PASS — `.specs/STATE.md` AD-023 and the repository Terraform conventions were followed |
+
+No implementation defect, surviving mutant, or spec-precision gap was found. There is no validation signal to distill into a new lesson.
+
+### Requirement traceability update
+
+| Requirement | Previous status | Verified status |
+| --- | --- | --- |
+| DEMO-09 | Implemented | Validated |
+
+**Final verdict:** PASS — T31 is ready. The orchestrator should update `spec.md` traceability and `.specs/STATE.md` handoff in its closing commit; this verifier intentionally changed only `validation.md`.
