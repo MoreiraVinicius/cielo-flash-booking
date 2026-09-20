@@ -167,6 +167,14 @@
 - **Trade-off:** O evento não recebe estado comercial persistido nem endpoint de edição; consumidores calculam sua elegibilidade no comando e consultas podem ficar defasadas pelo TTL de cache.
 - **Scope:** Domínio `Event`, contrato HTTP, schema Flyway, reserva, cache e as arquiteturas demo/high-load.
 
+### AD-022 - `.specs` como fonte única de sistema
+
+- **Status:** active
+- **Decision:** `.specs/` é a única fonte autoritativa de comportamento, arquitetura, decisões, planos e validação atuais. Markdown fora dela só mantém entrada original, navegação concisa ou procedimento operacional que não replique a especificação.
+- **Reason:** Cópias de decisões e planos divergiram da contagem real de tarefas e tornaram documentos históricos fáceis de confundir com intenção atual.
+- **Trade-off:** O leitor consulta `.specs/` para detalhes de produto e arquitetura em vez de encontrar narrativas completas no README e em documentos auxiliares.
+- **Scope:** Todo Markdown do repositório.
+
 ## Handoff
 
 - **Feature**: `flash-sale-window`
