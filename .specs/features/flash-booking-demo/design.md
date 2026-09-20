@@ -208,7 +208,7 @@ O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva
 - `infra/modules/network/`: VPC, sub-redes, rotas e NAT.
 - `infra/modules/data-plane/`: RDS, Valkey, SQS, DLQ, Secrets Manager e redrive.
 - `infra/modules/compute/`: ECR, ECS, ALB, API Gateway e IAM.
-- `infra/modules/observability/`: logs, dashboard e alarmes.
+- `infra/modules/edge-observability/`: ALB interno, API Gateway, WAF, logs de acesso, dashboard e alarmes de borda.
 - `infra/environments/demo/`: composição e variáveis econômicas.
 
 ## Entrada e escala independente
@@ -249,3 +249,7 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 ## Observabilidade e evolução futura
 
 Desde a demo, métricas são separadas por serviço, rota e resultado: TPS, p95/p99, `409`, `429`, `503`, hit rate, conexões, lock waits, backlog, idade da mensagem e DLQ. Uma evolução pode correlacionar essas séries com a abertura de venda e a proximidade da data do evento para antecipar capacidade. Essa correlação é sinal operacional; não altera automaticamente duração, inventário ou regra de reserva.
+
+O dashboard `flash-booking-demo-demo` organiza a leitura operacional em quatro blocos. **Edge & API** separa volume/erros de latência e usa `TargetGroup + LoadBalancer` para comparar saúde e tempo de resposta dos targets de consulta e comando. **Runtime ECS** confronta `RunningTaskCount` com `DesiredTaskCount` e separa CPU e memória dos três serviços. **Data & async** cobre capacidade do PostgreSQL, saturação e eficiência do Valkey, profundidade/idade das filas e mensagens em DLQ. **Recent failures** oferece tabelas de Logs Insights para acessos 4xx/5xx e erros dos três serviços.
+
+O painel referencia apenas namespaces e log groups já criados pela demo, usa período de 60 segundos e não introduz métricas customizadas, alarmes ou mudança de retenção. Os widgets de logs executam consultas sob demanda e, portanto, devem ser usados com a janela temporal necessária para limitar varredura e custo.

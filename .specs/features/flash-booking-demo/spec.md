@@ -156,6 +156,21 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Teste independente:** Executar os gates locais, o cenário multiprocesso e gerar um `terraform plan` completo.
 
+### P1: Operar a demo por um painel único
+
+**História:** Como operador, quero diagnosticar a saúde da demo em um painel CloudWatch único sem precisar conhecer previamente cada recurso AWS.
+
+**Acceptance Criteria:**
+
+1. WHEN o dashboard `flash-booking-demo-demo` for aberto THEN o sistema SHALL exibir volume, erros 4xx/5xx e latências p50/p95/p99 do API Gateway em gráficos distintos.
+2. WHEN a saúde do runtime for analisada THEN o dashboard SHALL comparar tasks desejadas e em execução e SHALL exibir CPU e memória separadas para `query-api`, `command-api` e `worker`.
+3. WHEN a rota interna for analisada THEN o dashboard SHALL exibir targets saudáveis e não saudáveis e latências por target group de consulta e comando com as dimensões publicadas pelo ALB.
+4. WHEN dependências de dados e processamento assíncrono forem analisadas THEN o dashboard SHALL exibir CPU, conexões e capacidade livre do PostgreSQL; CPU, memória, conexões, hits e misses do Valkey; profundidade, idade e DLQs das filas SQS.
+5. WHEN houver falha recente THEN o dashboard SHALL permitir investigar respostas 4xx/5xx do API Gateway e mensagens de erro dos três serviços ECS usando widgets de Logs Insights sobre os log groups existentes.
+6. The dashboard SHALL use only existing AWS metrics and log groups, SHALL keep a 60-second metric period, and SHALL NOT create custom metrics, new alarms, or change log retention.
+
+**Teste independente:** Executar o teste Terraform do módulo, inspecionar o JSON do dashboard e confirmar em `terraform plan` que a mudança remota atualiza somente o dashboard CloudWatch.
+
 ## Edge Cases
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
@@ -181,8 +196,9 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-06 | Notificar a reserva | Execute | Validated |
 | DEMO-07 | Proteger a API e limitar abuso | Execute | Validated |
 | DEMO-08 | Janela comercial do evento | Execute | Verified |
+| DEMO-09 | Operar a demo por um painel único | Execute | Implemented |
 
-**Cobertura:** 8 requisitos, 8 mapeados ao design, nenhum sem mapeamento.
+**Cobertura:** 9 requisitos, 9 mapeados ao design, nenhum sem mapeamento.
 
 ## Success Criteria
 
@@ -198,3 +214,4 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] Requisições anônimas não alcançam os containers e a borda mantém metas de throttling verificadas para cada método.
 - [x] Docker Compose inicia a solução completa.
 - [x] Terraform representa todos os recursos AWS da demo.
+- [x] O dashboard CloudWatch reúne sinais de borda, runtime, dados, filas e investigação de logs sem criar telemetria adicional.

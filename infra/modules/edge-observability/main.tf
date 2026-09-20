@@ -4,6 +4,11 @@ locals {
     Project   = var.name
   }
 
+  ecs_cluster_name                = "${var.name}-cluster"
+  query_target_group_arn_suffix   = split(":", var.query_target_group_arn)[5]
+  command_target_group_arn_suffix = split(":", var.command_target_group_arn)[5]
+  valkey_cache_cluster_id         = "${var.name}-valkey-001"
+
   api_invoker_assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -549,15 +554,11 @@ resource "aws_cloudwatch_dashboard" "demo" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type   = "text"
+        width  = 24
+        height = 1
         properties = {
-          title   = "API Gateway client and server errors"
-          region  = var.aws_region
-          stat    = "Sum"
-          period  = 60
-          metrics = [["AWS/ApiGateway", "5XXError", "ApiName", aws_api_gateway_rest_api.this.name, "Stage", aws_api_gateway_stage.demo.stage_name], [".", "4XXError", ".", ".", ".", "."]]
+          markdown = "# Edge & API\nDemanda, erros e caminho interno até os serviços."
         }
       },
       {
@@ -565,11 +566,306 @@ resource "aws_cloudwatch_dashboard" "demo" {
         width  = 12
         height = 6
         properties = {
-          title   = "Internal ALB unhealthy targets"
-          region  = var.aws_region
-          stat    = "Maximum"
-          period  = 60
-          metrics = [["AWS/ApplicationELB", "UnHealthyHostCount", "LoadBalancer", aws_lb.internal.arn_suffix]]
+          title    = "API Gateway requests and errors"
+          region   = var.aws_region
+          stat     = "Sum"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.this.name, "Stage", aws_api_gateway_stage.demo.stage_name, { label = "Requests", color = "#2ca02c" }],
+            [".", "4XXError", ".", ".", ".", ".", { label = "4xx", color = "#ff7f0e" }],
+            [".", "5XXError", ".", ".", ".", ".", { label = "5xx", color = "#d62728" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "API Gateway latency percentiles"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", aws_api_gateway_rest_api.this.name, "Stage", aws_api_gateway_stage.demo.stage_name, { label = "Latency p50", stat = "p50", color = "#1f77b4" }],
+            [".", "Latency", ".", ".", ".", ".", { label = "Latency p95", stat = "p95", color = "#ff7f0e" }],
+            [".", "Latency", ".", ".", ".", ".", { label = "Latency p99", stat = "p99", color = "#d62728" }],
+            [".", "IntegrationLatency", ".", ".", ".", ".", { label = "Integration p95", stat = "p95", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Internal ALB target health"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", local.query_target_group_arn_suffix, "LoadBalancer", aws_lb.internal.arn_suffix, { label = "query healthy", stat = "Minimum", color = "#2ca02c" }],
+            [".", "UnHealthyHostCount", ".", ".", ".", ".", { label = "query unhealthy", stat = "Maximum", color = "#d62728" }],
+            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", local.command_target_group_arn_suffix, "LoadBalancer", aws_lb.internal.arn_suffix, { label = "command healthy", stat = "Minimum", color = "#17becf" }],
+            [".", "UnHealthyHostCount", ".", ".", ".", ".", { label = "command unhealthy", stat = "Maximum", color = "#ff9896" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Internal ALB target latency"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ApplicationELB", "TargetResponseTime", "TargetGroup", local.query_target_group_arn_suffix, "LoadBalancer", aws_lb.internal.arn_suffix, { label = "query p50", stat = "p50", color = "#1f77b4" }],
+            [".", "TargetResponseTime", ".", ".", ".", ".", { label = "query p95", stat = "p95", color = "#ff7f0e" }],
+            ["AWS/ApplicationELB", "TargetResponseTime", "TargetGroup", local.command_target_group_arn_suffix, "LoadBalancer", aws_lb.internal.arn_suffix, { label = "command p50", stat = "p50", color = "#17becf" }],
+            [".", "TargetResponseTime", ".", ".", ".", ".", { label = "command p95", stat = "p95", color = "#d62728" }],
+          ]
+        }
+      },
+      {
+        type   = "text"
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Runtime ECS\nCapacidade desejada versus disponível e saturação por serviço."
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "ECS desired and running tasks"
+          region   = var.aws_region
+          stat     = "Average"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["ECS/ContainerInsights", "RunningTaskCount", "ServiceName", "query-api", "ClusterName", local.ecs_cluster_name, { label = "query running", color = "#1f77b4" }],
+            [".", "DesiredTaskCount", ".", ".", ".", ".", { label = "query desired", color = "#aec7e8" }],
+            ["ECS/ContainerInsights", "RunningTaskCount", "ServiceName", "command-api", "ClusterName", local.ecs_cluster_name, { label = "command running", color = "#ff7f0e" }],
+            [".", "DesiredTaskCount", ".", ".", ".", ".", { label = "command desired", color = "#ffbb78" }],
+            ["ECS/ContainerInsights", "RunningTaskCount", "ServiceName", "worker", "ClusterName", local.ecs_cluster_name, { label = "worker running", color = "#2ca02c" }],
+            [".", "DesiredTaskCount", ".", ".", ".", ".", { label = "worker desired", color = "#98df8a" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "ECS CPU utilization"
+          region   = var.aws_region
+          stat     = "Average"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ECS", "CPUUtilization", "ClusterName", local.ecs_cluster_name, "ServiceName", "query-api", { label = "query-api", color = "#1f77b4" }],
+            [".", "CPUUtilization", ".", ".", ".", "command-api", { label = "command-api", color = "#ff7f0e" }],
+            [".", "CPUUtilization", ".", ".", ".", "worker", { label = "worker", color = "#2ca02c" }],
+          ]
+          yAxis = {
+            left = { min = 0, max = 100, label = "Percent" }
+          }
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "ECS memory utilization"
+          region   = var.aws_region
+          stat     = "Average"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", local.ecs_cluster_name, "ServiceName", "query-api", { label = "query-api", color = "#1f77b4" }],
+            [".", "MemoryUtilization", ".", ".", ".", "command-api", { label = "command-api", color = "#ff7f0e" }],
+            [".", "MemoryUtilization", ".", ".", ".", "worker", { label = "worker", color = "#2ca02c" }],
+          ]
+          yAxis = {
+            left = { min = 0, max = 100, label = "Percent" }
+          }
+        }
+      },
+      {
+        type   = "text"
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Data & async\nPostgreSQL, Valkey e filas que sustentam reservas e notificações."
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "RDS CPU and connections"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.name}-postgres", { label = "CPU", stat = "Average", color = "#1f77b4" }],
+            [".", "DatabaseConnections", ".", ".", { label = "Connections", stat = "Average", yAxis = "right", color = "#ff7f0e" }],
+          ]
+          yAxis = {
+            left  = { min = 0, max = 100, label = "Percent" }
+            right = { min = 0, label = "Connections" }
+          }
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "RDS memory and storage headroom"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.name}-postgres", { label = "Freeable memory", stat = "Minimum", color = "#2ca02c" }],
+            [".", "FreeStorageSpace", ".", ".", { label = "Free storage", stat = "Minimum", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Valkey saturation and connections"
+          region   = var.aws_region
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", local.valkey_cache_cluster_id, { label = "Engine CPU", stat = "Average", color = "#1f77b4" }],
+            ["AWS/ElastiCache", "DatabaseMemoryUsageCountedForEvictPercentage", "ReplicationGroupId", "${var.name}-valkey", { label = "Memory used", stat = "Average", color = "#d62728" }],
+            ["AWS/ElastiCache", "CurrConnections", "CacheClusterId", local.valkey_cache_cluster_id, { label = "Connections", stat = "Average", yAxis = "right", color = "#ff7f0e" }],
+          ]
+          yAxis = {
+            left  = { min = 0, max = 100, label = "Percent" }
+            right = { min = 0, label = "Connections" }
+          }
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Valkey cache activity"
+          region   = var.aws_region
+          stat     = "Sum"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/ElastiCache", "CacheHits", "CacheClusterId", local.valkey_cache_cluster_id, { label = "Hits", color = "#2ca02c" }],
+            [".", "CacheMisses", ".", ".", { label = "Misses", color = "#d62728" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "SQS backlog and DLQs"
+          region   = var.aws_region
+          stat     = "Maximum"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${var.name}-expiration", { label = "expiration", color = "#1f77b4" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-notification", { label = "notification", color = "#2ca02c" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-expiration-dlq", { label = "expiration DLQ", color = "#d62728" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-notification-dlq", { label = "notification DLQ", color = "#ff9896" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "SQS oldest message age"
+          region   = var.aws_region
+          stat     = "Maximum"
+          period   = 60
+          view     = "timeSeries"
+          stacked  = false
+          liveData = true
+          metrics = [
+            ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "${var.name}-expiration", { label = "expiration", color = "#1f77b4" }],
+            [".", "ApproximateAgeOfOldestMessage", ".", "${var.name}-notification", { label = "notification", color = "#2ca02c" }],
+          ]
+          yAxis = {
+            left = { min = 0, label = "Seconds" }
+          }
+        }
+      },
+      {
+        type   = "text"
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Recent failures\nConsultas sob demanda nos log groups existentes; reduza a janela para limitar a varredura."
+        }
+      },
+      {
+        type   = "log"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Recent API Gateway 4xx/5xx"
+          region = var.aws_region
+          view   = "table"
+          query  = "SOURCE '/apigateway/${var.name}/access' | fields @timestamp, requestId, status, integration, responseLatency, sourceIp | filter status >= 400 | sort @timestamp desc | limit 50"
+        }
+      },
+      {
+        type   = "log"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Recent application errors"
+          region = var.aws_region
+          view   = "table"
+          query  = "SOURCE '/ecs/${var.name}/query-api' | SOURCE '/ecs/${var.name}/command-api' | SOURCE '/ecs/${var.name}/worker' | fields @timestamp, @log, @logStream, @message | filter @message like /ERROR|Exception|Caused by/ | sort @timestamp desc | limit 50"
         }
       }
     ]

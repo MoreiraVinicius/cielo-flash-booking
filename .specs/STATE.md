@@ -175,13 +175,21 @@
 - **Trade-off:** O leitor consulta `.specs/` para detalhes de produto e arquitetura em vez de encontrar narrativas completas no README e em documentos auxiliares.
 - **Scope:** Todo Markdown do repositório.
 
+### AD-023 - Dashboard operacional único sem telemetria adicional
+
+- **Status:** active
+- **Decision:** O dashboard `flash-booking-demo-demo` reúne borda, runtime ECS, dependências de dados, filas/DLQs e investigação por Logs Insights usando exclusivamente métricas e log groups já produzidos pela demo.
+- **Reason:** A operação durante a demonstração precisa permitir diagnóstico progressivo em uma única tela, sem exigir navegação prévia entre serviços nem criar instrumentação apenas para apresentação.
+- **Trade-off:** O dashboard depende das convenções de nome dos recursos Terraform e widgets de Logs Insights podem gerar custo de consulta conforme a janela examinada; não há novos alarmes nem métricas customizadas.
+- **Scope:** Terraform de edge/observabilidade e operação da demo AWS.
+
 ## Handoff
 
-- **Feature**: `flash-sale-window`
-- **Phase / Task**: T01-T06 concluídas e verificadas.
-- **Completed**: Janela comercial opcional implementada em Java, migration Flyway, contrato HTTP, cache, reserva, documentação, Postman, smoke e áudio. O gate local registrou 53 testes unitários e 68 integrações PostgreSQL/Testcontainers aprovados; o sensor matou a remoção do predicado de término.
-- **In-progress**: Nenhum trabalho de flash-sale-window em andamento.
-- **Next step**: Nenhum; a feature `flash-sale-window` está encerrada. Nenhum deploy AWS foi autorizado ou executado.
+- **Feature**: `flash-booking-demo`
+- **Phase / Task**: Execute / T31 implementada; verificação independente pendente.
+- **Completed**: Requisito DEMO-09, desenho operacional e decisão AD-023 registrados; dashboard publicado com 19 widgets e reconciliado sem diferença remota no recurso CloudWatch.
+- **In-progress**: Verificação independente e registro final de evidência.
+- **Next step**: Um verificador independente deve revisar DEMO-09, os testes Terraform e o dashboard remoto, e registrar o resultado em `validation.md`.
 - **Blockers**: Nenhum.
-- **Uncommitted files**: `.tmp/` e artefatos locais de áudio permanecem fora desta entrega; a feature `flash-sale-window` está versionada no commit desta entrega.
+- **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

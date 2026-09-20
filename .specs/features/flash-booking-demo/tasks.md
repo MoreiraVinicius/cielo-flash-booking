@@ -6,7 +6,7 @@ Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente 
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
 **Status:** Complete
-**Task count:** 29
+**Task count:** 31
 
 ## Test Coverage Matrix
 
@@ -74,6 +74,7 @@ T26 -> T27
 T27 -> T28
 T28 -> T29
 T29 -> T30
+T30 -> T31
 
 ```
 
@@ -450,6 +451,18 @@ T29 -> T30
 **Gate:** Build
 **Commit:** `feat(event): add flash sale window`
 
+### T31: Tornar o dashboard CloudWatch operacional
+
+**Status:** Complete
+**What:** Reorganizar o dashboard da demo em sinais de borda, runtime, dados/filas e investigação, usando métricas e log groups existentes com dimensões AWS válidas.
+**Where:** `infra/modules/edge-observability/`, `.specs/features/flash-booking-demo/` e `.specs/STATE.md`
+**Depends on:** T30
+**Requirement:** DEMO-09
+**Done when:** O dashboard possui seções e gráficos para API Gateway, ALB, ECS, RDS, Valkey e SQS; duas consultas de logs investigam falhas recentes; testes Terraform inspecionam sua estrutura; o plano remoto não cria nem destrói recursos e limita a alteração ao dashboard.
+**Tests:** static, terraform test, terraform validate e terraform plan
+**Gate:** Infra
+**Commit:** `feat(observability): expand demo dashboard`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -458,7 +471,7 @@ T29 -> T30
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T30 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada. Match. |
+| Quality | T26-T31 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; o painel operacional sucede a infraestrutura implantada. Match. |
 
 ## Test Co-location Validation
 
@@ -472,3 +485,4 @@ T29 -> T30
 | T28 | Docs | build/review | No deferred production tests | OK |
 | T29 | Verification | all | Fresh verifier | OK |
 | T30 | Event window | unit/integration/cache/HTTP/migration | Feature plan mantém os testes junto da implementação | OK |
+| T31 | CloudWatch dashboard | static/terraform test/plan | Testes estruturais e plano permanecem junto da alteração Terraform | OK |
