@@ -5,8 +5,8 @@
 Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente após seus testes e gate passarem. Atualize este arquivo antes de criar um commit Conventional Commit atômico.
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
-**Status:** Complete
-**Task count:** 32
+**Status:** In Progress
+**Task count:** 34
 
 ## Test Coverage Matrix
 
@@ -76,6 +76,8 @@ T28 -> T29
 T29 -> T30
 T30 -> T31
 T31 -> T32
+T32 -> T33
+T33 -> T34
 
 ```
 
@@ -476,6 +478,30 @@ T31 -> T32
 **Gate:** Infra
 **Commit:** `feat(observability): add business dashboard in pt-br`
 
+### T33: Encaminhar o alerta de US$50 ao corte automático
+
+**Status:** Pending
+**What:** Alterar o Budget mensal para US$50, encaminhar a notificação de gasto real de 100% pelo SNS operacional e permitir somente AWS Budgets publicar nesse tópico.
+**Where:** `infra/modules/edge-observability/` e `infra/environments/demo/`
+**Depends on:** T32
+**Requirement:** DEMO-11
+**Done when:** O Budget tem limite mensal `50`, preserva os avisos em 50%, 80% e 100%, envia o aviso de 100% ao tópico SNS operacional e o tópico permite publicação somente por `budgets.amazonaws.com` da conta atual.
+**Tests:** terraform test e terraform validate, incluídos na tarefa
+**Gate:** Infra
+**Commit:** `feat(cost): route budget limit alert to sns`
+
+### T34: Criar o mecanismo recuperável de corte de custo
+
+**Status:** Pending
+**What:** Criar Lambda, função de parada idempotente, role de mínimo privilégio, assinatura SNS, permissões e testes que congelam os dois alvos de autoscaling, param os três serviços ECS e solicitam a parada do RDS.
+**Where:** `infra/modules/edge-observability/`, `infra/modules/compute/outputs.tf`, `infra/modules/data-plane/outputs.tf` e `infra/environments/demo/main.tf`
+**Depends on:** T33
+**Requirement:** DEMO-11
+**Done when:** A Lambda só é invocável pelo SNS operacional, possui somente permissões de logs, `RegisterScalableTarget`, `UpdateService` e `StopDBInstance` nos recursos da demo, e seu handler trata reentrega SNS/RDS já parado sem reativar ou apagar recursos.
+**Tests:** unit do handler, terraform test e terraform validate, incluídos na tarefa
+**Gate:** Infra
+**Commit:** `feat(cost): stop recoverable demo resources at budget limit`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -484,7 +510,7 @@ T31 -> T32
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T32 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada. Match. |
+| Quality | T26-T34 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada; o roteamento do Budget precede a Lambda de corte. Match. |
 
 ## Test Co-location Validation
 
@@ -500,3 +526,5 @@ T31 -> T32
 | T30 | Event window | unit/integration/cache/HTTP/migration | Feature plan mantém os testes junto da implementação | OK |
 | T31 | CloudWatch dashboard | static/terraform test/plan | Testes estruturais e plano permanecem junto da alteração Terraform | OK |
 | T32 | Business dashboard | static/terraform test/remote read | Catálogo pt-BR e semântica das métricas são verificados junto da alteração Terraform | OK |
+| T33 | Budget/SNS | terraform test | O roteamento e a política SNS são verificados junto da alteração Terraform | OK |
+| T34 | Lambda de corte | unit/terraform test | O comportamento idempotente e as permissões são verificados junto da Lambda | OK |

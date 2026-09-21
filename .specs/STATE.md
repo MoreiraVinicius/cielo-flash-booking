@@ -191,13 +191,29 @@
 - **Trade-off:** Repetições idempotentes contam novamente e não existe informação de clientes únicos, reservas únicas, vendas ou receita; obter esses indicadores exigiria telemetria de domínio adicional fora deste escopo.
 - **Scope:** Terraform de edge/observabilidade e apresentação da demo AWS.
 
+### AD-025 - Carga dinâmica local antes de claims de produção
+
+- **Status:** active
+- **Decision:** A capacidade atual será medida com dados fake determinísticos em uma stack Docker Compose local. Smoke, stress e spike são gates obrigatórios; capacity valida por 30 minutos 60% do limite sustentável medido; load exige forecast aprovado; soak é promovido somente após os gates curtos. Uma carga AWS explicitamente autorizada será correlacionada por leitura do CloudWatch, sem liberar o harness para disparar tráfego remoto.
+- **Reason:** O baseline atual é curto e não existe demanda de produção aprovada nem ambiente high-load provisionado. A separação evita transformar um benchmark local em claim de produção.
+- **Trade-off:** Os resultados orientam gargalos e evolução, mas não comprovam capacidade, failover ou custo na AWS; CloudWatch correlaciona componentes em períodos de um minuto, mas não substitui as medidas por requisição do k6; RSS de container é apenas indicador de vazamento, não prova de heap JVM.
+- **Scope:** Harness e evidência de performance da demo; especificação `dynamic-fake-load`.
+
+### AD-026 - Corte automático recuperável ao atingir US$50
+
+- **Status:** active
+- **Decision:** Ao atingir US$50 de gasto mensal real, AWS Budgets publica no SNS operacional e uma Lambda interrompe os componentes recuperáveis: suspende e fixa em zero os alvos de autoscaling de `query-api` e `command-api`, reduz a zero os três serviços ECS e solicita `StopDBInstance` ao RDS PostgreSQL.
+- **Reason:** Alertas apenas informam; a demo deixada ativa precisa limitar o custo posterior sem apagar dados ou tornar a retomada manualmente destrutiva.
+- **Trade-off:** AWS Budgets processa custos com atraso e não é teto financeiro. ALB, Valkey, VPC, armazenamento, WAF e API Gateway seguem provisionados e podem gerar custo residual. RDS é reiniciado automaticamente pela AWS após no máximo sete dias parado.
+- **Scope:** Budget, SNS, Lambda de corte e permissões mínimas da demo AWS.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T32 concluída e validada.
-- **Completed**: Dashboard operacional T31 permanece publicado e validado; dashboard de negócio `flash-booking-demo-negocio` criado com 14 widgets em pt-BR e reconciliado sem diferença no recurso CloudWatch. Verificador independente aprovou os 8 critérios de DEMO-10 e matou a mutação de controle.
-- **In-progress**: Nenhum.
-- **Next step**: Nenhum; a implementação de DEMO-10 está concluída.
-- **Blockers**: Nenhum.
+- **Phase / Task**: Execute / T33 pendente.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. A decisão preserva dados e não destrói recursos.
+- **In-progress**: Implementar o roteamento do Budget de US$50 ao SNS operacional.
+- **Next step**: Executar T33, validar Terraform e registrar o commit atômico; depois executar T34.
+- **Blockers**: Nenhum para implementação local. A aplicação remota será feita após plano revisado dentro da autorização de corte automático do usuário.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

@@ -257,3 +257,27 @@ O painel referencia apenas namespaces e log groups já criados pela demo, usa pe
 O dashboard `flash-booking-demo-negocio` é uma visão separada para público não técnico. Ele usa as métricas detalhadas que o API Gateway já publica por `ApiName`, `Stage`, `Resource` e `Method`. Cards somam interações no período selecionado; gráficos organizam a jornada de consulta, tentativa de reserva, acompanhamento e cancelamento; expressões matemáticas separam respostas aceitas de 4xx e 5xx e calculam a taxa de aceite. Títulos, seções e legendas visíveis usam pt-BR.
 
 Esses indicadores medem requisições e respostas HTTP. Eles não representam clientes únicos, reservas únicas, vendas ou receita, porque uma repetição idempotente também produz uma resposta e porque a demo não possui pagamento. O painel declara essa limitação e não cria métricas customizadas, consultas de logs, alarmes ou mudanças de retenção.
+
+## Corte automático por custo
+
+O Budget mensal da demo passa a US$50. A notificação de gasto real em 100% mantém o e-mail operacional e também publica no tópico SNS operacional. A política do tópico permite publicação somente pelo serviço AWS Budgets da própria conta; a inscrição SNS invoca uma Lambda privada de corte.
+
+```mermaid
+flowchart LR
+    B[AWS Budgets: gasto real >= US$50] --> S[SNS operacional]
+    S --> L[Lambda de corte]
+    L --> A[Application Auto Scaling: min/max = 0 e suspenso]
+    L --> E[ECS: desiredCount = 0]
+    L --> R[RDS PostgreSQL: StopDBInstance]
+```
+
+A Lambda usa permissões mínimas: logs, `application-autoscaling:RegisterScalableTarget`, `ecs:UpdateService` nos três serviços e `rds:StopDBInstance` apenas no banco da demo. Ela primeiro bloqueia o scale-out e ajusta a capacidade de `query-api` e `command-api` para zero, depois define `desiredCount=0` nos três serviços e por fim solicita a parada do RDS. Reentregas SNS e o estado RDS já parado são tratados como sucesso idempotente.
+
+Valkey provisionado e ALB não oferecem pausa preservando recurso; a automação não os apaga. Eles, além de VPC, armazenamento, WAF e API Gateway, continuam como custo residual. Budgets apura gastos periodicamente, portanto o fluxo reduz custo futuro, mas não garante que a fatura pare exatamente em US$50. O RDS preserva metadados e dados, mas a AWS o reinicia após no máximo sete dias parado.
+
+| Risco | Local | Impacto | Mitigação |
+| --- | --- | --- | --- |
+| Alerta de custo atrasado | AWS Budgets | Gasto pode ultrapassar US$50 antes da ação | Declarar que o limite não é teto e manter alertas em 50%, 80% e 100%. |
+| Autoscaling reativar ECS | Alvos `query-api` e `command-api` | Tasks podem voltar após o corte | Fixar mínimo/máximo zero e suspender escalas antes de reduzir `desiredCount`. |
+| RDS reiniciar automaticamente | RDS | A demo pode voltar a gerar custo depois de sete dias | Registrar a limitação e exigir nova decisão para agenda de paradas. |
+| Custo residual | ALB e Valkey | A fatura não zera | Não destruir recursos automaticamente; expor a limitação no requisito e runbook. |

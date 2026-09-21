@@ -40,6 +40,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Notificação | E-mail assíncrono por outbox, SQS e SES | Não bloqueia a transação nem representa compra confirmada; ADR 0011. | yes |
 | Região | `sa-east-1` | Proximidade com o contexto brasileiro da vaga. | yes |
 | Build | Maven | Convenção simples para Spring Boot. | yes |
+| Corte automático de custo | O Budget mensal passa a US$50 e, ao atingir esse gasto real, interrompe ECS e RDS por SNS/Lambda | Preserva dados e infraestrutura recuperável; ALB, Valkey, rede e armazenamento não possuem pausa e permanecem como custo residual. | yes |
 
 **Open questions:** none. The capacity envelope is measured in the benchmark task and is not a prerequisite for implementing the demo; remote-recovery limits belong to the target high-load architecture.
 
@@ -188,6 +189,22 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Teste independente:** Executar o teste Terraform do módulo, conferir que todo texto e legenda visível pertence ao catálogo pt-BR e validar remotamente a estrutura do dashboard publicado.
 
+### P1: Interromper a demo por limite de custo
+
+**História:** Como responsável pela conta, quero que a demo interrompa automaticamente os componentes pausáveis quando o gasto mensal real chegar a US$50 para limitar a continuidade do custo.
+
+**Acceptance Criteria:**
+
+1. WHEN o gasto mensal real da demo atingir US$50 THEN AWS Budgets SHALL publicar uma notificação no tópico SNS operacional e invocar o mecanismo de corte automático.
+2. WHEN o mecanismo receber uma notificação do Budget THEN o sistema SHALL suspender o autoscaling e definir capacidade mínima e máxima zero para `query-api` e `command-api`, e SHALL definir `desiredCount` zero para `query-api`, `command-api` e `worker`.
+3. WHEN o mecanismo receber uma notificação do Budget THEN o sistema SHALL solicitar a parada temporária da instância RDS PostgreSQL após solicitar a redução dos serviços ECS.
+4. WHILE a notificação for entregue novamente ou o RDS já estiver parado THEN o mecanismo SHALL concluir sem criar recursos, apagar dados ou reativar serviços.
+5. The mecanismo SHALL ter somente permissões para escrever seus logs, ajustar os três serviços ECS e seus dois alvos de autoscaling, e parar a instância RDS da demo.
+6. The sistema SHALL manter ALB, Valkey, VPC, armazenamento, WAF, API Gateway e dados provisionados; esses recursos podem gerar custo residual e não fazem parte da interrupção automática.
+7. The documentação SHALL declarar que AWS Budgets processa custo periodicamente; por isso o corte é iniciado após o alerta e não garante um teto financeiro exato em US$50.
+
+**Teste independente:** Aplicar o plano Terraform, publicar uma mensagem SNS de teste autorizada e conferir no CloudWatch Logs que os três serviços receberam `desiredCount=0`, os dois alvos ECS ficaram suspensos em zero e a parada do RDS foi solicitada.
+
 ## Edge Cases
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
@@ -215,8 +232,9 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-08 | Janela comercial do evento | Execute | Verified |
 | DEMO-09 | Operar a demo por um painel único | Execute | Validated |
 | DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Validated |
+| DEMO-11 | Interromper a demo por limite de custo | Tasks | Pending |
 
-**Cobertura:** 10 requisitos, 10 mapeados ao design, nenhum sem mapeamento.
+**Cobertura:** 11 requisitos, 10 mapeados ao design, 1 em planejamento.
 
 ## Success Criteria
 
@@ -234,3 +252,4 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] Terraform representa todos os recursos AWS da demo.
 - [x] O dashboard CloudWatch reúne sinais de borda, runtime, dados, filas e investigação de logs sem criar telemetria adicional.
 - [x] O dashboard de negócio apresenta jornada, aceite e experiência percebida em pt-BR sem confundir respostas HTTP com clientes únicos ou vendas.
+- [ ] Ao atingir US$50 de gasto mensal real, a demo solicita a interrupção de ECS e RDS sem apagar dados ou infraestrutura.
