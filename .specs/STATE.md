@@ -39,7 +39,6 @@
 - **Reason:** A evolução deve nascer de gargalos medidos na demo; antecipar implementação Multi-AZ e autoscaling criaria custo e complexidade sem evidência.
 - **Trade-off:** Capacidade, desempenho, failover e custo da alta carga permanecem hipóteses de desenho até uma futura implementação autorizada.
 - **Scope:** Entrega, publicação e critérios de validação das duas features.
-- **ADR:** `docs/adr/0001-demo-publicada-alta-carga-sem-provisionamento.md`
 
 ### AD-007 - Reserva temporária e encerramento auditável
 
@@ -47,7 +46,6 @@
 - **Decision:** Manter PENDING, CANCELLED e EXPIRED, sem confirmação definitiva de compra; antes de `expiresAt`, `DELETE` encerra uma reserva pendente como CANCELLED, enquanto em `expiresAt` ou depois o prazo prevalece e o encerramento é EXPIRED; persistir código e descrição do motivo nos estados terminais.
 - **Reason:** Preservar o escopo de reserva temporária e explicar seus encerramentos.
 - **Scope:** Domínio compartilhado pelas duas arquiteturas.
-- **ADR:** [ADR 0002](../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md).
 
 ### AD-008 - Liberação até cinco segundos após vencimento
 
@@ -56,7 +54,6 @@
 - **Reason:** Limitar estoque temporariamente bloqueado e definir um prazo verificável para o fluxo assíncrono.
 - **Trade-off:** Pode haver indisponibilidade temporária de ingressos vencidos dentro dessa janela; falhas exigem contrato de recuperação separado.
 - **Scope:** Expiração por consumidor e reconciliador, em ambas as arquiteturas.
-- **ADR:** [ADR 0003](../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md).
 
 ### AD-009 - PostgreSQL autoritativo com evolução Aurora
 
@@ -65,7 +62,6 @@
 - **Reason:** Transação, invariantes e auditoria reduzem risco para este domínio e prazo; DynamoDB é alternativa somente para hot row comprovado.
 - **Trade-off:** Escritas concorrentes por evento podem gerar lock waits e exigem medição.
 - **Scope:** Persistência das duas arquiteturas.
-- **ADR:** [ADR 0004](../docs/adr/0004-postgresql-como-fonte-autoritativa.md).
 
 ### AD-010 - Cache Valkey para disponibilidade do evento
 
@@ -74,7 +70,6 @@
 - **Reason:** Disponibilidade de evento concentra leituras repetidas em flash sales. Reservas são consultas por identidade, mudam de estado e contêm dados pessoais; cacheá-las para reutilizar dados do evento mistura responsabilidades.
 - **Trade-off:** A disponibilidade exibida pode estar defasada por até um segundo. Consultas de reserva continuam consumindo o banco e não dependem do Valkey.
 - **Scope:** Consultas, ECS e infraestrutura das duas arquiteturas.
-- **ADR:** [ADR 0005](../docs/adr/0005-cache-valkey-compartilhado-e-binario-unico.md).
 
 ### AD-011 - Catálogo fechado de motivos de encerramento
 
@@ -82,7 +77,6 @@
 - **Decision:** O servidor grava `CANCELLED_BY_REQUEST` somente quando `DELETE` encerra a reserva antes de `expiresAt`; em `expiresAt` ou depois grava `RESERVATION_DEADLINE_REACHED`, inclusive quando `DELETE` materializa o vencimento. As descrições são fixas e `closureReason` aparece somente em reservas terminais.
 - **Reason:** O encerramento precisa ser auditável e ter contrato HTTP estável.
 - **Scope:** Domínio e API compartilhados pelas duas arquiteturas.
-- **ADR:** [ADR 0006](../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
 
 ### AD-012 - Idempotência durável e relógio transacional
 
@@ -90,7 +84,6 @@
 - **Decision:** PostgreSQL mantém o resultado de comandos por uma janela de 24 horas medida pelo próprio relógio UTC. Durante a janela, a chave reproduz o resultado compatível ou rejeita reutilização incompatível; no vencimento, uma nova tentativa pode reivindicá-la atomicamente. Registros vencidos são removidos pelo worker em lotes limitados, sem participar da decisão de validade.
 - **Reason:** Múltiplas tasks não podem depender de memória, cache, limpeza pontual ou relógios locais para preservar um único efeito. A separação entre validade lógica e remoção física evita tanto a reutilização antecipada quanto o bloqueio eterno da chave.
 - **Scope:** Domínio e persistência compartilhados pelas duas arquiteturas.
-- **ADR:** [ADR 0007](../docs/adr/0007-idempotencia-persistente-de-comandos.md) e [ADR 0008](../docs/adr/0008-relogio-do-banco-para-expiracao.md).
 
 ### AD-013 - Exposição HTTP temporária limitada por CIDR
 
@@ -98,7 +91,6 @@
 - **Decision:** A API REST publicada da demo aceita apenas os CIDRs fornecidos a Terraform em `allowed_cidrs`, sem valor default permissivo.
 - **Reason:** Credenciais AWS não são controle de acesso HTTP; a demonstração individual precisa limitar a exposição sem introduzir autenticação de produto.
 - **Scope:** Borda da demo e documentação operacional.
-- **ADR:** [ADR 0009](../docs/adr/0009-restringir-demo-por-cidr-no-api-gateway.md).
 
 ### AD-014 - Autenticação IAM e proteção de custos na borda
 
@@ -107,7 +99,6 @@
 - **Reason:** CIDR isolado não autentica pessoas, API key não é autorização e rejeitar tráfego na borda protege containers, banco e orçamento.
 - **Trade-off:** Entrevistadores precisam assinar chamadas com credenciais temporárias; limites e Budgets não garantem teto financeiro absoluto.
 - **Scope:** Borda, autenticação operacional e controles de custo das duas arquiteturas.
-- **ADR:** [ADR 0012](../docs/adr/0012-autenticacao-e-protecao-de-custos-na-borda.md).
 
 ### AD-015 - Cliente persistido e notificação de reserva
 
@@ -116,7 +107,6 @@
 - **Reason:** A reserva precisa ser utilizável pela pessoa associada sem criar cadastro completo nem acoplar SES à transação de inventário.
 - **Trade-off:** Nome e e-mail viram dados pessoais; entrega de e-mail é pelo menos uma vez e não confirma compra.
 - **Scope:** Domínio, persistência, contrato HTTP e mensageria das duas arquiteturas.
-- **ADR:** [ADR 0010](../docs/adr/0010-cliente-como-entidade-da-reserva.md) e [ADR 0011](../docs/adr/0011-notificacao-assincrona-de-reserva-por-email.md).
 
 ### AD-016 - Serviços de consulta e comando separados com um artefato
 
@@ -125,7 +115,6 @@
 - **Reason:** Consultas e reservas escalam em momentos diferentes; deployments separados fornecem sinais e escala próprios sem duplicar regras.
 - **Trade-off:** API Gateway, ALB, task definitions e observabilidade têm mais componentes que um serviço HTTP único.
 - **Scope:** Empacotamento, controllers e infraestrutura das duas arquiteturas.
-- **ADR:** [ADR 0013](../docs/adr/0013-separar-servicos-de-consulta-e-comando.md).
 
 ### AD-017 - Teto de alerta de custo da demo em US$5
 
