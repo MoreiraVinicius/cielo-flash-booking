@@ -71,6 +71,8 @@ T06 -> T07 -> T08
 
 ### T01: Implementar o gerador fake determinístico
 
+**Status:** Complete
+
 **What:** Criar o módulo de PRNG, eventos, clientes, chaves idempotentes e seleção hot/warm/cold, com seu contrato executável.
 **Where:** `performance/dynamic-load/lib/fake-data.js` e contrato co-localizado
 **Depends on:** None
@@ -93,6 +95,7 @@ T06 -> T07 -> T08
 **Tests:** contract k6 no mesmo task
 **Gate:** Contract
 **Commit:** `test(performance): add deterministic fake data generator`
+**Result:** O contrato k6 aprovou 8/8 checks: sequência reproduzível, limites de evento/cliente, `example.com`, quantidade positiva, chaves únicas de no máximo 128 caracteres e distribuição 60/30/10 em 10.000 seleções.
 
 ### T02: Definir perfis e guardrails de carga
 

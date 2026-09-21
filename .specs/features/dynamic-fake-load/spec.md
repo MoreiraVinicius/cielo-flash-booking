@@ -202,7 +202,7 @@ O baseline atual usa poucos dados previsíveis, dura 15 segundos e não encontra
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| LOAD-01 | Dados fake dinâmicos e reproduzíveis | Design | In Design |
+| LOAD-01 | Dados fake dinâmicos e reproduzíveis | Execute | Implementing |
 | LOAD-02 | Smoke test | Design | In Design |
 | LOAD-03 | Stress test | Design | In Design |
 | LOAD-04 | Spike test | Design | In Design |
