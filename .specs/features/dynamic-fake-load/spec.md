@@ -208,7 +208,7 @@ O baseline atual usa poucos dados previsíveis, dura 15 segundos e não encontra
 | LOAD-04 | Spike test | Execute | Implementing |
 | LOAD-05 | Capacity e load condicionado | Execute | Implementing |
 | LOAD-06 | Soak test | Execute | Implementing |
-| LOAD-07 | Evidência e observabilidade | Design | In Design |
+| LOAD-07 | Evidência e observabilidade | Execute | Implementing |
 | LOAD-08 | Guardrails e auditoria de invariantes | Design | In Design |
 | LOAD-09 | Correlação CloudWatch somente leitura | Design | In Design |
 

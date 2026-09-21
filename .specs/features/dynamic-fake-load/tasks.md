@@ -127,6 +127,8 @@ T06 -> T07 -> T08
 
 ### T03: Implementar o engine de workloads k6
 
+**Status:** Complete
+
 **What:** Criar um engine modular que prepara eventos, executa query-heavy, command-heavy e mixed e separa falha técnica de rejeição de negócio.
 **Where:** `performance/dynamic-load/workload.js`
 **Depends on:** T02
@@ -149,6 +151,7 @@ T06 -> T07 -> T08
 **Tests:** performance integration no mesmo task
 **Gate:** Inspect + Smoke
 **Commit:** `test(performance): add stateful dynamic workload engine`
+**Result:** `k6 inspect` aprovou o perfil smoke e o smoke real concluiu setup de 12 eventos, consulta, criação, leitura e cancelamento de reserva em duas command-api locais, com 4/4 checks e thresholds de p95 e falha técnica aprovados.
 
 ### T04: Coletar telemetria local, CloudWatch e auditar invariantes
 
