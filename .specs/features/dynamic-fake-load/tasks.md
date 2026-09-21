@@ -242,6 +242,8 @@ T06 -> T07 -> T08
 
 ### T07: Documentar operação e interpretação
 
+**Status:** Complete
+
 **What:** Documentar pré-requisitos, perfis, dados fake, comandos, custos de tempo, guardrails, resultados e limites de evidência; adicionar a feature à navegação principal.
 **Where:** `performance/dynamic-load/README.md` e navegação documental relacionada
 **Depends on:** T06
@@ -264,6 +266,7 @@ T06 -> T07 -> T08
 **Tests:** documentation validation no mesmo task
 **Gate:** Documentation
 **Commit:** `docs(performance): document dynamic load workflow`
+**Result:** O guia operacional documenta os perfis, pré-requisitos, durações, evidências, guardrails, correlação CloudWatch somente leitura e limites de inferência; o link foi incluído no README. O validador global `validate-readme.ps1` permanece bloqueado por contrato histórico ausente (`case técnico independente`) anterior a esta task, antes de alcançar os links novos.
 
 ### T08: Executar a matriz curta e publicar o baseline local
 

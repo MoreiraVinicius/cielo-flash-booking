@@ -43,5 +43,6 @@ Para a suite completa de testes:
 | --- | --- |
 | [Postman](postman/README.md) | Executar a coleção local ou preparar uma demonstração AWS autorizada |
 | [Baseline de desempenho](performance/demo/README.md) | Proveniência, limites e reprodução de benchmark local |
+| [Carga dinâmica fake](performance/dynamic-load/README.md) | Perfis locais, dados sintéticos, telemetria e limites de evidência |
 | [Módulos Terraform](infra/modules) | Contexto operacional da infraestrutura versionada |
 | [Gerador de áudio](scripts/generate-interview-audio.ps1) | Gerar localmente uma narração WAV a partir de texto UTF-8 |
