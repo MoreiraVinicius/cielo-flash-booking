@@ -214,6 +214,8 @@ T06 -> T07 -> T08
 
 ### T06: Orquestrar execução e publicação segura
 
+**Status:** Complete
+
 **What:** Criar o runner que controla Compose, preflight, k6, sampler, normalização, evidência parcial, teardown e publicação canônica.
 **Where:** `performance/dynamic-load/run.ps1` e regra de ignore coesa para resultados brutos
 **Depends on:** T05
@@ -236,6 +238,7 @@ T06 -> T07 -> T08
 **Tests:** integration e regressão no mesmo task
 **Gate:** Full
 **Commit:** `test(performance): orchestrate safe dynamic load runs`
+**Result:** O runner executou smoke local com duas command APIs distintas e produziu resumo k6, telemetria, auditoria, `run.json`, `result.json` e relatório `PASS`; publicação canônica permanece bloqueada com worktree sujo. Os contratos, inspect e a regressão Maven `clean verify -Pintegration` concluíram sem falhas (68 testes de integração).
 
 ### T07: Documentar operação e interpretação
 

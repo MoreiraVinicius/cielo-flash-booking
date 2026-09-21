@@ -24,6 +24,9 @@ crash.*.log
 target/
 *.log
 
+# Dynamic-load disposable evidence
+performance/dynamic-load/results/
+
 # Operating system files
 .DS_Store
 Thumbs.db
