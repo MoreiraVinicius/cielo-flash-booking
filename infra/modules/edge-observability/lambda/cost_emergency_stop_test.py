@@ -46,13 +46,13 @@ class CostEmergencyStopTest(unittest.TestCase):
         ecs = EcsClient()
         rds = RdsClient()
 
-        result = MODULE.stop_resources("cluster-arn", ["query-api", "command-api", "worker"], "postgres-id", autoscaling, ecs, rds)
+        result = MODULE.stop_resources("cluster-arn", "cluster-name", ["query-api", "command-api", "worker"], "postgres-id", autoscaling, ecs, rds)
 
         self.assertEqual("stop-requested", result["database"])
         self.assertEqual(
             [
-                {"ServiceNamespace": "ecs", "ResourceId": "service/cluster-arn/query-api", "ScalableDimension": "ecs:service:DesiredCount", "MinCapacity": 0, "MaxCapacity": 0, "SuspendedState": {"DynamicScalingInSuspended": True, "DynamicScalingOutSuspended": True, "ScheduledScalingSuspended": True}},
-                {"ServiceNamespace": "ecs", "ResourceId": "service/cluster-arn/command-api", "ScalableDimension": "ecs:service:DesiredCount", "MinCapacity": 0, "MaxCapacity": 0, "SuspendedState": {"DynamicScalingInSuspended": True, "DynamicScalingOutSuspended": True, "ScheduledScalingSuspended": True}},
+                {"ServiceNamespace": "ecs", "ResourceId": "service/cluster-name/query-api", "ScalableDimension": "ecs:service:DesiredCount", "MinCapacity": 0, "MaxCapacity": 0, "SuspendedState": {"DynamicScalingInSuspended": True, "DynamicScalingOutSuspended": True, "ScheduledScalingSuspended": True}},
+                {"ServiceNamespace": "ecs", "ResourceId": "service/cluster-name/command-api", "ScalableDimension": "ecs:service:DesiredCount", "MinCapacity": 0, "MaxCapacity": 0, "SuspendedState": {"DynamicScalingInSuspended": True, "DynamicScalingOutSuspended": True, "ScheduledScalingSuspended": True}},
             ],
             autoscaling.calls,
         )
@@ -67,7 +67,7 @@ class CostEmergencyStopTest(unittest.TestCase):
         self.assertEqual([{"DBInstanceIdentifier": "postgres-id"}], rds.calls)
 
     def test_treats_an_already_stopped_database_as_idempotent(self):
-        result = MODULE.stop_resources("cluster", ["query-api", "command-api", "worker"], "postgres", AutoscalingClient(), EcsClient(), StoppedRdsClient())
+        result = MODULE.stop_resources("cluster-arn", "cluster-name", ["query-api", "command-api", "worker"], "postgres", AutoscalingClient(), EcsClient(), StoppedRdsClient())
 
         self.assertEqual("already-stopped", result["database"])
 

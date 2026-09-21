@@ -589,7 +589,8 @@ resource "aws_lambda_function" "cost_emergency_stop" {
 
   environment {
     variables = {
-      ECS_CLUSTER         = var.ecs_cluster_arn
+      ECS_CLUSTER_ARN     = var.ecs_cluster_arn
+      ECS_CLUSTER_NAME    = var.ecs_cluster_name
       ECS_SERVICE_NAMES   = jsonencode(var.ecs_service_names)
       DATABASE_IDENTIFIER = var.database_identifier
     }

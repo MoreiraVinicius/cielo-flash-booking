@@ -199,8 +199,8 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T34 concluída e aplicada; verificação independente pendente.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta. T34 criou a Lambda idempotente, permissões mínimas e assinatura SNS. Aplicação direcionada criou 8 recursos e atualizou 1, sem destruição. Testes unitários, `terraform test`, `terraform validate`, leitura remota e plano direcionado reconciliado passaram.
+- **Phase / Task**: Execute / T35 concluída e aplicada; verificação independente pendente.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e T33/T35 foram aplicados. O plano inicial criou 8 recursos e atualizou 1; a correção direcionada atualizou somente a Lambda para separar ARN e nome do cluster. Testes unitários, `terraform test`, `terraform validate` e leitura remota passaram.
 - **In-progress**: Verificação independente de DEMO-11.
 - **Next step**: Um verificador independente deve revisar DEMO-11, testes, plano e evidência remota, executar sensor de discriminação e registrar o resultado em `validation.md`.
 - **Blockers**: Nenhum.

@@ -59,6 +59,7 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     budget_alert_email         = "alerts@example.com"
     budget_emergency_topic_arn = "arn:aws:sns:sa-east-1:123456789012:budget-emergency"
     ecs_cluster_arn            = "arn:aws:ecs:sa-east-1:123456789012:cluster/flash-booking-demo-cluster"
+    ecs_cluster_name           = "flash-booking-demo-cluster"
     ecs_service_names          = ["query-api", "command-api", "worker"]
     ecs_service_arns           = ["arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/query-api", "arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/command-api", "arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/worker"]
     ecs_scalable_target_arns   = ["arn:aws:application-autoscaling:sa-east-1:123456789012:scalable-target/query", "arn:aws:application-autoscaling:sa-east-1:123456789012:scalable-target/command"]
@@ -95,7 +96,8 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   assert {
     condition = (
       aws_lambda_function.cost_emergency_stop.handler == "cost_emergency_stop.handler" &&
-      aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_CLUSTER == var.ecs_cluster_arn &&
+      aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_CLUSTER_ARN == var.ecs_cluster_arn &&
+      aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_CLUSTER_NAME == var.ecs_cluster_name &&
       toset(jsondecode(aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_SERVICE_NAMES)) == toset(var.ecs_service_names) &&
       aws_lambda_function.cost_emergency_stop.environment[0].variables.DATABASE_IDENTIFIER == var.database_identifier
     )

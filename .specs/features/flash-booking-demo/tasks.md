@@ -6,7 +6,7 @@ Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente 
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
 **Status:** In Progress
-**Task count:** 34
+**Task count:** 35
 
 ## Test Coverage Matrix
 
@@ -78,6 +78,7 @@ T30 -> T31
 T31 -> T32
 T32 -> T33
 T33 -> T34
+T34 -> T35
 
 ```
 
@@ -502,6 +503,18 @@ T33 -> T34
 **Gate:** Infra
 **Commit:** `feat(cost): stop recoverable demo resources at budget limit`
 
+### T35: Corrigir o identificador do alvo de autoscaling
+
+**Status:** Complete
+**What:** Separar o ARN do cluster ECS, usado para atualizar serviços, do nome do cluster, usado no identificador `service/<cluster>/<serviço>` do Application Auto Scaling.
+**Where:** composição Terraform da demo e módulo `edge-observability`
+**Depends on:** T34
+**Requirement:** DEMO-11
+**Done when:** A Lambda envia o ARN ao `UpdateService` e usa somente o nome do cluster para congelar `query-api` e `command-api` no Application Auto Scaling; o teste unitário distingue os dois valores.
+**Tests:** unit do handler e terraform test, incluídos na tarefa
+**Gate:** Infra
+**Commit:** `fix(cost): use cluster name for autoscaling target`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -510,7 +523,7 @@ T33 -> T34
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T34 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada; o roteamento do Budget precede a Lambda de corte. Match. |
+| Quality | T26-T35 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada; o roteamento do Budget precede a Lambda de corte e T35 corrige o identificador do alvo escalável. Match. |
 
 ## Test Co-location Validation
 
@@ -528,3 +541,4 @@ T33 -> T34
 | T32 | Business dashboard | static/terraform test/remote read | Catálogo pt-BR e semântica das métricas são verificados junto da alteração Terraform | OK |
 | T33 | Budget/SNS | terraform test | O roteamento e a política SNS são verificados junto da alteração Terraform | OK |
 | T34 | Lambda de corte | unit/terraform test | O comportamento idempotente e as permissões são verificados junto da Lambda | OK |
+| T35 | Lambda de corte | unit/terraform test | ARN e nome do cluster são distinguidos no teste da integração de autoscaling | OK |

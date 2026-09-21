@@ -16,12 +16,12 @@ SUSPEND_ALL_SCALING = {
 }
 
 
-def stop_resources(cluster, services, database_identifier, autoscaling, ecs, rds):
+def stop_resources(cluster_arn, cluster_name, services, database_identifier, autoscaling, ecs, rds):
     for service in services:
         if service in SCALABLE_SERVICES:
             autoscaling.register_scalable_target(
                 ServiceNamespace="ecs",
-                ResourceId=f"service/{cluster}/{service}",
+                ResourceId=f"service/{cluster_name}/{service}",
                 ScalableDimension="ecs:service:DesiredCount",
                 MinCapacity=0,
                 MaxCapacity=0,
@@ -29,7 +29,7 @@ def stop_resources(cluster, services, database_identifier, autoscaling, ecs, rds
             )
 
     for service in services:
-        ecs.update_service(cluster=cluster, service=service, desiredCount=0)
+        ecs.update_service(cluster=cluster_arn, service=service, desiredCount=0)
 
     try:
         rds.stop_db_instance(DBInstanceIdentifier=database_identifier)
@@ -48,7 +48,8 @@ def stop_resources(cluster, services, database_identifier, autoscaling, ecs, rds
 
 def handler(event, context):
     return stop_resources(
-        os.environ["ECS_CLUSTER"],
+        os.environ["ECS_CLUSTER_ARN"],
+        os.environ["ECS_CLUSTER_NAME"],
         json.loads(os.environ["ECS_SERVICE_NAMES"]),
         os.environ["DATABASE_IDENTIFIER"],
         boto3.client("application-autoscaling"),

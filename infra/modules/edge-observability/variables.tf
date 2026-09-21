@@ -43,6 +43,11 @@ variable "ecs_cluster_arn" {
   type        = string
 }
 
+variable "ecs_cluster_name" {
+  description = "ECS cluster name used in Application Auto Scaling resource identifiers."
+  type        = string
+}
+
 variable "ecs_service_names" {
   description = "The three ECS services set to zero by the emergency stop."
   type        = list(string)
