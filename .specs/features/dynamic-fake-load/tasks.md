@@ -185,6 +185,8 @@ T06 -> T07 -> T08
 
 ### T05: Normalizar resultados e emitir verdict
 
+**Status:** Complete
+
 **What:** Combinar summaries, telemetria local ou CloudWatch, audit e proveniência em JSON canônico e relatório Markdown com regras de verdict por perfil.
 **Where:** `performance/dynamic-load/normalize.ps1`
 **Depends on:** T04
@@ -208,6 +210,7 @@ T06 -> T07 -> T08
 **Tests:** contract PowerShell no mesmo task
 **Gate:** Contract
 **Commit:** `test(performance): normalize load evidence and verdicts`
+**Result:** O contrato aprovou a derivação do último degrau sustentável, os verdicts `INCONCLUSIVE`, `INCOMPLETE` e degradação de soak, rejeição de fixture incompleta e os rótulos que proíbem claim de produção.
 
 ### T06: Orquestrar execução e publicação segura
 
