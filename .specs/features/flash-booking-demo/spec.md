@@ -195,7 +195,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Acceptance Criteria:**
 
-1. WHEN o gasto mensal real da demo atingir US$50 THEN AWS Budgets SHALL publicar uma notificação no tópico SNS operacional e invocar o mecanismo de corte automático.
+1. WHEN o gasto mensal real da demo atingir US$50 THEN AWS Budgets SHALL publicar uma notificação em um tópico SNS dedicado e invocar o mecanismo de corte automático.
 2. WHEN o mecanismo receber uma notificação do Budget THEN o sistema SHALL suspender o autoscaling e definir capacidade mínima e máxima zero para `query-api` e `command-api`, e SHALL definir `desiredCount` zero para `query-api`, `command-api` e `worker`.
 3. WHEN o mecanismo receber uma notificação do Budget THEN o sistema SHALL solicitar a parada temporária da instância RDS PostgreSQL após solicitar a redução dos serviços ECS.
 4. WHILE a notificação for entregue novamente ou o RDS já estiver parado THEN o mecanismo SHALL concluir sem criar recursos, apagar dados ou reativar serviços.
@@ -232,7 +232,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-08 | Janela comercial do evento | Execute | Verified |
 | DEMO-09 | Operar a demo por um painel único | Execute | Validated |
 | DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Validated |
-| DEMO-11 | Interromper a demo por limite de custo | Tasks | Pending |
+| DEMO-11 | Interromper a demo por limite de custo | Execute | Implementing |
 
 **Cobertura:** 11 requisitos, 10 mapeados ao design, 1 em planejamento.
 

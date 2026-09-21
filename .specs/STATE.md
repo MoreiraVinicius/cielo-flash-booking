@@ -210,10 +210,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T33 pendente.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. A decisão preserva dados e não destrói recursos.
-- **In-progress**: Implementar o roteamento do Budget de US$50 ao SNS operacional.
-- **Next step**: Executar T33, validar Terraform e registrar o commit atômico; depois executar T34.
+- **Phase / Task**: Execute / T34 pendente.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta.
+- **In-progress**: Implementar Lambda e permissões para interromper ECS e RDS.
+- **Next step**: Executar T34, validar Terraform e registrar o commit atômico.
 - **Blockers**: Nenhum para implementação local. A aplicação remota será feita após plano revisado dentro da autorização de corte automático do usuário.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

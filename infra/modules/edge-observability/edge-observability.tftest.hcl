@@ -34,6 +34,9 @@ mock_provider "aws" {
   mock_resource "aws_api_gateway_stage" {
     defaults = { arn = "arn:aws:apigateway:sa-east-1::/restapis/mockapi/stages/demo" }
   }
+  mock_data "aws_caller_identity" {
+    defaults = { account_id = "123456789012" }
+  }
 }
 
 run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
@@ -51,6 +54,7 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     trusted_principal_arns     = ["arn:aws:iam::123456789012:role/operator"]
     allowed_cidrs              = ["203.0.113.10/32"]
     budget_alert_email         = "alerts@example.com"
+    budget_emergency_topic_arn = "arn:aws:sns:sa-east-1:123456789012:budget-emergency"
     alarm_topic_arn            = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
@@ -70,8 +74,18 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   }
 
   assert {
-    condition     = one([for rule in aws_wafv2_web_acl.api.rule : rule if rule.name == "RateLimit"]).statement[0].rate_based_statement[0].limit == var.waf_rate_limit && aws_budgets_budget.demo.limit_amount == "5" && length(aws_budgets_budget.demo.notification) == 3
-    error_message = "The edge must rate-limit requests and create all three notifications for the US$5 budget."
+    condition     = one([for rule in aws_wafv2_web_acl.api.rule : rule if rule.name == "RateLimit"]).statement[0].rate_based_statement[0].limit == var.waf_rate_limit && aws_budgets_budget.demo.limit_amount == "50" && length(aws_budgets_budget.demo.notification) == 3
+    error_message = "The edge must rate-limit requests and create all three notifications for the US$50 budget."
+  }
+
+  assert {
+    condition     = contains(one([for notification in aws_budgets_budget.demo.notification : notification if notification.threshold == 100]).subscriber_sns_topic_arns, var.budget_emergency_topic_arn)
+    error_message = "The actual-spend 100% budget notification must publish to the dedicated emergency topic."
+  }
+
+  assert {
+    condition     = jsondecode(aws_sns_topic_policy.budget_emergency.policy).Statement[0].Principal.Service == "budgets.amazonaws.com" && jsondecode(aws_sns_topic_policy.budget_emergency.policy).Statement[0].Condition.StringEquals["aws:SourceAccount"] == "123456789012"
+    error_message = "Only same-account AWS Budgets may publish the emergency trigger."
   }
 
   assert {

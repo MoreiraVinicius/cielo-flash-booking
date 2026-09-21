@@ -480,12 +480,12 @@ T33 -> T34
 
 ### T33: Encaminhar o alerta de US$50 ao corte automático
 
-**Status:** Pending
-**What:** Alterar o Budget mensal para US$50, encaminhar a notificação de gasto real de 100% pelo SNS operacional e permitir somente AWS Budgets publicar nesse tópico.
+**Status:** Complete
+**What:** Alterar o Budget mensal para US$50, encaminhar a notificação de gasto real de 100% por um SNS dedicado e permitir somente AWS Budgets publicar nesse tópico.
 **Where:** `infra/modules/edge-observability/` e `infra/environments/demo/`
 **Depends on:** T32
 **Requirement:** DEMO-11
-**Done when:** O Budget tem limite mensal `50`, preserva os avisos em 50%, 80% e 100%, envia o aviso de 100% ao tópico SNS operacional e o tópico permite publicação somente por `budgets.amazonaws.com` da conta atual.
+**Done when:** O Budget tem limite mensal `50`, preserva os avisos em 50%, 80% e 100%, envia o aviso de 100% ao tópico SNS dedicado e o tópico permite publicação somente por `budgets.amazonaws.com` da conta atual.
 **Tests:** terraform test e terraform validate, incluídos na tarefa
 **Gate:** Infra
 **Commit:** `feat(cost): route budget limit alert to sns`

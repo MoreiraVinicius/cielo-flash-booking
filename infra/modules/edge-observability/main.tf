@@ -482,7 +482,7 @@ resource "aws_wafv2_web_acl_association" "api" {
 resource "aws_budgets_budget" "demo" {
   name         = "${var.name}-monthly-cap"
   budget_type  = "COST"
-  limit_amount = "5"
+  limit_amount = "50"
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
@@ -494,8 +494,29 @@ resource "aws_budgets_budget" "demo" {
       threshold_type             = "PERCENTAGE"
       notification_type          = "ACTUAL"
       subscriber_email_addresses = [var.budget_alert_email]
+      subscriber_sns_topic_arns  = notification.value == 100 ? [var.budget_emergency_topic_arn] : []
     }
   }
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_sns_topic_policy" "budget_emergency" {
+  arn = var.budget_emergency_topic_arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowBudgetsFromThisAccount"
+      Effect    = "Allow"
+      Principal = { Service = "budgets.amazonaws.com" }
+      Action    = "SNS:Publish"
+      Resource  = var.budget_emergency_topic_arn
+      Condition = {
+        StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+      }
+    }]
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {

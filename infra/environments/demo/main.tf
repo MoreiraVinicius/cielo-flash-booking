@@ -15,6 +15,10 @@ resource "aws_sns_topic" "operational_alerts" {
   name = "${var.name}-operational-alerts"
 }
 
+resource "aws_sns_topic" "budget_emergency" {
+  name = "${var.name}-budget-emergency"
+}
+
 resource "aws_sns_topic_subscription" "operational_email" {
   topic_arn = aws_sns_topic.operational_alerts.arn
   protocol  = "email"
@@ -72,5 +76,6 @@ module "edge_observability" {
   trusted_principal_arns     = var.trusted_principal_arns
   allowed_cidrs              = var.allowed_cidrs
   budget_alert_email         = var.budget_alert_email
+  budget_emergency_topic_arn = aws_sns_topic.budget_emergency.arn
   alarm_topic_arn            = aws_sns_topic.operational_alerts.arn
 }

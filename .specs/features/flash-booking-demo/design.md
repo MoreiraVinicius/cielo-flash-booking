@@ -260,11 +260,11 @@ Esses indicadores medem requisições e respostas HTTP. Eles não representam cl
 
 ## Corte automático por custo
 
-O Budget mensal da demo passa a US$50. A notificação de gasto real em 100% mantém o e-mail operacional e também publica no tópico SNS operacional. A política do tópico permite publicação somente pelo serviço AWS Budgets da própria conta; a inscrição SNS invoca uma Lambda privada de corte.
+O Budget mensal da demo passa a US$50. A notificação de gasto real em 100% mantém o e-mail operacional e também publica em um tópico SNS dedicado ao corte. A política desse tópico permite publicação somente pelo serviço AWS Budgets da própria conta; a inscrição SNS invoca uma Lambda privada de corte.
 
 ```mermaid
 flowchart LR
-    B[AWS Budgets: gasto real >= US$50] --> S[SNS operacional]
+    B[AWS Budgets: gasto real >= US$50] --> S[SNS dedicado ao corte]
     S --> L[Lambda de corte]
     L --> A[Application Auto Scaling: min/max = 0 e suspenso]
     L --> E[ECS: desiredCount = 0]

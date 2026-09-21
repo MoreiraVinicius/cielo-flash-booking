@@ -29,7 +29,12 @@ variable "allowed_cidrs" {
   }
 }
 variable "budget_alert_email" {
-  description = "Email address that receives the 50%, 80%, and 100% alerts for the US$5 demo budget."
+  description = "Email address that receives the 50%, 80%, and 100% alerts for the US$50 demo budget."
+  type        = string
+}
+
+variable "budget_emergency_topic_arn" {
+  description = "Dedicated SNS topic that receives the actual-spend 100% budget notification and triggers the emergency stop."
   type        = string
 }
 variable "waf_rate_limit" {
