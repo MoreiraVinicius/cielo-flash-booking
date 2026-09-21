@@ -183,13 +183,21 @@
 - **Trade-off:** O dashboard depende das convenções de nome dos recursos Terraform e widgets de Logs Insights podem gerar custo de consulta conforme a janela examinada; não há novos alarmes nem métricas customizadas.
 - **Scope:** Terraform de edge/observabilidade e operação da demo AWS.
 
+### AD-024 - Dashboard de negócio baseado em interações HTTP
+
+- **Status:** active
+- **Decision:** O dashboard `flash-booking-demo-negocio` apresenta em pt-BR a jornada e a experiência percebida usando métricas detalhadas já publicadas pelo API Gateway, com aviso explícito de que os valores representam interações e respostas HTTP.
+- **Reason:** O público de negócio precisa compreender interesse, tentativas, aceite e cancelamento sem navegar por recursos técnicos nem interpretar nomenclatura de infraestrutura.
+- **Trade-off:** Repetições idempotentes contam novamente e não existe informação de clientes únicos, reservas únicas, vendas ou receita; obter esses indicadores exigiria telemetria de domínio adicional fora deste escopo.
+- **Scope:** Terraform de edge/observabilidade e apresentação da demo AWS.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T31 concluída e validada.
-- **Completed**: Requisito DEMO-09, desenho operacional e decisão AD-023 registrados; dashboard publicado com 19 widgets; verificador independente aprovou 6/6 critérios, confirmou reconciliação remota e matou 1/1 mutação do sensor.
-- **In-progress**: Nenhum trabalho do dashboard em andamento.
-- **Next step**: Nenhum; o dashboard `flash-booking-demo-demo` está publicado e a T31 está encerrada.
+- **Phase / Task**: Execute / T32 implementada; verificação independente pendente.
+- **Completed**: Dashboard operacional T31 permanece publicado e validado; dashboard de negócio `flash-booking-demo-negocio` criado com 14 widgets em pt-BR e reconciliado sem diferença no recurso CloudWatch.
+- **In-progress**: Verificação independente e registro de evidência de DEMO-10.
+- **Next step**: Um verificador independente deve revisar DEMO-10, testes Terraform e o dashboard remoto, e registrar o resultado em `validation.md`.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

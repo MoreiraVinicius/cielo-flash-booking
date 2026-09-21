@@ -156,4 +156,94 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     )
     error_message = "Log widgets must query the existing API Gateway and all three ECS log groups."
   }
+
+  assert {
+    condition = (
+      aws_cloudwatch_dashboard.business.dashboard_name == "flash-booking-demo-negocio" &&
+      length(jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets) == 14 &&
+      length([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : widget if widget.type == "text"]) == 3 &&
+      length([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : widget if widget.type == "metric"]) == 11
+    )
+    error_message = "The business dashboard must be a separate 14-widget view with three explanatory sections and eleven business charts."
+  }
+
+  assert {
+    condition = length(setsubtract(
+      toset([
+        "Eventos publicados",
+        "Consultas de evento concluídas",
+        "Respostas de reserva aceitas",
+        "Cancelamentos concluídos",
+        "Interações por etapa",
+        "Resultados das tentativas de reserva",
+        "Taxa de aceite de reservas",
+        "Interações não concluídas por etapa",
+        "Acompanhamento após a reserva",
+        "Tempo para consultar um evento",
+        "Tempo para tentar uma reserva",
+      ]),
+      toset([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : try(widget.properties.title, "")]),
+    )) == 0
+    error_message = "The business dashboard must expose the complete customer journey with pt-BR titles."
+  }
+
+  assert {
+    condition = length(setsubtract(
+      toset(flatten([
+        for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : try([
+          for metric in widget.properties.metrics : try(metric[0].label, metric[length(metric) - 1].label, "")
+        ], [])
+      ])),
+      toset([
+        "Total de respostas",
+        "Não concluídas por regra ou entrada",
+        "Falhas técnicas",
+        "Eventos publicados",
+        "Consultas concluídas",
+        "Tentativas de reserva",
+        "Respostas aceitas",
+        "Solicitações de cancelamento",
+        "Cancelamentos concluídos",
+        "Consultas de evento",
+        "Consultas da reserva",
+        "Taxa de aceite (%)",
+        "Consulta: regra ou entrada",
+        "Consulta: falha técnica",
+        "Reserva: regra ou entrada",
+        "Reserva: falha técnica",
+        "Cancelamento: regra ou entrada",
+        "Cancelamento: falha técnica",
+        "Consulta não concluída por regra ou entrada",
+        "Consulta com falha técnica",
+        "Cancelamento não concluído por regra ou entrada",
+        "Cancelamento com falha técnica",
+        "Consultas da reserva concluídas",
+        "Mediana (p50)",
+        "95% das respostas (p95)",
+      ]),
+    )) == 0
+    error_message = "Every visible and supporting business metric label must belong to the approved pt-BR catalog."
+  }
+
+  assert {
+    condition = (
+      alltrue([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : try(widget.properties.period == 300, true)]) &&
+      alltrue(flatten([
+        for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : try([
+          for metric in widget.properties.metrics : try(metric[0].expression != "", contains(["", ".", "AWS/ApiGateway"], metric[0]))
+        ], [])
+      ]))
+    )
+    error_message = "Business charts must use five-minute periods and only existing detailed API Gateway metrics."
+  }
+
+  assert {
+    condition = (
+      strcontains(jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets[0].properties.markdown, "não clientes únicos, reservas únicas, vendas ou receita") &&
+      one([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : widget if try(widget.properties.title, "") == "Taxa de aceite de reservas"]).properties.metrics[3][0].expression == "IF(taxa_tentativas>0,100*(taxa_tentativas-taxa_4xx-taxa_5xx)/taxa_tentativas,0)" &&
+      one([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : widget if try(widget.properties.title, "") == "Interações por etapa"]).properties.metrics[0][4] == "Resource" &&
+      one([for widget in jsondecode(aws_cloudwatch_dashboard.business.dashboard_body).widgets : widget if try(widget.properties.title, "") == "Interações por etapa"]).properties.metrics[0][8] == "Method"
+    )
+    error_message = "The business view must disclose its counting boundary, calculate acceptance exactly, and use route-level metrics."
+  }
 }

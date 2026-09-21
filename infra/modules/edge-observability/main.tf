@@ -8,6 +8,8 @@ locals {
   query_target_group_arn_suffix   = split(":", var.query_target_group_arn)[5]
   command_target_group_arn_suffix = split(":", var.command_target_group_arn)[5]
   valkey_cache_cluster_id         = "${var.name}-valkey-001"
+  business_api_name               = "${var.name}-api"
+  business_stage_name             = "demo"
 
   api_invoker_assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -868,6 +870,260 @@ resource "aws_cloudwatch_dashboard" "demo" {
           query  = "SOURCE '/ecs/${var.name}/query-api' | SOURCE '/ecs/${var.name}/command-api' | SOURCE '/ecs/${var.name}/worker' | fields @timestamp, @log, @logStream, @message | filter @message like /ERROR|Exception|Caused by/ | sort @timestamp desc | limit 50"
         }
       }
+    ]
+  })
+}
+
+resource "aws_cloudwatch_dashboard" "business" {
+  dashboard_name = "${var.name}-negocio"
+  dashboard_body = jsonencode({
+    start          = "-PT24H"
+    periodOverride = "inherit"
+    widgets = [
+      {
+        type   = "text"
+        width  = 24
+        height = 3
+        properties = {
+          markdown = "# Visão de negócio\nAcompanhe interesse, aceite e experiência na jornada de reserva.\n\n**Como interpretar:** os números representam interações e respostas da aplicação, não clientes únicos, reservas únicas, vendas ou receita. Repetições idempotentes podem aparecer novamente."
+        }
+      },
+      {
+        type   = "metric"
+        width  = 6
+        height = 5
+        properties = {
+          title                = "Eventos publicados"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events", "Stage", local.business_stage_name, "Method", "POST", { id = "eventos_total", label = "Total de respostas", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "eventos_4xx", label = "Não concluídas por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "eventos_5xx", label = "Falhas técnicas", stat = "Sum", visible = false }],
+            [{ expression = "eventos_total-eventos_4xx-eventos_5xx", id = "eventos_publicados", label = "Eventos publicados", color = "#2ca02c" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 6
+        height = 5
+        properties = {
+          title                = "Consultas de evento concluídas"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}", "Stage", local.business_stage_name, "Method", "GET", { id = "consultas_total", label = "Total de respostas", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "consultas_4xx", label = "Não concluídas por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "consultas_5xx", label = "Falhas técnicas", stat = "Sum", visible = false }],
+            [{ expression = "consultas_total-consultas_4xx-consultas_5xx", id = "consultas_concluidas", label = "Consultas concluídas", color = "#1f77b4" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 6
+        height = 5
+        properties = {
+          title                = "Respostas de reserva aceitas"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { id = "reservas_total", label = "Tentativas de reserva", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "reservas_4xx", label = "Não concluídas por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "reservas_5xx", label = "Falhas técnicas", stat = "Sum", visible = false }],
+            [{ expression = "reservas_total-reservas_4xx-reservas_5xx", id = "reservas_aceitas", label = "Respostas aceitas", color = "#2ca02c" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 6
+        height = 5
+        properties = {
+          title                = "Cancelamentos concluídos"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "DELETE", { id = "cancelamentos_total", label = "Solicitações de cancelamento", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "cancelamentos_4xx", label = "Não concluídas por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "cancelamentos_5xx", label = "Falhas técnicas", stat = "Sum", visible = false }],
+            [{ expression = "cancelamentos_total-cancelamentos_4xx-cancelamentos_5xx", id = "cancelamentos_concluidos", label = "Cancelamentos concluídos", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "text"
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Jornada do cliente"
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Interações por etapa"
+          region   = var.aws_region
+          view     = "timeSeries"
+          period   = 300
+          stat     = "Sum"
+          stacked  = false
+          liveData = true
+          legend   = { position = "bottom" }
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}", "Stage", local.business_stage_name, "Method", "GET", { label = "Consultas de evento", color = "#1f77b4" }],
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { label = "Tentativas de reserva", color = "#ff7f0e" }],
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "GET", { label = "Consultas da reserva", color = "#2ca02c" }],
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "DELETE", { label = "Solicitações de cancelamento", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Resultados das tentativas de reserva"
+          region   = var.aws_region
+          view     = "timeSeries"
+          period   = 300
+          stacked  = true
+          liveData = true
+          legend   = { position = "bottom" }
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { id = "tentativas", label = "Tentativas de reserva", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "nao_concluidas", label = "Não concluídas por regra ou entrada", stat = "Sum", color = "#ff7f0e" }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "falhas_tecnicas", label = "Falhas técnicas", stat = "Sum", color = "#d62728" }],
+            [{ expression = "tentativas-nao_concluidas-falhas_tecnicas", id = "aceitas", label = "Respostas aceitas", color = "#2ca02c" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 8
+        height = 5
+        properties = {
+          title                = "Taxa de aceite de reservas"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { id = "taxa_tentativas", label = "Tentativas de reserva", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "taxa_4xx", label = "Não concluídas por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "taxa_5xx", label = "Falhas técnicas", stat = "Sum", visible = false }],
+            [{ expression = "IF(taxa_tentativas>0,100*(taxa_tentativas-taxa_4xx-taxa_5xx)/taxa_tentativas,0)", id = "taxa_aceite", label = "Taxa de aceite (%)", color = "#2ca02c" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 8
+        height = 5
+        properties = {
+          title    = "Interações não concluídas por etapa"
+          region   = var.aws_region
+          view     = "timeSeries"
+          period   = 300
+          stacked  = false
+          liveData = true
+          legend   = { position = "bottom" }
+          metrics = [
+            ["AWS/ApiGateway", "4XXError", "ApiName", local.business_api_name, "Resource", "/events/{id}", "Stage", local.business_stage_name, "Method", "GET", { id = "consulta_4xx", label = "Consulta: regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "consulta_5xx", label = "Consulta: falha técnica", stat = "Sum", visible = false }],
+            ["AWS/ApiGateway", "4XXError", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { id = "reserva_4xx", label = "Reserva: regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "reserva_5xx", label = "Reserva: falha técnica", stat = "Sum", visible = false }],
+            ["AWS/ApiGateway", "4XXError", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "DELETE", { id = "cancelamento_4xx", label = "Cancelamento: regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "cancelamento_5xx", label = "Cancelamento: falha técnica", stat = "Sum", visible = false }],
+            [{ expression = "consulta_4xx+consulta_5xx", id = "consulta_nao_concluida", label = "Consultas de evento", color = "#1f77b4" }],
+            [{ expression = "reserva_4xx+reserva_5xx", id = "reserva_nao_concluida", label = "Tentativas de reserva", color = "#ff7f0e" }],
+            [{ expression = "cancelamento_4xx+cancelamento_5xx", id = "cancelamento_nao_concluido", label = "Solicitações de cancelamento", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 8
+        height = 5
+        properties = {
+          title                = "Acompanhamento após a reserva"
+          region               = var.aws_region
+          view                 = "singleValue"
+          period               = 300
+          setPeriodToTimeRange = true
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "GET", { id = "acompanhamento_total", label = "Consultas da reserva", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "acompanhamento_4xx", label = "Consulta não concluída por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "acompanhamento_5xx", label = "Consulta com falha técnica", stat = "Sum", visible = false }],
+            ["AWS/ApiGateway", "Count", "ApiName", local.business_api_name, "Resource", "/reservations/{id}", "Stage", local.business_stage_name, "Method", "DELETE", { id = "encerramento_total", label = "Solicitações de cancelamento", stat = "Sum", visible = false }],
+            [".", "4XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "encerramento_4xx", label = "Cancelamento não concluído por regra ou entrada", stat = "Sum", visible = false }],
+            [".", "5XXError", ".", ".", ".", ".", ".", ".", ".", ".", { id = "encerramento_5xx", label = "Cancelamento com falha técnica", stat = "Sum", visible = false }],
+            [{ expression = "acompanhamento_total-acompanhamento_4xx-acompanhamento_5xx", id = "consultas_reserva", label = "Consultas da reserva concluídas", color = "#1f77b4" }],
+            [{ expression = "encerramento_total-encerramento_4xx-encerramento_5xx", id = "cancelamentos_finais", label = "Cancelamentos concluídos", color = "#9467bd" }],
+          ]
+        }
+      },
+      {
+        type   = "text"
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Experiência percebida"
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Tempo para consultar um evento"
+          region   = var.aws_region
+          view     = "timeSeries"
+          period   = 300
+          stacked  = false
+          liveData = true
+          legend   = { position = "bottom" }
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", local.business_api_name, "Resource", "/events/{id}", "Stage", local.business_stage_name, "Method", "GET", { label = "Mediana (p50)", stat = "p50", color = "#1f77b4" }],
+            [".", "Latency", ".", ".", ".", ".", ".", ".", ".", ".", { label = "95% das respostas (p95)", stat = "p95", color = "#ff7f0e" }],
+          ]
+          yAxis = {
+            left = { min = 0, label = "Milissegundos" }
+          }
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title    = "Tempo para tentar uma reserva"
+          region   = var.aws_region
+          view     = "timeSeries"
+          period   = 300
+          stacked  = false
+          liveData = true
+          legend   = { position = "bottom" }
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", local.business_api_name, "Resource", "/events/{id}/reservations", "Stage", local.business_stage_name, "Method", "POST", { label = "Mediana (p50)", stat = "p50", color = "#1f77b4" }],
+            [".", "Latency", ".", ".", ".", ".", ".", ".", ".", ".", { label = "95% das respostas (p95)", stat = "p95", color = "#ff7f0e" }],
+          ]
+          yAxis = {
+            left = { min = 0, label = "Milissegundos" }
+          }
+        }
+      },
     ]
   })
 }

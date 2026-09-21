@@ -6,7 +6,7 @@ Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente 
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
 **Status:** Complete
-**Task count:** 31
+**Task count:** 32
 
 ## Test Coverage Matrix
 
@@ -75,6 +75,7 @@ T27 -> T28
 T28 -> T29
 T29 -> T30
 T30 -> T31
+T31 -> T32
 
 ```
 
@@ -463,6 +464,18 @@ T30 -> T31
 **Gate:** Infra
 **Commit:** `feat(observability): expand demo dashboard`
 
+### T32: Criar o dashboard de negócio em pt-BR
+
+**Status:** Complete
+**What:** Criar uma visão CloudWatch separada e compreensível para público de negócio, com jornada, respostas aceitas, taxa de aceite e latência percebida em pt-BR.
+**Where:** `infra/modules/edge-observability/`, `.specs/features/flash-booking-demo/` e `.specs/STATE.md`
+**Depends on:** T31
+**Requirement:** DEMO-10
+**Done when:** `flash-booking-demo-negocio` usa apenas métricas detalhadas existentes do API Gateway; todo texto e legenda visível está em pt-BR; a limitação entre interações HTTP e entidades/vendas únicas está explícita; testes estruturais e observação remota comprovam os oito critérios.
+**Tests:** static, terraform test, terraform validate e leitura remota do dashboard
+**Gate:** Infra
+**Commit:** `feat(observability): add business dashboard in pt-br`
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -471,7 +484,7 @@ T30 -> T31
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T31 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; o painel operacional sucede a infraestrutura implantada. Match. |
+| Quality | T26-T32 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada. Match. |
 
 ## Test Co-location Validation
 
@@ -486,3 +499,4 @@ T30 -> T31
 | T29 | Verification | all | Fresh verifier | OK |
 | T30 | Event window | unit/integration/cache/HTTP/migration | Feature plan mantém os testes junto da implementação | OK |
 | T31 | CloudWatch dashboard | static/terraform test/plan | Testes estruturais e plano permanecem junto da alteração Terraform | OK |
+| T32 | Business dashboard | static/terraform test/remote read | Catálogo pt-BR e semântica das métricas são verificados junto da alteração Terraform | OK |

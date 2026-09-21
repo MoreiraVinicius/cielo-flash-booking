@@ -171,6 +171,23 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Teste independente:** Executar o teste Terraform do módulo, inspecionar o JSON do dashboard e confirmar em `terraform plan` que a mudança remota atualiza somente o dashboard CloudWatch.
 
+### P1: Acompanhar a jornada de negócio em português
+
+**História:** Como cliente de negócio, quero entender o interesse e a conversão da demo sem precisar interpretar termos de infraestrutura.
+
+**Acceptance Criteria:**
+
+1. WHEN o dashboard `flash-booking-demo-negocio` for aberto THEN o sistema SHALL apresentar todos os títulos, textos explicativos e legendas visíveis em pt-BR.
+2. WHEN o período do dashboard for selecionado THEN o sistema SHALL resumir eventos publicados, consultas de evento concluídas, respostas de reserva aceitas e cancelamentos concluídos nesse período.
+3. WHEN a jornada for analisada THEN o sistema SHALL comparar consultas de evento, tentativas de reserva, consultas de reserva e solicitações de cancelamento ao longo do tempo.
+4. WHEN os resultados de reserva forem analisados THEN o sistema SHALL separar respostas aceitas, respostas não concluídas por regra ou entrada e falhas técnicas.
+5. WHEN existirem tentativas de reserva THEN o sistema SHALL calcular a taxa de aceite como `100 * respostas aceitas / tentativas`; WHEN não existirem tentativas THEN o sistema SHALL exibir zero.
+6. WHEN a experiência percebida for analisada THEN o sistema SHALL exibir latências p50 e p95 separadas para consulta de evento e tentativa de reserva.
+7. The dashboard SHALL state that its numbers count API interactions and responses, not unique customers, unique reservations, sales, or revenue.
+8. The dashboard SHALL use only the existing detailed API Gateway metrics, SHALL use five-minute periods, and SHALL NOT create custom metrics, alarms, log queries, or retention changes.
+
+**Teste independente:** Executar o teste Terraform do módulo, conferir que todo texto e legenda visível pertence ao catálogo pt-BR e validar remotamente a estrutura do dashboard publicado.
+
 ## Edge Cases
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
@@ -197,8 +214,9 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-07 | Proteger a API e limitar abuso | Execute | Validated |
 | DEMO-08 | Janela comercial do evento | Execute | Verified |
 | DEMO-09 | Operar a demo por um painel único | Execute | Validated |
+| DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Implemented |
 
-**Cobertura:** 9 requisitos, 9 mapeados ao design, nenhum sem mapeamento.
+**Cobertura:** 10 requisitos, 10 mapeados ao design, nenhum sem mapeamento.
 
 ## Success Criteria
 
@@ -215,3 +233,4 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - [x] Docker Compose inicia a solução completa.
 - [x] Terraform representa todos os recursos AWS da demo.
 - [x] O dashboard CloudWatch reúne sinais de borda, runtime, dados, filas e investigação de logs sem criar telemetria adicional.
+- [x] O dashboard de negócio apresenta jornada, aceite e experiência percebida em pt-BR sem confundir respostas HTTP com clientes únicos ou vendas.
