@@ -199,10 +199,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T34 implementada localmente, aguardando validação raiz e aplicação remota.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta. T34 implementou a Lambda idempotente, suas permissões mínimas e a assinatura SNS; os dois testes unitários e o `terraform test` do módulo passaram.
-- **In-progress**: Validar o ambiente raiz e aplicar o plano de corte automático.
-- **Next step**: Renovar a credencial do perfil `demo-provisioner`, executar `terraform validate`/plan no ambiente demo, revisar e aplicar os recursos; depois registrar o commit atômico de T34 e a verificação independente.
-- **Blockers**: `terraform init` do ambiente demo falha no STS com `InvalidClientTokenId`; o perfil configurado em `demo.tfvars` não fornece credenciais AWS válidas nesta sessão.
+- **Phase / Task**: Execute / T34 concluída e aplicada; verificação independente pendente.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta. T34 criou a Lambda idempotente, permissões mínimas e assinatura SNS. Aplicação direcionada criou 8 recursos e atualizou 1, sem destruição. Testes unitários, `terraform test`, `terraform validate`, leitura remota e plano direcionado reconciliado passaram.
+- **In-progress**: Verificação independente de DEMO-11.
+- **Next step**: Um verificador independente deve revisar DEMO-11, testes, plano e evidência remota, executar sensor de discriminação e registrar o resultado em `validation.md`.
+- **Blockers**: Nenhum.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

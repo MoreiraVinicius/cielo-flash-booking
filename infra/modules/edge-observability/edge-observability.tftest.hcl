@@ -34,6 +34,9 @@ mock_provider "aws" {
   mock_resource "aws_api_gateway_stage" {
     defaults = { arn = "arn:aws:apigateway:sa-east-1::/restapis/mockapi/stages/demo" }
   }
+  mock_resource "aws_lambda_function" {
+    defaults = { arn = "arn:aws:lambda:sa-east-1:123456789012:function:mock" }
+  }
   mock_data "aws_caller_identity" {
     defaults = { account_id = "123456789012" }
   }
@@ -55,6 +58,12 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
     allowed_cidrs              = ["203.0.113.10/32"]
     budget_alert_email         = "alerts@example.com"
     budget_emergency_topic_arn = "arn:aws:sns:sa-east-1:123456789012:budget-emergency"
+    ecs_cluster_arn            = "arn:aws:ecs:sa-east-1:123456789012:cluster/flash-booking-demo-cluster"
+    ecs_service_names          = ["query-api", "command-api", "worker"]
+    ecs_service_arns           = ["arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/query-api", "arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/command-api", "arn:aws:ecs:sa-east-1:123456789012:service/flash-booking-demo-cluster/worker"]
+    ecs_scalable_target_arns   = ["arn:aws:application-autoscaling:sa-east-1:123456789012:scalable-target/query", "arn:aws:application-autoscaling:sa-east-1:123456789012:scalable-target/command"]
+    database_identifier        = "flash-booking-demo-postgres"
+    database_arn               = "arn:aws:rds:sa-east-1:123456789012:db:flash-booking-demo-postgres"
     alarm_topic_arn            = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
@@ -76,6 +85,30 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   assert {
     condition     = one([for rule in aws_wafv2_web_acl.api.rule : rule if rule.name == "RateLimit"]).statement[0].rate_based_statement[0].limit == var.waf_rate_limit && aws_budgets_budget.demo.limit_amount == "50" && length(aws_budgets_budget.demo.notification) == 3
     error_message = "The edge must rate-limit requests and create all three notifications for the US$50 budget."
+  }
+
+  assert {
+    condition     = aws_lambda_permission.budget_emergency.principal == "sns.amazonaws.com" && aws_lambda_permission.budget_emergency.source_arn == var.budget_emergency_topic_arn && aws_sns_topic_subscription.budget_emergency.protocol == "lambda" && aws_sns_topic_subscription.budget_emergency.topic_arn == var.budget_emergency_topic_arn
+    error_message = "Only the dedicated Budget topic must invoke the emergency-stop Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.cost_emergency_stop.handler == "cost_emergency_stop.handler" &&
+      aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_CLUSTER == var.ecs_cluster_arn &&
+      toset(jsondecode(aws_lambda_function.cost_emergency_stop.environment[0].variables.ECS_SERVICE_NAMES)) == toset(var.ecs_service_names) &&
+      aws_lambda_function.cost_emergency_stop.environment[0].variables.DATABASE_IDENTIFIER == var.database_identifier
+    )
+    error_message = "The emergency-stop Lambda must receive exactly the demo cluster, three services, and database identifier."
+  }
+
+  assert {
+    condition = (
+      toset(one([for statement in jsondecode(aws_iam_role_policy.cost_emergency_stop.policy).Statement : statement if statement.Action == "ecs:UpdateService"]).Resource) == toset(var.ecs_service_arns) &&
+      toset(one([for statement in jsondecode(aws_iam_role_policy.cost_emergency_stop.policy).Statement : statement if statement.Action == "application-autoscaling:RegisterScalableTarget"]).Resource) == toset(var.ecs_scalable_target_arns) &&
+      one([for statement in jsondecode(aws_iam_role_policy.cost_emergency_stop.policy).Statement : statement if statement.Action == "rds:StopDBInstance"]).Resource == var.database_arn
+    )
+    error_message = "The emergency-stop role must limit ECS, autoscaling, and RDS writes to the demo resources."
   }
 
   assert {

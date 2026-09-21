@@ -519,6 +519,102 @@ resource "aws_sns_topic_policy" "budget_emergency" {
   })
 }
 
+locals {
+  cost_emergency_stop_name = "${var.name}-cost-emergency-stop"
+}
+
+data "archive_file" "cost_emergency_stop" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/cost_emergency_stop.py"
+  output_path = "${path.root}/.terraform/${local.cost_emergency_stop_name}.zip"
+}
+
+resource "aws_iam_role" "cost_emergency_stop" {
+  name = local.cost_emergency_stop_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_cloudwatch_log_group" "cost_emergency_stop" {
+  name              = "/aws/lambda/${local.cost_emergency_stop_name}"
+  retention_in_days = 7
+  tags              = local.tags
+}
+
+resource "aws_iam_role_policy" "cost_emergency_stop" {
+  name = "stop-demo-resources-at-budget-limit"
+  role = aws_iam_role.cost_emergency_stop.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "${aws_cloudwatch_log_group.cost_emergency_stop.arn}:*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "application-autoscaling:RegisterScalableTarget"
+        Resource = var.ecs_scalable_target_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ecs:UpdateService"
+        Resource = var.ecs_service_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = "rds:StopDBInstance"
+        Resource = var.database_arn
+      },
+    ]
+  })
+}
+
+resource "aws_lambda_function" "cost_emergency_stop" {
+  function_name    = local.cost_emergency_stop_name
+  role             = aws_iam_role.cost_emergency_stop.arn
+  handler          = "cost_emergency_stop.handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.cost_emergency_stop.output_path
+  source_code_hash = data.archive_file.cost_emergency_stop.output_base64sha256
+  timeout          = 30
+  memory_size      = 128
+
+  environment {
+    variables = {
+      ECS_CLUSTER         = var.ecs_cluster_arn
+      ECS_SERVICE_NAMES   = jsonencode(var.ecs_service_names)
+      DATABASE_IDENTIFIER = var.database_identifier
+    }
+  }
+
+  depends_on = [aws_cloudwatch_log_group.cost_emergency_stop]
+  tags       = local.tags
+}
+
+resource "aws_lambda_permission" "budget_emergency" {
+  statement_id  = "AllowBudgetEmergencyTopic"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cost_emergency_stop.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = var.budget_emergency_topic_arn
+}
+
+resource "aws_sns_topic_subscription" "budget_emergency" {
+  topic_arn = var.budget_emergency_topic_arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.cost_emergency_stop.arn
+
+  depends_on = [aws_lambda_permission.budget_emergency]
+}
+
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name          = "${var.name}-api-5xx"
   alarm_description   = "API Gateway returned server errors."

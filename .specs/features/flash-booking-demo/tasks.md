@@ -492,9 +492,9 @@ T33 -> T34
 
 ### T34: Criar o mecanismo recuperável de corte de custo
 
-**Status:** Pending
+**Status:** Complete
 **What:** Criar Lambda, função de parada idempotente, role de mínimo privilégio, assinatura SNS, permissões e testes que congelam os dois alvos de autoscaling, param os três serviços ECS e solicitam a parada do RDS.
-**Where:** `infra/modules/edge-observability/`, `infra/modules/compute/outputs.tf`, `infra/modules/data-plane/outputs.tf` e `infra/environments/demo/main.tf`
+**Where:** composição Terraform da demo e módulo `edge-observability`
 **Depends on:** T33
 **Requirement:** DEMO-11
 **Done when:** A Lambda só é invocável pelo SNS operacional, possui somente permissões de logs, `RegisterScalableTarget`, `UpdateService` e `StopDBInstance` nos recursos da demo, e seu handler trata reentrega SNS/RDS já parado sem reativar ou apagar recursos.

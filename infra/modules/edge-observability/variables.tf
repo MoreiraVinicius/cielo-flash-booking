@@ -37,6 +37,36 @@ variable "budget_emergency_topic_arn" {
   description = "Dedicated SNS topic that receives the actual-spend 100% budget notification and triggers the emergency stop."
   type        = string
 }
+
+variable "ecs_cluster_arn" {
+  description = "ECS cluster that owns the recoverable demo services."
+  type        = string
+}
+
+variable "ecs_service_names" {
+  description = "The three ECS services set to zero by the emergency stop."
+  type        = list(string)
+}
+
+variable "ecs_service_arns" {
+  description = "Exact ECS service ARNs granted to the emergency-stop Lambda."
+  type        = list(string)
+}
+
+variable "ecs_scalable_target_arns" {
+  description = "Exact Application Auto Scaling target ARNs frozen by the emergency-stop Lambda."
+  type        = list(string)
+}
+
+variable "database_identifier" {
+  description = "RDS instance identifier stopped by the emergency-stop Lambda."
+  type        = string
+}
+
+variable "database_arn" {
+  description = "Exact RDS instance ARN granted to the emergency-stop Lambda."
+  type        = string
+}
 variable "waf_rate_limit" {
   description = "Maximum requests from one source IP in the WAF evaluation window."
   type        = number

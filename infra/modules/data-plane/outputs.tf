@@ -8,6 +8,9 @@ output "database_port" {
   value       = aws_db_instance.postgres.port
 }
 
+output "database_identifier" { value = aws_db_instance.postgres.identifier }
+output "database_arn" { value = aws_db_instance.postgres.arn }
+
 output "database_secret_arn" {
   description = "ARN of the RDS-managed Secrets Manager secret containing database credentials."
   value       = try(aws_db_instance.postgres.master_user_secret[0].secret_arn, null)

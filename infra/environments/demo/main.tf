@@ -77,5 +77,11 @@ module "edge_observability" {
   allowed_cidrs              = var.allowed_cidrs
   budget_alert_email         = var.budget_alert_email
   budget_emergency_topic_arn = aws_sns_topic.budget_emergency.arn
+  ecs_cluster_arn            = module.compute.ecs_cluster_arn
+  ecs_service_names          = [module.compute.query_service_name, module.compute.command_service_name, module.compute.worker_service_name]
+  ecs_service_arns           = module.compute.ecs_service_arns
+  ecs_scalable_target_arns   = module.compute.ecs_scalable_target_arns
+  database_identifier        = module.data_plane.database_identifier
+  database_arn               = module.data_plane.database_arn
   alarm_topic_arn            = aws_sns_topic.operational_alerts.arn
 }
