@@ -421,3 +421,82 @@ No implementation defect, surviving mutation or requirement gap was found. The d
 | DEMO-10 | Implemented | Validated |
 
 **Final verdict:** PASS — T32 is ready. The orchestrator should update `spec.md` traceability and `.specs/STATE.md` handoff in its closing commit; this verifier intentionally changed only `validation.md`.
+
+## Independent verification — DEMO-11 / T33-T35 automatic cost cutoff
+
+- **Verifier date:** 2026-09-21
+- **Reviewed commits:** `3c2ff33`, `e015c6c`, `48176a9` and `d6e6486`
+- **Verifier:** independent sub-agent (author != verifier)
+- **Scope:** Budget at US$50, dedicated SNS delivery, least-privilege Lambda, the recoverable ECS/RDS stop sequence and the cluster-name correction for Application Auto Scaling. AWS inspection was read-only; SNS was not published and Lambda was not invoked because either action would pause the live demo.
+
+### Verdict
+
+**Overall: PASS.** The deployed configuration and the tested handler meet DEMO-11. The safe evidence strategy intentionally does not perform an end-to-end SNS publication against the running environment.
+
+### Spec-anchored acceptance criteria
+
+| Criterion | Spec-defined outcome | Evidence (`file:line` + assertion or remote observation) | Result |
+| --- | --- | --- | --- |
+| DEMO-11 AC1 | At actual monthly US$50, Budget notifies the dedicated SNS topic and the topic invokes the cutoff mechanism. | `infra/modules/edge-observability/main.tf:485-497` sets a monthly USD 50 Budget and subscribes its actual 100% notification to the dedicated topic; `edge-observability.tftest.hcl:87,117,122` asserts the limit, subscription and Budgets-only topic policy. Read-only AWS observation returned `50.0 USD`, actual thresholds 50/80/100, the 100% SNS subscriber, a Lambda subscription and an Active Lambda. | PASS |
+| DEMO-11 AC2 | Freeze autoscaling at min/max zero for query/command and set desired count zero for all three ECS services. | `cost_emergency_stop.py:19-32` registers only the two scalable targets with all scale actions suspended and updates query, command and worker to `desiredCount=0`; `cost_emergency_stop_test.py:49-65` asserts those exact calls, capacities and service set. The test killed the ARN-as-ResourceId mutant below. | PASS |
+| DEMO-11 AC3 | Request PostgreSQL stop after ECS reduction. | `cost_emergency_stop.py:31-36` orders ECS updates before `StopDBInstance`; `cost_emergency_stop_test.py:67` asserts the database identifier. | PASS |
+| DEMO-11 AC4 | Re-delivery or already-stopped RDS is safe and does not recreate, delete or reactivate resources. | The operations only set zero/stop values in `cost_emergency_stop.py:19-45`; `cost_emergency_stop_test.py:34-40,69-72` simulates `InvalidDBInstanceState` for an already stopped database and asserts `already-stopped`. | PASS |
+| DEMO-11 AC5 | Lambda has only logs, two autoscaling targets, three ECS services and the demo RDS permissions. | `main.tf:550-577` contains exactly those IAM actions/resources; `edge-observability.tftest.hcl:109-111` asserts the scoped resource sets. Read-only IAM observation returned exactly those four policy statements and no wildcard operational action. | PASS |
+| DEMO-11 AC6 | ALB, Valkey, network, storage, WAF, API Gateway and data remain provisioned and residual cost is declared. | `spec.md:203` and `design.md:276` explicitly preserve those resources and declare residual cost; the handler has no deletion or change operation for them (`cost_emergency_stop.py:19-45`). | PASS |
+| DEMO-11 AC7 | Documentation declares periodic Budget processing and no exact US$50 ceiling. | `spec.md:204` and `design.md:276,280` state the delayed cost processing and non-exact cap. | PASS |
+
+**Spec-anchored status:** 7/7 outcomes have precise implementation or configuration evidence; no spec-precision gap found.
+
+### Remote read-only observation
+
+The independent read used account `581645023528` through assumed role `FlashBookingDemoProvisioner` in `sa-east-1` on 2026-09-21.
+
+| Check | Observed result |
+| --- | --- |
+| Budget | `flash-booking-demo-monthly-cap`, monthly COST, `50.0 USD`; actual thresholds 50%, 80%, 100% |
+| 100% subscribers | Operational email plus `arn:aws:sns:sa-east-1:581645023528:flash-booking-demo-budget-emergency` |
+| SNS policy | Only `budgets.amazonaws.com` may publish, constrained to account `581645023528` |
+| SNS delivery | One Lambda subscription to `flash-booking-demo-cost-emergency-stop` |
+| Lambda | `Active`, handler `cost_emergency_stop.handler`, timeout 30 seconds; distinct cluster ARN and name variables are deployed |
+| Lambda permission | `sns.amazonaws.com` only, constrained to the dedicated topic ARN |
+| Execution policy | Logs only, exactly two Application Auto Scaling target ARNs, three ECS service ARNs and the single demo RDS ARN |
+
+### Gate evidence
+
+| Gate | Result |
+| --- | --- |
+| `python -m unittest infra/modules/edge-observability/lambda/cost_emergency_stop_test.py -v` | PASS — 2 passed, 0 failed |
+| `terraform test` in `infra/modules/edge-observability` | PASS — 1 passed, 0 failed |
+| `terraform validate` in `infra/environments/demo` | PASS — configuration valid |
+| `validate_spec.py .specs/features/flash-booking-demo/spec.md --strict` | PASS — 0 errors, 0 warnings |
+| `validate_tasks.py .specs/features/flash-booking-demo/tasks.md --strict` | PASS — 0 errors, 0 warnings |
+| `git diff --check d6e6486^..d6e6486` | PASS — no output |
+
+### Discrimination sensor
+
+The preferred temporary worktree could not be created because this execution identity cannot write Git's `.git/worktrees` metadata. The fallback copied only the Lambda and its unit test to the system temporary directory; the real tree was never edited. The temporary copy was deleted after the test.
+
+| Mutation | File:line | Targeted assertion | Result |
+| --- | --- | --- | --- |
+| Use `cluster_arn` instead of `cluster_name` in the Application Auto Scaling `ResourceId` | `cost_emergency_stop.py:24` | `cost_emergency_stop_test.py:52-58` requires `service/cluster-name/{service}` | KILLED — 1 of 2 tests failed with expected `cluster-name` and mutated `cluster-arn` values |
+
+**Sensor result:** 1/1 killed, 0 survived. The real-tree porcelain after cleanup matched its baseline; only pre-existing `scripts/compose-smoke.ps1` and generated Lambda `__pycache__/` remained changed/untracked.
+
+### Code quality and limitation
+
+| Check | Result |
+| --- | --- |
+| Surgical scope and no destructive infrastructure action | PASS |
+| ARN/name separation protects Application Auto Scaling while preserving ECS API input | PASS — `cost_emergency_stop.py:24,32` and unit assertions `:54-65` |
+| Tests map to DEMO-11 and assert concrete zero/suspension values | PASS |
+| Documented guidance followed | PASS — `.specs/STATE.md` AD-026 and `AGENTS.md` Terraform/spec workflow |
+
+No test SNS message was published and no remote Lambda invocation was made: those are intentionally omitted to avoid triggering the real circuit breaker and stopping the demo. This is an operational-safety limitation, not a configuration discrepancy; the deployed subscription, invocation permission, Lambda configuration and handler behavior were independently verified by read-only observation and local tests.
+
+### Requirement traceability update
+
+| Requirement | Previous status | Verified status |
+| --- | --- | --- |
+| DEMO-11 | Implemented | Validated |
+
+**Final verdict:** PASS — the orchestrator may mark DEMO-11 `Validated` and complete the handoff.

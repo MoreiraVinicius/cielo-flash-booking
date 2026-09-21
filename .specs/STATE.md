@@ -199,10 +199,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T35 concluída e aplicada; verificação independente pendente.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e T33/T35 foram aplicados. O plano inicial criou 8 recursos e atualizou 1; a correção direcionada atualizou somente a Lambda para separar ARN e nome do cluster. Testes unitários, `terraform test`, `terraform validate` e leitura remota passaram.
-- **In-progress**: Verificação independente de DEMO-11.
-- **Next step**: Um verificador independente deve revisar DEMO-11, testes, plano e evidência remota, executar sensor de discriminação e registrar o resultado em `validation.md`.
+- **Phase / Task**: Execute / DEMO-11 concluída e validada.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e T33/T35 foram aplicados. O plano inicial criou 8 recursos e atualizou 1; a correção direcionada atualizou somente a Lambda para separar ARN e nome do cluster. A verificação independente aprovou 7/7 critérios, os testes unitários, `terraform test`, `terraform validate`, validadores das specs, leitura remota e sensor de discriminação (1/1 mutação eliminada).
+- **In-progress**: Nenhum.
+- **Next step**: Nenhum.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`
