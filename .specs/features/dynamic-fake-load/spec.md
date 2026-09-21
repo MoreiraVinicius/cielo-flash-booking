@@ -203,11 +203,11 @@ O baseline atual usa poucos dados previsíveis, dura 15 segundos e não encontra
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | LOAD-01 | Dados fake dinâmicos e reproduzíveis | Execute | Implementing |
-| LOAD-02 | Smoke test | Design | In Design |
-| LOAD-03 | Stress test | Design | In Design |
-| LOAD-04 | Spike test | Design | In Design |
-| LOAD-05 | Capacity e load condicionado | Design | In Design |
-| LOAD-06 | Soak test | Design | In Design |
+| LOAD-02 | Smoke test | Execute | Implementing |
+| LOAD-03 | Stress test | Execute | Implementing |
+| LOAD-04 | Spike test | Execute | Implementing |
+| LOAD-05 | Capacity e load condicionado | Execute | Implementing |
+| LOAD-06 | Soak test | Execute | Implementing |
 | LOAD-07 | Evidência e observabilidade | Design | In Design |
 | LOAD-08 | Guardrails e auditoria de invariantes | Design | In Design |
 | LOAD-09 | Correlação CloudWatch somente leitura | Design | In Design |

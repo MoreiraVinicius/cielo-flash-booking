@@ -99,6 +99,8 @@ T06 -> T07 -> T08
 
 ### T02: Definir perfis e guardrails de carga
 
+**Status:** Complete
+
 **What:** Implementar a configuração declarativa de smoke, stress, spike, capacity, load e soak, incluindo validação de loopback e do forecast.
 **Where:** `performance/dynamic-load/lib/profile-config.js` e contrato co-localizado
 **Depends on:** T01
@@ -121,6 +123,7 @@ T06 -> T07 -> T08
 **Tests:** contract k6 no mesmo task
 **Gate:** Contract
 **Commit:** `test(performance): define load profiles and safety guards`
+**Result:** O contrato k6 aprovou 7/7 checks para os executores, forma de spike, forecast obrigatório, duas command-api, loopback e limites de taxa.
 
 ### T03: Implementar o engine de workloads k6
 
