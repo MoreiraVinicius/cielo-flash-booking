@@ -214,7 +214,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-07 | Proteger a API e limitar abuso | Execute | Validated |
 | DEMO-08 | Janela comercial do evento | Execute | Verified |
 | DEMO-09 | Operar a demo por um painel único | Execute | Validated |
-| DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Implemented |
+| DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Validated |
 
 **Cobertura:** 10 requisitos, 10 mapeados ao design, nenhum sem mapeamento.
 

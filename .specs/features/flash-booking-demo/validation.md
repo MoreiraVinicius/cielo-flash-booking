@@ -344,3 +344,80 @@ No implementation defect, surviving mutant, or spec-precision gap was found. The
 | DEMO-09 | Implemented | Validated |
 
 **Final verdict:** PASS — T31 is ready. The orchestrator should update `spec.md` traceability and `.specs/STATE.md` handoff in its closing commit; this verifier intentionally changed only `validation.md`.
+
+## Independent verification — DEMO-10 / T32 business dashboard
+
+- **Verifier date:** 2026-09-21
+- **Reviewed commit:** `96caff9c1429cfef9f785cd2aa1a86e0879f4b8a`
+- **Verifier:** independent sub-agent (author != verifier)
+- **Scope:** DEMO-10, T32, the `flash-booking-demo-negocio` CloudWatch resource and its Terraform structural test. No apply, deployment, or AWS resource change was performed.
+
+### Verdict
+
+**Overall:** PASS — all 8 DEMO-10 acceptance criteria match the versioned dashboard and the remote state reconciled by the read-only Terraform plan in `sa-east-1`.
+
+T32 is complete at `tasks.md:467-478`. The reviewed commit adds one CloudWatch dashboard, its structural assertions, and the corresponding specification, design and state updates. No application, alarm, custom metric, log-query or log-retention resource was introduced.
+
+### Spec-anchored acceptance criteria
+
+| Criterion | Spec-defined outcome | Evidence (`file:line`, assertion, or dated remote-plan observation) | Result |
+| --- | --- | --- | --- |
+| DEMO-10 AC1 | All visible titles, explanatory text and labels are pt-BR. | `main.tf:888` contains the explanatory text; `main.tf:896-1114` defines the business titles and labels. `edge-observability.tftest.hcl:171-225` permits only the approved pt-BR title and label catalog. The 2026-09-21 plan payload lists 11 pt-BR titles, the three pt-BR section texts, and 25 distinct pt-BR metric labels. | PASS |
+| DEMO-10 AC2 | The selected period summarizes published events, completed event lookups, accepted reservation responses and completed cancellations. | Four five-minute single-value cards are defined at `main.tf:896-961`; each subtracts `4XXError` and `5XXError` from its API Gateway `Count`. Their required titles are asserted at `edge-observability.tftest.hcl:171-187`. | PASS |
+| DEMO-10 AC3 | The journey compares event lookups, reservation attempts, reservation lookups and cancellation requests over time. | `main.tf:976-991` defines the four route-and-method series; `edge-observability.tftest.hcl:244-245` asserts the route-level `Resource` and `Method` dimensions. The reconciled payload contains `/events/{id} GET`, `/events/{id}/reservations POST`, `/reservations/{id} GET`, and `/reservations/{id} DELETE`. | PASS |
+| DEMO-10 AC4 | Reservation results separate accepted responses, rule/input non-completions and technical failures. | `main.tf:997-1011` defines accepted as `Count - 4XXError - 5XXError`, alongside the separate 4xx and 5xx series. The title and pt-BR label set are enforced by `edge-observability.tftest.hcl:177-225`. | PASS |
+| DEMO-10 AC5 | Acceptance is `100 * accepted / attempts`, returning zero when there are no attempts. | `main.tf:1017-1027` defines `IF(taxa_tentativas>0,100*(taxa_tentativas-taxa_4xx-taxa_5xx)/taxa_tentativas,0)`. The exact expression is asserted at `edge-observability.tftest.hcl:242-247`. | PASS |
+| DEMO-10 AC6 | Event-query and reservation-attempt latency expose separate p50 and p95 values. | `main.tf:1090-1105` and `main.tf:1111-1126` define the two latency charts with `p50` and `p95`; their labels are part of the catalog asserted at `edge-observability.tftest.hcl:193-225`. | PASS |
+| DEMO-10 AC7 | The dashboard states that it counts HTTP interactions/responses, not unique customers, reservations, sales or revenue. | `main.tf:888` declares this boundary verbatim. `edge-observability.tftest.hcl:242` asserts the required limitation text, consistent with AD-024 at `.specs/STATE.md:186-193`. | PASS |
+| DEMO-10 AC8 | Only existing detailed API Gateway metrics are used at five-minute periods; no custom metrics, alarms, log queries or retention changes are added. | `main.tf:899-1114` gives every metric widget `period = 300`; `edge-observability.tftest.hcl:230-237` asserts period 300 and `AWS/ApiGateway`/expression-only metric rows. The reconciled payload has 14 widgets: 3 text, 11 metric, 0 log; every metric period is 300 and its only namespace is `AWS/ApiGateway`. The reviewed diff adds only the dashboard resource. | PASS |
+
+**Spec-anchored status:** 8/8 ACs match the outcomes in `spec.md:180-194`; no spec-precision gap was found.
+
+### Remote reconciliation and drift separation
+
+The verifier attempted the requested direct `AWS_PROFILE=demo-provisioner aws sts get-caller-identity` and CloudWatch read on 2026-09-21. This execution environment has no AWS CLI profile or credentials, so it could not repeat that direct CLI lookup. It did not create credentials or alter AWS configuration.
+
+Instead, the verifier independently inspected the existing read-only `infra/environments/demo/post-business.plan`, generated on 2026-09-21 05:01:33 UTC with the configured `demo-provisioner` profile. Terraform's remote refresh records `module.edge_observability.aws_cloudwatch_dashboard.business` as **no-op** and exposes the reconciled dashboard body used above. The only non-no-op action is `module.edge_observability.aws_api_gateway_rest_api.this:update`.
+
+That API Gateway policy update is pre-existing drift, not part of T32: the earlier `post-dashboard.plan` from 2026-09-20 22:54:07 UTC reports the same sole update, while neither plan changes either CloudWatch dashboard. No plan or apply was run by this verifier.
+
+| Remote-plan check | Observed result |
+| --- | --- |
+| Dashboard identity | `flash-booking-demo-negocio` |
+| Widget inventory | 14 total: 3 text, 11 metric, 0 log |
+| Titles, texts and labels | All supplied dashboard strings are the approved pt-BR catalog; no English dashboard title or legend occurs |
+| Metric period and namespace | 11/11 metric widgets use `300`; the only published namespace is `AWS/ApiGateway` |
+| Reconciliation | Business dashboard is `no-op`; only the pre-existing API Gateway REST policy canonicalization remains an update |
+
+### Gate evidence
+
+| Gate | Result |
+| --- | --- |
+| `TF_CLI_CONFIG_FILE=NUL terraform fmt -check -recursive infra` | PASS, exit 0 |
+| `TF_CLI_CONFIG_FILE=NUL terraform test` in `infra/modules/edge-observability` | PASS — 1 run passed, 0 failed |
+| `TF_CLI_CONFIG_FILE=NUL terraform validate` in `infra/environments/demo` | PASS — configuration valid |
+| `validate_spec.py .specs/features/flash-booking-demo/spec.md` | PASS — 0 errors, 0 warnings |
+| `validate_tasks.py .specs/features/flash-booking-demo/tasks.md --strict` | PASS — 0 errors, 0 warnings |
+| `git diff --check 96caff9^ 96caff9` | PASS — no output |
+
+**Test integrity:** T32 adds five assertions at `edge-observability.tftest.hcl:160-247`. The reviewed diff removes no existing Terraform assertion; the checks are tied directly to widget inventory, pt-BR catalog, metric source/period, acceptance formula and route dimensions.
+
+### Discrimination sensor
+
+The sensor copied only `infra/modules/edge-observability` into the system temporary directory. In that isolated copy it changed the visible title `Eventos publicados` to `Published events`; the real worktree was never edited.
+
+| Mutation | Targeted assertion | Outcome |
+| --- | --- | --- |
+| Anglicize the visible `Eventos publicados` title | `edge-observability.tftest.hcl:171-187` requires every pt-BR journey title | KILLED — `terraform test` failed at line 171 with `The business dashboard must expose the complete customer journey with pt-BR titles.` (0 passed, 1 failed) |
+
+**Sensor result:** 1/1 mutation killed, 0 survived. The explicitly created temporary copy was removed. The real-tree porcelain immediately after cleanup exactly matched the pre-sensor baseline: deleted `docs/intellij-debug.md`, modified `scripts/compose-smoke.ps1`, and the pre-existing untracked `.tmp/`, `docs/research/`, `docs/rodar-localmente.md` and `scripts/generate-interview-audio.ps1`. None belongs to T32.
+
+### Gaps and traceability
+
+No implementation defect, surviving mutation or requirement gap was found. The direct AWS CLI profile is absent in this verifier environment; this is an environment-observation limitation, not a dashboard discrepancy, because the current remote-refresh plan independently proves the dashboard is reconciled as no-op. No lesson is distilled from this clean outcome.
+
+| Requirement | Previous status | Verified status |
+| --- | --- | --- |
+| DEMO-10 | Implemented | Validated |
+
+**Final verdict:** PASS — T32 is ready. The orchestrator should update `spec.md` traceability and `.specs/STATE.md` handoff in its closing commit; this verifier intentionally changed only `validation.md`.

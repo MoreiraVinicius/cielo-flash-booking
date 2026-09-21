@@ -194,10 +194,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T32 implementada; verificação independente pendente.
-- **Completed**: Dashboard operacional T31 permanece publicado e validado; dashboard de negócio `flash-booking-demo-negocio` criado com 14 widgets em pt-BR e reconciliado sem diferença no recurso CloudWatch.
-- **In-progress**: Verificação independente e registro de evidência de DEMO-10.
-- **Next step**: Um verificador independente deve revisar DEMO-10, testes Terraform e o dashboard remoto, e registrar o resultado em `validation.md`.
+- **Phase / Task**: Execute / T32 concluída e validada.
+- **Completed**: Dashboard operacional T31 permanece publicado e validado; dashboard de negócio `flash-booking-demo-negocio` criado com 14 widgets em pt-BR e reconciliado sem diferença no recurso CloudWatch. Verificador independente aprovou os 8 critérios de DEMO-10 e matou a mutação de controle.
+- **In-progress**: Nenhum.
+- **Next step**: Nenhum; a implementação de DEMO-10 está concluída.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`
