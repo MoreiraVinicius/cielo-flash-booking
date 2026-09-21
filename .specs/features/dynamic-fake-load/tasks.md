@@ -155,6 +155,8 @@ T06 -> T07 -> T08
 
 ### T04: Coletar telemetria local, CloudWatch e auditar invariantes
 
+**Status:** Complete
+
 **What:** Criar os samplers locais, a auditoria PostgreSQL e o coletor CloudWatch somente leitura para correlacionar uma janela AWS autorizada externamente.
 **Where:** `performance/dynamic-load/telemetry.ps1` e adaptador CloudWatch co-localizado
 **Depends on:** T03
@@ -179,6 +181,7 @@ T06 -> T07 -> T08
 **Tests:** integration e contract CloudWatch no mesmo task
 **Gate:** Contract + Smoke
 **Commit:** `test(performance): collect runtime and database telemetry`
+**Result:** O contrato CloudWatch aprovou a consulta read-only de 23 séries de um minuto e o smoke local coletou Docker, PostgreSQL e Valkey sem lacunas. A auditoria pós-carga aprovou 12/12 eventos para disponibilidade não negativa, quantidade positiva e balanço de inventário.
 
 ### T05: Normalizar resultados e emitir verdict
 
