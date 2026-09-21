@@ -97,7 +97,7 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 
 | Restrição observada | Alternativa | Consequência |
 | --- | --- | --- |
-| Confirmação síncrona obrigatória | DynamoDB com inventário particionado e escritas condicionais | Exige novo modelo e código; não é uma simples troca de infraestrutura e só pode ocorrer após nova ADR. |
+| Confirmação síncrona obrigatória | DynamoDB com inventário particionado e escritas condicionais | Exige novo modelo e código; não é uma simples troca de infraestrutura e só pode ocorrer após uma nova decisão em STATE.md. |
 | Confirmação assíncrona aceita | SQS FIFO com grupo por evento | Absorve rajadas, mas a API passa a retornar 202. |
 | Muitos times e plataforma Kubernetes | EKS | Melhora padronização organizacional, não o hot row por si só. |
 
@@ -123,7 +123,7 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 | Cache desatualizado | Usuário vê disponibilidade antiga | TTL máximo de um segundo e invalidação pós-commit; o comando sempre revalida no writer, portanto inconsistência visual não vira oversell. |
 | Réplica Aurora atrasada | Consulta de evento mostra valor antigo ou reserva recém-criada parece ausente | Disponibilidade aceita consistência eventual; consulta de reserva usa endpoint read-write para leitura após escrita. |
 | Escala do ECS supera banco | Mais conexões e lock waits sem maior vazão | RDS Proxy controla conexões; o máximo do serviço de comandos vem do benchmark e não pode ultrapassar a capacidade validada do writer. |
-| Linha quente de evento | p95/p99 de reserva cresce mesmo com mais tasks | Medir lock waits por evento, aplicar admissão e pré-escala; considerar mudança de modelo somente por nova ADR quando o SLO falhar após tuning. |
+| Linha quente de evento | p95/p99 de reserva cresce mesmo com mais tasks | Medir lock waits por evento, aplicar admissão e pré-escala; considerar mudança de modelo somente por nova decisão em STATE.md quando o SLO falhar após tuning. |
 | Redução de tasks interrompe trabalho | Requisição ou mensagem em voo volta a ser processada | Drenagem do ALB, SIGTERM, `stopTimeout`, idempotência e redelivery da fila. |
 | Publishers concorrentes leem o mesmo lote | Mensagens, tentativas, logs e custo crescem proporcionalmente ao número de workers | Claim/lease atômico e limitado com `FOR UPDATE SKIP LOCKED`; teste sincronizado com dois publishers. |
 | Publisher encerra após o claim | Evento permanece temporariamente indisponível | Lease curto baseado no relógio PostgreSQL devolve elegibilidade; backlog e idade do claim geram sinal operacional. |
@@ -147,7 +147,7 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 
 ## Modelagem de dados
 
-A arquitetura parte da [modelagem da demo](../../../docs/data-model.md) e mantém um único schema Flyway para os dois ambientes. A promoção acrescenta ao `outbox_event` apenas estado operacional de claim, com token opaco e `lease_until TIMESTAMPTZ`, além de um acesso indexável aos eventos não publicados elegíveis. O adaptador adquire um lote limitado com `FOR UPDATE SKIP LOCKED` e atualiza token, lease e tentativas em uma transação curta. `markPublished` exige o mesmo token e limpa o claim. Não existe tabela ou modelo de negócio exclusivo do ambiente high-load.
+A arquitetura parte do [modelo de referência da demo](../flash-booking-demo/design.md) e mantém um único schema Flyway para os dois ambientes. A promoção acrescenta ao `outbox_event` apenas estado operacional de claim, com token opaco e `lease_until TIMESTAMPTZ`, além de um acesso indexável aos eventos não publicados elegíveis. O adaptador adquire um lote limitado com `FOR UPDATE SKIP LOCKED` e atualiza token, lease e tentativas em uma transação curta. `markPublished` exige o mesmo token e limpa o claim. Não existe tabela ou modelo de negócio exclusivo do ambiente high-load.
 
 O mesmo schema compartilhado mantém `event.starts_at` e `event.ends_at`. Mesmo com pré-escala ou scale-out de `command-api`, somente o `UPDATE` condicional PostgreSQL autoriza a reserva, exigindo capacidade, início ausente ou alcançado e fim ausente ou futuro. Agendar capacidade não muda a janela comercial.
 

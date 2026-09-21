@@ -31,7 +31,7 @@ No benchmark, o perfil de concorrência continuará criando duas réplicas adici
 | Validação independente da demo | `.specs/features/flash-booking-demo/validation.md` | Fonte canônica para o baseline 43/43 e 94 testes, a suíte rápida atual e os reruns pendentes. |
 | Baseline local | `performance/demo/README.md` e `performance/demo/results/` | Preservar números existentes até uma execução corrigida produzir nova evidência. |
 | Diagramas aprofundados | `docs/images/flash-booking-c4-*.svg` e `flash-booking-sequence-reservation.svg` | Exibir dentro de seções recolhíveis, sem redesenhar o conteúdo já refinado. |
-| ADRs | `docs/adr/` | Referenciar decisões e trade-offs, sem duplicar justificativas extensas. |
+| Decisões | `.specs/STATE.md` | Referenciar decisões e trade-offs, sem duplicar justificativas extensas. |
 | Scripts de gates | `.specs/features/flash-booking-demo/tasks.md` | Reusar os comandos Maven, Compose e Terraform já comprovados. |
 
 ### Integration Points

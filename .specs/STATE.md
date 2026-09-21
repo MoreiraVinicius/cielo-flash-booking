@@ -199,10 +199,10 @@
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / T34 pendente.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta.
-- **In-progress**: Implementar Lambda e permissões para interromper ECS e RDS.
-- **Next step**: Executar T34, validar Terraform e registrar o commit atômico.
-- **Blockers**: Nenhum para implementação local. A aplicação remota será feita após plano revisado dentro da autorização de corte automático do usuário.
+- **Phase / Task**: Execute / T34 implementada localmente, aguardando validação raiz e aplicação remota.
+- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e as tarefas T33/T34 foram especificados. T33 configurou o Budget mensal de US$50 e seu SNS dedicado com publicação restrita ao AWS Budgets da conta. T34 implementou a Lambda idempotente, suas permissões mínimas e a assinatura SNS; os dois testes unitários e o `terraform test` do módulo passaram.
+- **In-progress**: Validar o ambiente raiz e aplicar o plano de corte automático.
+- **Next step**: Renovar a credencial do perfil `demo-provisioner`, executar `terraform validate`/plan no ambiente demo, revisar e aplicar os recursos; depois registrar o commit atômico de T34 e a verificação independente.
+- **Blockers**: `terraform init` do ambiente demo falha no STS com `InvalidClientTokenId`; o perfil configurado em `demo.tfvars` não fornece credenciais AWS válidas nesta sessão.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

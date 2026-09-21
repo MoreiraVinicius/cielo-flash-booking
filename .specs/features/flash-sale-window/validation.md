@@ -34,4 +34,4 @@ The `ends_at` predicate was temporarily removed from `JdbcInventoryOperations.de
 
 ## Scope Audit
 
-Updated source, migration, tests, existing demo and high-load specifications, README, data-model document, ADRs, demo runbook, case evaluation, architecture prompt, compose smoke, Postman collection/readme, README validator, teaching transcript, and regenerated teaching audio. No Terraform runtime or AWS resource was changed.
+Updated source, migration, tests, existing demo and high-load specifications, README, operational documentation, compose smoke, Postman collection/readme, README validator, teaching transcript, and regenerated teaching audio. No Terraform runtime or AWS resource was changed.

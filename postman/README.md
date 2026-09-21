@@ -85,7 +85,7 @@ Para encerrar:
 
 ## Executar na AWS
 
-A demo AWS é temporária e atualmente não está ativa. Execute esta pasta somente depois de uma autorização de deploy e de seguir o [runbook](../docs/demo-runbook.md).
+A demo AWS é temporária e atualmente não está ativa. Execute esta pasta somente depois de uma autorização explícita de deploy. A arquitetura, os requisitos e as evidências da demo ficam em [`.specs/features/flash-booking-demo/`](../.specs/features/flash-booking-demo/).
 
 Depois de um terraform apply autorizado:
 

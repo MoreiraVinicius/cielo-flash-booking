@@ -1,6 +1,6 @@
 # Documentation Consolidation Specification
 
-**Status:** Implementing
+**Status:** Complete
 
 ## Goal
 
@@ -16,6 +16,8 @@ The repository has parallel plans, ADRs, evaluation matrices, model descriptions
 - The original case, operational guides, Postman instructions, performance provenance, and Terraform module READMEs remain useful when they do not duplicate specifications.
 - Generated interview audio and its generated input transcript are not versioned; the reusable PowerShell generator is versioned.
 - No open product or architecture decision is required for this documentation-only change.
+
+**Open questions:** none.
 
 ## User Stories
 

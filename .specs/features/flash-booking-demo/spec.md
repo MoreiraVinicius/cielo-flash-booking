@@ -29,15 +29,15 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | --- | --- | --- | --- |
 | Duração da reserva | 10 minutos configuráveis | Compatível com SQS message timer e comum para checkout. | yes |
 | Janela comercial do evento | `startsAt` e `endsAt` opcionais, decididos pelo PostgreSQL | Sem início a venda vale imediatamente; sem fim não há encerramento temporal; a regra permanece consistente entre tasks. | yes |
-| Aceitação da reserva | Síncrona, com estado PENDING | Bloqueio temporário, sem compra definitiva; ADR 0002. | yes |
-| Liberação após vencimento | Até expiresAt + 5 segundos com banco e processamento saudáveis | Limita estoque temporariamente bloqueado; ADR 0003. | yes |
-| Encerramento | Persistir código e descrição do motivo em CANCELLED e EXPIRED | O catálogo e o formato de consulta estão definidos no ADR 0006. | yes |
+| Aceitação da reserva | Síncrona, com estado PENDING | Bloqueio temporário, sem compra definitiva. | yes |
+| Liberação após vencimento | Até expiresAt + 5 segundos com banco e processamento saudáveis | Limita estoque temporariamente bloqueado. | yes |
+| Encerramento | Persistir código e descrição do motivo em CANCELLED e EXPIRED | O catálogo e o formato de consulta estão definidos nesta especificação. | yes |
 | Banco | RDS PostgreSQL 16 Single-AZ | Econômico e suficiente para a demo. | yes |
-| Cache | ElastiCache for Valkey compartilhado | Cacheia somente a disponibilidade consultada por `GET /events/{id}` por no máximo um segundo; ADR 0005. | yes |
-| Autenticação da API | API Gateway REST com IAM/SigV4, principals e CIDRs permitidos | Autentica antes dos containers e evita senha compartilhada; ADR 0012. | yes |
-| Serviços HTTP | `query-api` e `command-api` separados, usando a mesma imagem | Permite escala independente sem duplicar domínio; ADR 0013. | yes |
-| Cliente da reserva | `Customer` ligado por chave estrangeira | Permite consulta e notificação sem criar endpoint de cadastro; ADR 0010. | yes |
-| Notificação | E-mail assíncrono por outbox, SQS e SES | Não bloqueia a transação nem representa compra confirmada; ADR 0011. | yes |
+| Cache | ElastiCache for Valkey compartilhado | Cacheia somente a disponibilidade consultada por `GET /events/{id}` por no máximo um segundo. | yes |
+| Autenticação da API | API Gateway REST com IAM/SigV4, principals e CIDRs permitidos | Autentica antes dos containers e evita senha compartilhada. | yes |
+| Serviços HTTP | `query-api` e `command-api` separados, usando a mesma imagem | Permite escala independente sem duplicar domínio. | yes |
+| Cliente da reserva | `Customer` ligado por chave estrangeira | Permite consulta e notificação sem criar endpoint de cadastro. | yes |
+| Notificação | E-mail assíncrono por outbox, SQS e SES | Não bloqueia a transação nem representa compra confirmada. | yes |
 | Região | `sa-east-1` | Proximidade com o contexto brasileiro da vaga. | yes |
 | Build | Maven | Convenção simples para Spring Boot. | yes |
 | Corte automático de custo | O Budget mensal passa a US$50 e, ao atingir esse gasto real, interrompe ECS e RDS por SNS/Lambda | Preserva dados e infraestrutura recuperável; ALB, Valkey, rede e armazenamento não possuem pausa e permanecem como custo residual. | yes |

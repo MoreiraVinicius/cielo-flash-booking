@@ -201,7 +201,7 @@ The lightweight sensor used a detached scratch worktree based on `6597aa8` and i
 - **Verifier date**: 2026-09-15
 - **Reviewed diff**: `30ca0f4^..f86f6ed` (`30ca0f4` and `f86f6ed`)
 - **Verifier**: independent sub-agent (author != verifier)
-- **Scope**: current idempotency criteria in `spec.md:99-106`, AD-012 in `.specs/STATE.md:87-93`, `design.md:119-129,166`, ADR 0007, and T13 in `tasks.md:230-239`. No Docker, Testcontainers, PostgreSQL, Terraform, or AWS command was run.
+- **Scope**: current idempotency criteria in `spec.md:99-106`, AD-012 in `.specs/STATE.md:87-93`, `design.md:119-129,166`, and T13 in `tasks.md:230-239`. No Docker, Testcontainers, PostgreSQL, Terraform, or AWS command was run.
 
 ### Scoped verdict
 

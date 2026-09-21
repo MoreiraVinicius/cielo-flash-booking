@@ -21,7 +21,7 @@ Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A ev
 - Aurora PostgreSQL Serverless e RDS Proxy substituem o RDS Single-AZ. A Query API terá conexões explícitas para leitura eventual de eventos e leitura autoritativa de reservas.
 - ECS continuará sendo usado; EKS não é requisito de escala.
 - Eventos com horário conhecido usarão pré-escala programada além de target tracking.
-- `query-api` e `command-api` serão serviços ECS separados, mas apontarão para a mesma imagem; ADR 0013.
+- `query-api` e `command-api` serão serviços ECS separados, mas apontarão para a mesma imagem; decisão registrada em [STATE.md](../../STATE.md).
 - O serviço de consultas usará Valkey e o endpoint read-only do RDS Proxy para disponibilidade. Consulta de reserva não usa cache e usa o endpoint read-write para evitar leitura ausente logo após criação.
 - A demo mantém um único publisher da outbox. Antes de escalar workers, o adaptador compartilhado deve adquirir lotes por claim/lease atômico no PostgreSQL; chamadas SQS ficam fora da transação de aquisição e uma falha libera o evento pelo vencimento do lease.
 - O claim reduz duplicidade sistemática entre publishers, mas não promete exactly-once diante de resposta ambígua do SQS; consumidores continuam idempotentes.

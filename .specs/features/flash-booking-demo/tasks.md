@@ -116,7 +116,7 @@ T33 -> T34
 **Where:** `src/main/java/com/cielo/flashbooking/domain/reservation/`
 **Depends on:** T01
 **Requirement:** DEMO-03
-**Done when:** Toda reserva pertence a um cliente e um evento; o Java trata o e-mail com uma regra única antes de buscar ou persistir; cancelamento antes de `expiresAt` resulta em CANCELLED e no prazo/depois resulta em EXPIRED; somente transições válidas alteram o estado e indicam devolução única; estados terminais usam o catálogo imutável do ADR 0006.
+**Done when:** Toda reserva pertence a um cliente e um evento; o Java trata o e-mail com uma regra única antes de buscar ou persistir; cancelamento antes de `expiresAt` resulta em CANCELLED e no prazo/depois resulta em EXPIRED; somente transições válidas alteram o estado e indicam devolução única; estados terminais usam o catálogo imutável definido na especificação.
 **Tests:** unit, incluídos na tarefa
 **Gate:** Quick
 **Commit:** `feat(reservation): add reservation state model`
@@ -124,7 +124,7 @@ T33 -> T34
 ### T04: Criar o schema relacional
 
 **Status:** Complete
-**What:** Criar migrations de clientes, eventos, reservas, idempotência, outbox e entrega de notificação com índices e constraints de `docs/data-model.md`.
+**What:** Criar migrations de clientes, eventos, reservas, idempotência, outbox e entrega de notificação com os índices e constraints definidos no design da demo.
 **Where:** `src/main/resources/db/migration/`
 **Depends on:** T02, T03, T05
 **Requirement:** DEMO-01, DEMO-02, DEMO-03, DEMO-04
@@ -226,7 +226,7 @@ T33 -> T34
 **Where:** `src/main/java/com/cielo/flashbooking/domain/reservation/`, `src/main/java/com/cielo/flashbooking/reservation/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/`, `src/test/java/com/cielo/flashbooking/reservation/`
 **Depends on:** T10
 **Requirement:** DEMO-03
-**Done when:** `DELETE` retorna 200 e CANCELLED antes de `expiresAt`, ou 200 e EXPIRED no prazo/depois; uma espera por lock que atravessa o prazo resulta em EXPIRED; repetição, expiração concorrente e cancelamento concorrente devolvem capacidade uma vez; estado e motivo do ADR 0006 são persistidos na mesma transação, preservando um encerramento já efetivado e invalidando somente a chave do evento após o commit.
+**Done when:** `DELETE` retorna 200 e CANCELLED antes de `expiresAt`, ou 200 e EXPIRED no prazo/depois; uma espera por lock que atravessa o prazo resulta em EXPIRED; repetição, expiração concorrente e cancelamento concorrente devolvem capacidade uma vez; estado e motivo definidos na especificação são persistidos na mesma transação, preservando um encerramento já efetivado e invalidando somente a chave do evento após o commit.
 **Tests:** unit, integration e concurrency, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(reservation): cancel reservation endpoint`
@@ -240,7 +240,7 @@ T33 -> T34
 **Where:** `src/main/java/com/cielo/flashbooking/application/idempotency/`, `src/main/java/com/cielo/flashbooking/adapter/out/persistence/idempotency/` e `src/main/resources/application.yml`
 **Depends on:** T07, T10, T12
 **Requirement:** DEMO-04
-**Done when:** Antes do vencimento, repetição com operação, alvo e payload iguais retorna a resposta final persistida e reutilização incompatível retorna 409; respostas finais de domínio, inclusive 409 por capacidade, são preservadas; 5xx não é preservado; depois do vencimento, uma nova impressão digital pode reivindicar a chave, inclusive com concorrência gerando um único novo efeito; a limpeza limitada remove apenas registros vencidos e não define a validade. Seguir ADR 0007.
+**Done when:** Antes do vencimento, repetição com operação, alvo e payload iguais retorna a resposta final persistida e reutilização incompatível retorna 409; respostas finais de domínio, inclusive 409 por capacidade, são preservadas; 5xx não é preservado; depois do vencimento, uma nova impressão digital pode reivindicar a chave, inclusive com concorrência gerando um único novo efeito; a limpeza limitada remove apenas registros vencidos e não define a validade. Seguir a decisão de idempotência em STATE.md.
 **Tests:** unit para binding/defaults, overrides de ambiente e rejeição de lotes/durações inválidos; integration e concurrency para replay, reclaim e limpeza, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(api): add persistent idempotency`
@@ -276,7 +276,7 @@ T33 -> T34
 **Where:** `src/main/java/com/cielo/flashbooking/feature/reservation/expire/`
 **Depends on:** T12, T15
 **Requirement:** DEMO-03
-**Done when:** Mensagem válida expira com commit até expiresAt + 5 segundos em operação saudável; o relógio PostgreSQL decide a elegibilidade; mensagem antecipada não expira a reserva; duplicidade não repete efeito. EXPIRED persiste código e descrição do motivo junto ao estado, devolução e invalidação das chaves afetadas. Testes medem o prazo conforme ADRs 0003 e 0008.
+**Done when:** Mensagem válida expira com commit até expiresAt + 5 segundos em operação saudável; o relógio PostgreSQL decide a elegibilidade; mensagem antecipada não expira a reserva; duplicidade não repete efeito. EXPIRED persiste código e descrição do motivo junto ao estado, devolução e invalidação das chaves afetadas. Testes medem o prazo definido na especificação.
 **Tests:** unit, integration e concurrency, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(reservation): expire reservations from sqs`
@@ -288,7 +288,7 @@ T33 -> T34
 **Where:** `src/main/java/com/cielo/flashbooking/application/reconciliation/`
 **Depends on:** T16
 **Requirement:** DEMO-03
-**Done when:** Reserva sem mensagem tem devolução concluída até expiresAt + 5 segundos com banco e reconciliador saudáveis; múltiplos workers não duplicam devolução nem sobrescrevem motivo terminal. A busca usa o relógio PostgreSQL conforme ADR 0008; testes medem o prazo conforme ADR 0003.
+**Done when:** Reserva sem mensagem tem devolução concluída até expiresAt + 5 segundos com banco e reconciliador saudáveis; múltiplos workers não duplicam devolução nem sobrescrevem motivo terminal. A busca usa o relógio PostgreSQL; testes medem o prazo definido na especificação.
 **Tests:** integration e concurrency, incluídos na tarefa
 **Gate:** Full
 **Commit:** `feat(reservation): reconcile expired reservations`
@@ -386,7 +386,7 @@ T33 -> T34
 **Where:** `infra/modules/edge-observability/`
 **Depends on:** T24
 **Requirement:** DEMO-04, DEMO-05, DEMO-07
-**Done when:** GET roteia somente para query-api e POST/DELETE para command-api; a role de invocação possui apenas `execute-api:Invoke` e não provisiona recursos; chamada sem role recebe 403 antes do VPC Link; cada método tem sua meta de throttling configurada e verificável; API Gateway é o único recurso público; Budget alerta em 50%, 80% e 100%, conforme ADR 0012.
+**Done when:** GET roteia somente para query-api e POST/DELETE para command-api; a role de invocação possui apenas `execute-api:Invoke` e não provisiona recursos; chamada sem role recebe 403 antes do VPC Link; cada método tem sua meta de throttling configurada e verificável; API Gateway é o único recurso público; Budget alerta em 50%, 80% e 100%.
 **Tests:** static e terraform test, incluídos na tarefa
 **Gate:** Infra
 **Commit:** `infra: expose and monitor demo api`

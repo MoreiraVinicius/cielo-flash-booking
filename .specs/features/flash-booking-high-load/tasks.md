@@ -293,7 +293,7 @@ T20 -> T21
 
 ### T20: Documentar runbook e forks extremos
 
-**What:** Registrar operação, custos, rollback, correlação futura com abertura da venda/proximidade do evento e critérios de nova ADR para DynamoDB, SQS FIFO ou EKS.
+**What:** Registrar operação, custos, rollback, correlação futura com abertura da venda/proximidade do evento e critérios de nova decisão em STATE.md para DynamoDB, SQS FIFO ou EKS.
 **Where:** `docs/ARCHITECTURE.md`
 **Depends on:** T19
 **Requirement:** SCALE-04

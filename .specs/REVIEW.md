@@ -8,7 +8,7 @@ Status histórico: revisão documental consolidada antes da implementação. Est
 
 - Demo: spec, contexto, design e 29 tasks.
 - Alta carga: spec, contexto, design e 20 tasks.
-- `STATE.md`, `README.md`, `IMPLEMENTATION_PLAN.md`, ADRs, modelo de dados, estimativa de custo e `Case BackEnd 1.md`.
+- `STATE.md`, `README.md`, as especificações vigentes, a estimativa de custo e `Case BackEnd 1.md`.
 - Não há código de aplicação nem infraestrutura implementada no escopo desta revisão.
 - A matriz em `docs/case-requirements-evaluation.md` separa cobertura documental de comprovação por execução.
 
@@ -34,7 +34,7 @@ Status histórico: revisão documental consolidada antes da implementação. Est
 | R16 | Recuperação de alta carga | Multi-AZ, filas duráveis, idempotência e reconciliação estão desenhados. | RTO, RPO, cutover e failover seguem não comprovados por decisão de não provisionar. |
 | R17 | Escala de consultas e comandos | `query-api`, `command-api` e `worker` são serviços ECS independentes, todos originados da mesma imagem Java. | Políticas de escala da alta carga precisam de dados reais para calibração. |
 | R18 | Conexões e réplicas | Alta carga usa RDS Proxy com endpoints de leitura e escrita; consulta de disponibilidade pode usar réplica, consulta de reserva recém-criada usa escrita para evitar `404` por atraso. | Métricas de conexão e atraso de réplica precisam de ambiente remoto. |
-| R19 | Cliente da reserva | `Customer` é persistido e referenciado por `Reservation.customerId`; o modelo completo está centralizado em `docs/data-model.md`. | Política de retenção/eliminação de dados pessoais é evolução antes de produção real. |
+| R19 | Cliente da reserva | `Customer` é persistido e referenciado por `Reservation.customerId`; o modelo de referência está em `.specs/features/flash-booking-demo/design.md`. | Política de retenção/eliminação de dados pessoais é evolução antes de produção real. |
 | R20 | Notificação por e-mail | `ReservationCreated` segue por outbox, fila própria, worker e SES; falha de e-mail não altera estoque. | Sandbox do SES exige identidades verificadas; entrega é pelo menos uma vez. |
 | R21 | Autenticação e abuso | API Gateway REST é o único ponto público, exige IAM/SigV4 e combina resource policy, WAF, throttling e limites de escala. | Rate limiting e Budgets são camadas de redução de risco, não garantia de custo zero. |
 | R22 | Defesa contra oversell | Decremento condicional no evento e criação da reserva ocorrem na mesma transação; cancelamento e expiração competem por transição condicional, e somente o vencedor devolve capacidade. | A propriedade só pode receber PASS após testes concorrentes e de falha. |
@@ -47,7 +47,7 @@ Status histórico: revisão documental consolidada antes da implementação. Est
 - Toda reserva pertence a um cliente e a um evento. A reserva criada gera e-mail assíncrono informando que ela é temporária; o e-mail não confirma compra.
 - PostgreSQL é a fonte autoritativa. ElastiCache for Valkey implementa cache compatível com o protocolo Redis, com TTL curto; o cache nunca decide disponibilidade para uma reserva.
 - Um API Gateway REST regional autenticado com IAM/SigV4 é o único ponto público. API key não é tratada como autenticação. Backends ficam privados atrás de VPC Link e ALB interno.
-- Cada decisão arquitetural relevante está registrada em ADR autossuficiente; nenhuma escolha é aceita apenas porque foi solicitada.
+- Cada decisão arquitetural relevante está registrada em `STATE.md`; nenhuma escolha é aceita apenas porque foi solicitada.
 
 ## Evidência exigida antes de declarar atendimento
 

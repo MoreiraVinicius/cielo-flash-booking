@@ -72,19 +72,19 @@ A aplicação será um monólito modular empacotado uma vez. A mesma imagem inic
 - **Responsabilidade:** Aplicar cache-aside à consulta de evento e invalidar sua disponibilidade depois de commits que alterem o estoque.
 - **Local:** `src/main/java/.../adapter/out/cache/`
 - **Dependências:** Cliente Valkey/Redis configurado por endpoint e porta. A demo usa os limites fixos do contrato abaixo; a arquitetura futura pode externalizá-los como configuração operacional.
-- **Contrato:** `event-availability:{id}` expira em no máximo um segundo. Cache não autoriza comandos e sua falha consulta PostgreSQL com proteção definida no ADR 0005. A consulta de reserva não usa cache e retorna o evento somente como `{id, name}`.
+- **Contrato:** `event-availability:{id}` expira em no máximo um segundo. Cache não autoriza comandos e sua falha consulta PostgreSQL com os limites de proteção definidos neste design. A consulta de reserva não usa cache e retorna o evento somente como `{id, name}`.
 
 ### Integração de e-mail
 
 - **Responsabilidade:** Consumir `ReservationCreated` e enviar confirmação de reserva temporária.
 - **Local:** `src/main/java/.../notification/email/`.
 - **Dependências:** Amazon SES na AWS e Mailpit no Docker Compose. O consumidor adquire um lease curto no PostgreSQL, chama o provedor sem transação aberta e conclui o estado em outra transação curta. Registros terminais de notificação e outbox são removidos em lotes após a retenção.
-- **Contrato:** Falha de e-mail usa retry, DLQ e alarme, sem reverter a reserva; ADR 0011.
+- **Contrato:** Falha de e-mail usa retry, DLQ e alarme, sem reverter a reserva.
 - **Isolamento:** Timeout, executor e listener próprios impedem que lentidão do SES consuma as threads reservadas à expiração.
 
 ## Modelagem de dados
 
-A modelagem completa, relações, constraints, índices e contrato HTTP estão em [docs/data-model.md](../../../docs/data-model.md). O schema é idêntico nas duas arquiteturas.
+As relações e invariantes abaixo formam o modelo de referência. O schema é idêntico nas duas arquiteturas.
 
 ### Event
 
@@ -108,7 +108,7 @@ A modelagem completa, relações, constraints, índices e contrato HTTP estão e
 - `expiresAt: Instant`
 - `createdAt: Instant`
 - `updatedAt: Instant`
-- `closureReason: { code, description } | null`; obrigatório e imutável em CANCELLED e EXPIRED, nulo em PENDING, conforme [ADR 0006](../../../docs/adr/0006-catalogo-de-motivos-de-encerramento.md).
+- `closureReason: { code, description } | null`; obrigatório e imutável em CANCELLED e EXPIRED, nulo em PENDING.
 
 ### Customer
 
@@ -118,7 +118,7 @@ A modelagem completa, relações, constraints, índices e contrato HTTP estão e
 - `createdAt: Instant`
 - `updatedAt: Instant`
 
-Um cliente realiza várias reservas; cada reserva pertence a exatamente um cliente e um evento. O Java trata o endereço antes da validação, busca e persistência, e o banco armazena somente a forma canônica na coluna única `email`. O vínculo é persistido na criação, conforme ADR 0010.
+Um cliente realiza várias reservas; cada reserva pertence a exatamente um cliente e um evento. O Java trata o endereço antes da validação, busca e persistência, e o banco armazena somente a forma canônica na coluna única `email`. O vínculo é persistido na criação.
 
 ### IdempotencyRecord
 
@@ -126,7 +126,7 @@ Um cliente realiza várias reservas; cada reserva pertence a exatamente um clien
 - Armazena status HTTP, resposta serializada, criação e vencimento após 24 horas, ambos medidos pelo PostgreSQL.
 - A aquisição insere uma chave nova ou substitui atomicamente o registro vencido. A restrição única e o `ON CONFLICT` serializam chamadas concorrentes; somente a vencedora executa o comando. A substituição inicia a nova janela com `clock_timestamp()` depois de conquistar o lock, sem descontar o tempo de espera.
 - O worker remove até 500 registros vencidos a cada cinco segundos por padrão, com tamanho e intervalos tipados em `idempotency.cleanup` e aquisição via `FOR UPDATE SKIP LOCKED`. A limpeza é manutenção de retenção: atraso ou concorrência com uma nova aquisição não prolonga a janela nem apaga uma chave reativada.
-- O desenho segue o [ADR 0007](../../../docs/adr/0007-idempotencia-persistente-de-comandos.md).
+- A decisão correspondente está em [STATE.md](../../STATE.md).
 
 A configuração de limpeza usa `batch-size` entre 1 e 10.000, `fixed-delay` positivo e `initial-delay` não negativo. Valores ausentes usam 500 linhas e cinco segundos; valores explícitos inválidos impedem o startup. Overrides de ambiente usam `IDEMPOTENCY_CLEANUP_BATCHSIZE`, `IDEMPOTENCY_CLEANUP_FIXEDDELAY` e `IDEMPOTENCY_CLEANUP_INITIALDELAY`, com unidades explícitas de duração. Mudanças exigem reinício, sem refresh dinâmico.
 
@@ -186,7 +186,7 @@ Com carga muito alta no mesmo evento, as transações se enfileiram na linha que
 
 O publisher calcula `DelaySeconds` a partir de `expiresAt`, limitado a 15 minutos. O consumidor executa uma transição condicional. Um reconciliador periódico consulta reservas vencidas para cobrir falhas de publicação e mensagens na DLQ.
 
-Conforme [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md) e [ADR 0008](../../../docs/adr/0008-relogio-do-banco-para-expiracao.md), concluir a transição, a gravação do motivo e a devolução de capacidade na mesma transação até expiresAt + 5 segundos em operação saudável. O relógio PostgreSQL decide a elegibilidade; mensagem antecipada não autoriza expiração antes de expiresAt e o reconciliador varre candidatos ao menos a cada segundo. A janela não estende a validade e não define a defasagem de caches.
+Concluir a transição, a gravação do motivo e a devolução de capacidade na mesma transação até expiresAt + 5 segundos em operação saudável. O relógio PostgreSQL decide a elegibilidade; mensagem antecipada não autoriza expiração antes de expiresAt e o reconciliador varre candidatos ao menos a cada segundo. A janela não estende a validade e não define a defasagem de caches.
 
 O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva pendente, amostra o relógio do banco depois do lock e encerra como `CANCELLED` apenas se esse instante ainda for anterior a `expiresAt`; caso contrário, encerra como `EXPIRED`. A resposta `200` contém o estado terminal efetivamente persistido. Isso impede que uma requisição iniciada antes do prazo, mas desbloqueada depois dele, registre um cancelamento tardio.
 
@@ -229,7 +229,7 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 | E-mail indisponível | Notificação | Cliente não recebe referência da reserva | Retry, DLQ e alarme; falha não altera a reserva. |
 | E-mail lento bloqueia expiração | Worker | Estoque permanece retido além do prazo saudável | Filas, listeners, executores, timeouts e métricas separados; capacidade de expiração não é emprestada ao envio de e-mail. |
 | Dados pessoais em respostas, logs ou mensagens | Cliente e reserva | Exposição de nome ou e-mail | Resposta de reserva privada, logs mascarados, payload mínimo e nenhum dado de reserva no cache. |
-| Abuso do endpoint | Borda | Aumento de custo e saturação | IAM/SigV4, allowlist, throttling por método, WAF e tetos de capacidade; ADR 0012. |
+| Abuso do endpoint | Borda | Aumento de custo e saturação | IAM/SigV4, allowlist, throttling por método, WAF e tetos de capacidade. |
 | Single-AZ | RDS demo | Indisponibilidade zonal | Aceito na demo; alta carga usa Multi-AZ. |
 | NAT único | Rede demo | Ponto único de saída | Aceito na demo; alta carga usa NAT por AZ. |
 
@@ -237,13 +237,13 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 
 | Decisão | Escolha | Justificativa |
 | --- | --- | --- |
-| Empacotamento | Uma imagem com modos `query-api`, `command-api` e `worker` | Permite escala e permissões separadas sem duplicar regras ou criar releases divergentes; ADR 0013. |
+| Empacotamento | Uma imagem com modos `query-api`, `command-api` e `worker` | Permite escala e permissões separadas sem duplicar regras ou criar releases divergentes. |
 | Compute | Três serviços ECS Fargate | Consultas, comandos e trabalho assíncrono têm sinais diferentes; Fargate evita a operação de Kubernetes para um projeto individual. |
-| Banco | RDS PostgreSQL | Transações, constraints e chaves estrangeiras defendem estoque e vínculos com menos código; a comparação com NoSQL está no ADR 0004. |
-| Cache | ElastiCache for Valkey | Mantém protocolo e clientes Redis, custa menos no ElastiCache e tem governança aberta; comparação completa no ADR 0005. |
+| Banco | RDS PostgreSQL | Transações, constraints e chaves estrangeiras defendem estoque e vínculos com menos código. |
+| Cache | ElastiCache for Valkey | Mantém protocolo e clientes Redis, custa menos no ElastiCache e tem governança aberta. |
 | Concorrência | Atualização e transições condicionais | A decisão de estoque acontece em uma única escrita atômica; o encerramento observa o relógio PostgreSQL depois do lock; retries e fluxos de devolução só alteram uma linha se ainda possuírem o estado esperado. |
 | Assíncrono | Outbox + duas filas SQS | Reserva e eventos são confirmados juntos; expiração e e-mail têm retries/DLQs independentes e não alongam a transação HTTP. |
-| Entrada | API Gateway REST com IAM/WAF/throttling + VPC Link V2 + ALB interno | Autentica e limita antes do compute; nenhum segundo endpoint público contorna a proteção; ADR 0012. |
+| Entrada | API Gateway REST com IAM/WAF/throttling + VPC Link V2 + ALB interno | Autentica e limita antes do compute; nenhum segundo endpoint público contorna a proteção. |
 | Infraestrutura | Terraform | Torna topologia, tetos de capacidade e destruição revisáveis; alta carga muda parâmetros/recursos sem alterar Java. |
 
 ## Observabilidade e evolução futura

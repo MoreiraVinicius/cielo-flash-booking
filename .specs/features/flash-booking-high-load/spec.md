@@ -6,7 +6,7 @@ A demo funcional não deve receber toda a complexidade de produção antecipadam
 
 ## Goals
 
-O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../docs/adr/0002-reserva-temporaria-com-motivo-de-encerramento.md), e o prazo de liberação de cinco segundos em operação saudável do [ADR 0003](../../../docs/adr/0003-prazo-de-liberacao-de-reservas-expiradas.md). A infraestrutura desta feature não será provisionada nem testada remotamente nesta entrega, conforme [ADR 0001](../../../docs/adr/0001-demo-publicada-alta-carga-sem-provisionamento.md); critérios operacionais abaixo são metas sem comprovação remota, a reconciliar nas tasks.
+O código herda da demo a semântica de reserva e seus motivos, além do prazo de liberação de cinco segundos em operação saudável. A infraestrutura desta feature não será provisionada nem testada remotamente nesta entrega; critérios operacionais abaixo são metas sem comprovação remota, a reconciliar nas tasks. As decisões globais estão em [STATE.md](../../STATE.md).
 
 - [ ] Escalar leitura sem aumentar proporcionalmente a carga no banco principal.
 - [ ] Escalar serviços de consultas, comandos e workers de forma independente antes e durante flash sales.
@@ -19,7 +19,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | Item | Motivo |
 | --- | --- |
 | EKS | Só se justifica com plataforma Kubernetes dedicada. |
-| Modelo de escrita DynamoDB | Só será considerado se a linha quente violar o SLO e uma nova ADR autorizar mudança de código. |
+| Modelo de escrita DynamoDB | Só será considerado se a linha quente violar o SLO e uma nova decisão em STATE.md autorizar mudança de código. |
 | Reserva assíncrona | Altera o contrato de produto. |
 | Multi-region active-active | Complexidade sem requisito de RTO/RPO correspondente. |
 | CI/CD | Não será avaliada. |
@@ -29,12 +29,12 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 | Tema | Decisão | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
 | Pré-requisito | Demo com validação PASS | Evolução depende de baseline confiável. | yes |
-| Banco | Aurora PostgreSQL Serverless | Escala por ACU e preserva JDBC e o modelo relacional; a promoção aplica ao schema compartilhado os campos operacionais exigidos pelo claim da outbox; ADR 0004. | yes |
-| Cache | ElastiCache for Valkey Multi-AZ | Mantém o cache exclusivo de disponibilidade de eventos; só a topologia e capacidade mudam por Terraform; ADR 0005. | yes |
+| Banco | Aurora PostgreSQL Serverless | Escala por ACU e preserva JDBC e o modelo relacional; a promoção aplica ao schema compartilhado os campos operacionais exigidos pelo claim da outbox. | yes |
+| Cache | ElastiCache for Valkey Multi-AZ | Mantém o cache exclusivo de disponibilidade de eventos; só a topologia e capacidade mudam por Terraform. | yes |
 | Compute | ECS Fargate | Escala horizontal sem Kubernetes. | yes |
-| Serviços | `query-api`, `command-api` e `worker` construídos da mesma base Java | Escala independente sem duplicar regras; adaptadores operacionais da evolução permanecem no mesmo repositório e artefato; ADR 0013. | yes |
-| Segurança | API Gateway REST único, IAM/SigV4, WAF e throttling | Protege antes dos containers e preserva o mesmo contrato da demo; ADR 0012. | yes |
-| Notificação | Mesmos eventos, filas, consumidores e SES da demo, com claim/lease no publisher compartilhado antes do scale-out | Consumidores continuam idempotentes, mas múltiplos publishers não devem reler simultaneamente o mesmo lote; ADR 0011. | yes |
+| Serviços | `query-api`, `command-api` e `worker` construídos da mesma base Java | Escala independente sem duplicar regras; adaptadores operacionais da evolução permanecem no mesmo repositório e artefato. | yes |
+| Segurança | API Gateway REST único, IAM/SigV4, WAF e throttling | Protege antes dos containers e preserva o mesmo contrato da demo. | yes |
+| Notificação | Mesmos eventos, filas, consumidores e SES da demo, com claim/lease no publisher compartilhado antes do scale-out | Consumidores continuam idempotentes, mas múltiplos publishers não devem reler simultaneamente o mesmo lote. | yes |
 | Janela comercial | `startsAt`/`endsAt` continuam campos do evento e a reserva usa o decremento temporal condicional do PostgreSQL | Pré-escala prepara capacidade, mas não abre nem encerra vendas e não pode contornar a regra autoritativa. | yes |
 | Gatilhos | SLO e percentual do envelope medido | TPS absoluto é volátil e específico do ambiente. | yes |
 
@@ -49,7 +49,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 **Critérios de aceite:**
 
 1. QUANDO `GET /events/{id}` encontrar uma entrada válida no Valkey, ENTÃO o serviço de consultas DEVE responder sem consultar PostgreSQL.
-2. SE Valkey estiver indisponível, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL dentro dos limites de timeout, circuito e fallback definidos no ADR 0005, sem consumir o pool reservado aos comandos.
+2. SE Valkey estiver indisponível, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL dentro dos limites de timeout, circuito e fallback definidos para a demo, sem consumir o pool reservado aos comandos.
 3. ENQUANTO a disponibilidade for servida por cache, o sistema DEVE tratá-la como eventual e nunca usá-la para autorizar uma reserva.
 4. QUANDO uma reserva, expiração ou cancelamento alterar capacidade, ENTÃO o sistema DEVE invalidar a chave de disponibilidade após o commit.
 5. QUANDO `GET /reservations/{id}` for chamado, ENTÃO a Query API DEVE consultar o caminho read-write do PostgreSQL diretamente, sem depender do Valkey.
@@ -108,7 +108,7 @@ O código herda a semântica de reserva e seus motivos do [ADR 0002](../../../do
 
 1. QUANDO um teste de carga terminar, ENTÃO o relatório DEVE registrar TPS sustentável, p95, p99, erros, conexões, lock waits, hit rate e backlog separadamente para consultas, comandos e workers.
 2. SE a previsão ou carga observada alcançar 60% do envelope sustentável, ENTÃO o plano operacional DEVE iniciar pré-escala ou revisão de capacidade do serviço afetado, sem escalar os demais automaticamente.
-3. SE lock waits dominarem o p95 de reserva após tuning, ENTÃO a documentação DEVE exigir nova ADR antes de considerar DynamoDB síncrono ou SQS FIFO assíncrono.
+3. SE lock waits dominarem o p95 de reserva após tuning, ENTÃO a documentação DEVE exigir nova decisão em STATE.md antes de considerar DynamoDB síncrono ou SQS FIFO assíncrono.
 4. O sistema DEVE registrar rollback para cada evolução habilitada.
 5. QUANDO datas de abertura de venda ou proximidade do evento estiverem disponíveis, ENTÃO a observabilidade futura DEVE correlacioná-las com os padrões de consulta e comando; essa correlação não DEVE alterar regras de reserva automaticamente nesta entrega.
 
