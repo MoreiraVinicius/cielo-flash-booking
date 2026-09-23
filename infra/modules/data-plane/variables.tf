@@ -18,16 +18,6 @@ variable "isolated_data_subnet_ids" {
   }
 }
 
-variable "database_subnet_ids" {
-  description = "Exactly two subnets used by the RDS DB subnet group."
-  type        = list(string)
-
-  validation {
-    condition     = length(var.database_subnet_ids) == 2
-    error_message = "database_subnet_ids must contain exactly two subnets."
-  }
-}
-
 variable "public_access_enabled" {
   description = "Whether the PostgreSQL RDS endpoint is temporarily public."
   type        = bool

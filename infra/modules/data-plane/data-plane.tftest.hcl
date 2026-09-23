@@ -7,7 +7,6 @@ run "keeps_data_private_encrypted_and_message_paths_isolated" {
     name                     = "flash-booking-demo"
     vpc_id                   = "vpc-123"
     isolated_data_subnet_ids = ["subnet-data-a", "subnet-data-b"]
-    database_subnet_ids      = ["subnet-data-a", "subnet-data-b"]
     rds_security_group_id    = "sg-rds"
     valkey_security_group_id = "sg-valkey"
     ses_sender_email         = "demo@example.com"
@@ -48,7 +47,6 @@ run "exposes_rds_only_for_explicit_administrative_access" {
     name                     = "flash-booking-demo"
     vpc_id                   = "vpc-123"
     isolated_data_subnet_ids = ["subnet-data-a", "subnet-data-b"]
-    database_subnet_ids      = ["subnet-public-a", "subnet-public-b"]
     public_access_enabled    = true
     rds_security_group_id    = "sg-rds"
     valkey_security_group_id = "sg-valkey"
@@ -57,8 +55,8 @@ run "exposes_rds_only_for_explicit_administrative_access" {
   }
 
   assert {
-    condition     = aws_db_instance.postgres.publicly_accessible && toset(aws_db_subnet_group.postgres.subnet_ids) == toset(["subnet-public-a", "subnet-public-b"])
-    error_message = "Public administrative access must put only RDS in the two supplied public subnets."
+    condition     = aws_db_instance.postgres.publicly_accessible && aws_db_instance.postgres.db_subnet_group_name == aws_db_subnet_group.postgres.name && toset(aws_db_subnet_group.postgres.subnet_ids) == toset(["subnet-data-a", "subnet-data-b"])
+    error_message = "Public administrative access must retain the existing RDS subnet group."
   }
 }
 
@@ -69,7 +67,6 @@ run "requires_tls_and_preserves_rds_managed_security" {
     name                     = "flash-booking-demo"
     vpc_id                   = "vpc-123"
     isolated_data_subnet_ids = ["subnet-data-a", "subnet-data-b"]
-    database_subnet_ids      = ["subnet-data-a", "subnet-data-b"]
     rds_security_group_id    = "sg-rds"
     valkey_security_group_id = "sg-valkey"
     ses_sender_email         = "demo@example.com"

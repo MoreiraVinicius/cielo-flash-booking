@@ -211,6 +211,10 @@ O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva
 - `infra/modules/edge-observability/`: ALB interno, API Gateway, WAF, logs de acesso, dashboard e alarmes de borda.
 - `infra/environments/demo/`: composição e variáveis econômicas.
 
+## Exceção temporária para DataGrip
+
+`database_administrative_access_enabled` é um interruptor exclusivo da demo. Quando ativo com um IPv4 `/32`, mantém o DB subnet group do RDS e adiciona uma rota `0.0.0.0/0` para o Internet Gateway nos subnets de dados, habilita o endpoint público RDS e acrescenta apenas esse `/32` na porta `5432`. O parameter group exige `rds.force_ssl=1`; senha continua no segredo gerenciado pelo RDS. Valkey não ganha regra de entrada pública, embora compartilhe a rota de saída temporária. Desabilitar a flag restaura a ausência de rota e de regra administrativa. Esta exceção não altera os diagramas e não deve ser promovida para high-load, que preserva banco privado com Aurora/RDS Proxy.
+
 ## Entrada e escala independente
 
 O API Gateway REST regional é o único endpoint público. IAM/SigV4 autentica o operador; resource policy e WAF restringem origem; throttling separado limita GET e comandos. VPC Link V2 alcança um ALB interno, que roteia GETs ao target group de `query-api` e POST/DELETE ao target group de `command-api`. Não existe DNS público alternativo para ALB ou ECS.

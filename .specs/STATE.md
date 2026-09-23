@@ -196,13 +196,21 @@
 - **Trade-off:** AWS Budgets processa custos com atraso e não é teto financeiro. ALB, Valkey, VPC, armazenamento, WAF e API Gateway seguem provisionados e podem gerar custo residual. RDS é reiniciado automaticamente pela AWS após no máximo sete dias parado.
 - **Scope:** Budget, SNS, Lambda de corte e permissões mínimas da demo AWS.
 
+### AD-027 - Acesso direto temporário ao RDS da demo
+
+- **Status:** active
+- **Decision:** Somente durante a janela da demo, `database_administrative_access_enabled` pode tornar o endpoint RDS público e adicionar uma rota `0.0.0.0/0` pelo Internet Gateway aos subnets de dados atuais. O security group aceita PostgreSQL somente do IPv4 administrativo configurado como um único `/32`, além das tasks ECS, e o parâmetro `rds.force_ssl=1` exige TLS. Desabilitar a flag remove tanto a rota quanto a regra administrativa.
+- **Reason:** O operador precisa inspecionar e corrigir dados no DataGrip local durante os dois dias da demo. A AWS não permite mover a instância existente para outro DB subnet group na mesma VPC, portanto a exceção precisa preservar o subnet group em uso.
+- **Trade-off:** A camada de dados deixa de ser isolada enquanto a flag estiver ativa. Valkey continua sem entrada pública porque seu security group só aceita ECS, mas compartilha a rota temporária. Isso reduz a defesa em profundidade e não é uma topologia aceitável para produção ou alta carga.
+- **Scope:** Apenas a demo AWS temporária; a arquitetura high-load mantém Aurora/RDS Proxy, subnets privadas e nenhum endpoint administrativo público.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / DEMO-11 concluída e validada.
+- **Phase / Task**: Execute / DEMO-12 concluída e validada.
 - **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e T33/T35 foram aplicados. O plano inicial criou 8 recursos e atualizou 1; a correção direcionada atualizou somente a Lambda para separar ARN e nome do cluster. A verificação independente aprovou 7/7 critérios, os testes unitários, `terraform test`, `terraform validate`, validadores das specs, leitura remota e sensor de discriminação (1/1 mutação eliminada).
 - **In-progress**: Nenhum.
-- **Next step**: Nenhum.
+- **Next step**: Configurar o DataGrip com o endpoint e a senha recuperada do Secrets Manager; revogar a flag ao encerrar a demo.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
 - **Branch**: `main`

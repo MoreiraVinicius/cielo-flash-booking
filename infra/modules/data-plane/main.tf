@@ -7,7 +7,7 @@ locals {
 
 resource "aws_db_subnet_group" "postgres" {
   name       = "${var.name}-postgres"
-  subnet_ids = var.database_subnet_ids
+  subnet_ids = var.isolated_data_subnet_ids
 
   tags = merge(local.tags, { Name = "${var.name}-postgres" })
 }
@@ -48,7 +48,7 @@ resource "aws_db_parameter_group" "postgres" {
   parameter {
     name         = "rds.force_ssl"
     value        = "1"
-    apply_method = "immediate"
+    apply_method = "pending-reboot"
   }
 
   tags = merge(local.tags, { Name = "${var.name}-postgres" })

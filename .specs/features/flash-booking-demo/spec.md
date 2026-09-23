@@ -41,6 +41,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | Região | `sa-east-1` | Proximidade com o contexto brasileiro da vaga. | yes |
 | Build | Maven | Convenção simples para Spring Boot. | yes |
 | Corte automático de custo | O Budget mensal passa a US$50 e, ao atingir esse gasto real, interrompe ECS e RDS por SNS/Lambda | Preserva dados e infraestrutura recuperável; ALB, Valkey, rede e armazenamento não possuem pausa e permanecem como custo residual. | yes |
+| Administração local temporária | Durante a demo, DataGrip alcança o RDS público somente de um IPv4 `/32`, com TLS obrigatório e rota IGW temporária na camada de dados | Permite corrigir dados durante a janela curta da demo; não pertence à arquitetura high-load, que mantém o banco privado. | yes |
 
 **Open questions:** none. The capacity envelope is measured in the benchmark task and is not a prerequisite for implementing the demo; remote-recovery limits belong to the target high-load architecture.
 
@@ -136,7 +137,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 2. WHEN an origin is outside the allowed CIDRs THEN the resource policy or WAF SHALL block the call before the ALB.
 3. WHEN the GET routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 20 requests per second and burst 40. Validation SHALL record the effective stage setting and the response distribution of a signed burst. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
 4. WHEN the POST or DELETE routes are deployed in the demo THEN API Gateway SHALL configure a throttle target of 5 requests per second and burst 10. Validation SHALL record the effective stage setting for both methods and the response distribution of a signed burst on a safe command route. A specific `429` response is not a deterministic condition because API Gateway throttling is best effort.
-5. API Gateway REST SHALL be the only public resource; ALB, ECS, PostgreSQL, Valkey, and SQS SHALL remain private.
+5. API Gateway REST SHALL be the only public application entry point; ALB, ECS, Valkey, and SQS SHALL remain private. WHERE `database_administrative_access_enabled` is true during the demo, PostgreSQL MAY expose a direct endpoint only to the configured single IPv4 `/32`, with TLS required and a temporary Internet Gateway route for the existing data subnets; this exception SHALL NOT apply to high-load.
 6. WHEN spending reaches 50%, 80%, or 100% of the US$5 budget THEN AWS Budget SHALL issue an alert; the operational document SHALL state that the alert does not guarantee an immediate billing stop.
 
 **Teste independente:** Assinar uma chamada com role permitida, repetir sem assinatura e fora do CIDR, e validar por Terraform que nenhum backend possui entrada pública.
@@ -205,6 +206,17 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 **Teste independente:** Aplicar o plano Terraform, publicar uma mensagem SNS de teste autorizada e conferir no CloudWatch Logs que os três serviços receberam `desiredCount=0`, os dois alvos ECS ficaram suspensos em zero e a parada do RDS foi solicitada.
 
+### P1: Administrar dados da demo pelo DataGrip
+
+**Requirement:** DEMO-12
+
+1. WHEN `database_administrative_access_enabled` is false THEN o endpoint PostgreSQL e os subnets de dados SHALL permanecer sem acesso administrativo público.
+2. WHEN `database_administrative_access_enabled` is true with a valid IPv4 `/32` THEN o RDS SHALL ficar publicamente acessível, preservar o DB subnet group existente, exigir TLS e aceitar `5432` apenas desse `/32` e das tasks ECS.
+3. WHILE essa flag estiver ativa THEN a rota dos subnets de dados SHALL usar o Internet Gateway somente como exceção temporária da demo; Valkey SHALL continuar sem regra de entrada pública.
+4. The arquitetura high-load SHALL NOT reutilizar essa exceção; seu banco permanece privado atrás de Aurora/RDS Proxy.
+
+**Teste independente:** Executar `terraform test` nos módulos de rede e dados, validar o plano da demo com a flag e observar no RDS `PubliclyAccessible=true`, a rota IGW e a única regra administrativa `/32`.
+
 ## Edge Cases
 
 - SE a quantidade for zero ou negativa, ENTÃO o sistema DEVE retornar `400`.
@@ -233,6 +245,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | DEMO-09 | Operar a demo por um painel único | Execute | Validated |
 | DEMO-10 | Acompanhar a jornada de negócio em português | Execute | Validated |
 | DEMO-11 | Interromper a demo por limite de custo | Execute | Validated |
+| DEMO-12 | Administrar dados da demo pelo DataGrip | Execute | Validated |
 
 **Cobertura:** 11 requisitos, 10 mapeados ao design, 1 em planejamento.
 

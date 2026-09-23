@@ -33,7 +33,7 @@ Para a suite completa de testes:
 
 ## Estado da entrega
 
-- A demo AWS foi aplicada, observada e destruída. Ela não está ativa.
+- A demo AWS está provisionada para a janela atual. O RDS aceita DataGrip local somente pela exceção temporária documentada em [Acesso temporário ao RDS pelo DataGrip](docs/acesso-rds-datagrip.md); desligue-a e destrua a demo ao final.
 - A arquitetura high-load é somente desenho de evolução. Não foi provisionada, submetida a carga remota ou validada quanto a failover.
 - A evidência atual da aplicação está nas validações em `.specs/`; a execução local mais recente aprovou 121 testes, incluindo 68 integrações.
 

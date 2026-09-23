@@ -19,6 +19,7 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 
 - PostgreSQL será a fonte de verdade.
 - RDS PostgreSQL 16 Single-AZ será a infraestrutura autoritativa da demo.
+- Por até dois dias de demo, o operador pode habilitar acesso direto do DataGrip ao RDS a partir de um único IPv4 `/32`; isso torna a rota dos subnets de dados internet-routable e não é reutilizável na arquitetura high-load.
 - A reserva será aceita de forma síncrona como bloqueio temporário PENDING, sem confirmação de compra.
 - A disponibilidade nunca será usada para autorizar a reserva; a transação de reserva decide.
 - Evento pode receber `startsAt` e `endsAt` opcionais. Sem início, a venda é imediata; sem fim, permanece elegível enquanto houver capacidade. O PostgreSQL decide a criação e a janela no mesmo decremento de inventário. Início informado é posterior ao instante de criação; fim com início é posterior ao início; fim sem início é no mínimo 10 minutos posterior à criação.

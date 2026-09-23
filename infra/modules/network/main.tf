@@ -106,6 +106,15 @@ resource "aws_route_table_association" "private_app" {
 resource "aws_route_table" "isolated_data" {
   vpc_id = aws_vpc.this.id
 
+  dynamic "route" {
+    for_each = var.data_subnets_publicly_routable ? [true] : []
+
+    content {
+      cidr_block = "0.0.0.0/0"
+      gateway_id = aws_internet_gateway.this.id
+    }
+  }
+
   tags = merge(local.tags, { Name = "${var.name}-data" })
 }
 

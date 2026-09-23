@@ -5,7 +5,7 @@
 Execute estas tarefas com a skill `tlc-spec-driven`. Uma tarefa termina somente após seus testes e gate passarem. Atualize este arquivo antes de criar um commit Conventional Commit atômico.
 
 **Design:** `.specs/features/flash-booking-demo/design.md`
-**Status:** In Progress
+**Status:** Complete
 **Task count:** 35
 
 ## Test Coverage Matrix
@@ -515,6 +515,17 @@ T34 -> T35
 **Gate:** Infra
 **Commit:** `fix(cost): use cluster name for autoscaling target`
 
+### T36: Habilitar administração temporária do RDS na demo
+
+**Status:** In Progress
+**What:** Implementar a exceção exclusiva da demo para DataGrip: endpoint público RDS, TLS obrigatório, uma única regra `/32` e rota IGW temporária nos subnets de dados existentes, sem mover o DB subnet group.
+**Where:** `infra/environments/demo/`, `infra/modules/network/`, `infra/modules/data-plane/` e documentação operacional.
+**Depends on:** T22, T23
+**Requirement:** DEMO-12
+**Done when:** Com a flag desligada, RDS e subnets de dados continuam privados; com a flag ligada e um `/32`, RDS é público, TLS é obrigatório, a única entrada adicional é `5432` desse `/32`, Valkey não recebe entrada pública e o banco permanece no subnet group existente. Specs afirmam que a exceção dura somente a demo e não é arquitetura high-load.
+**Tests:** `terraform test` nos módulos `network` e `data-plane`, `terraform validate` da demo e observação remota do RDS, rota e security group.
+**Gate:** Infra
+
 ## Dependency Cross-Check
 
 | Phase | Tasks | Dependency status |
@@ -523,7 +534,7 @@ T34 -> T35
 | Functional API | T06-T12 | Banco, suporte e erros precedem endpoints; reserva depende de inventário. Match. |
 | Distributed | T13-T18 | Idempotência precede outbox; publisher precede expiração e notificação; consumer precede reconcile. Match. |
 | AWS | T19-T25 | Imagem precede Compose; rede precede dados/compute; compute precede entrada. Match. |
-| Quality | T26-T35 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada; o roteamento do Budget precede a Lambda de corte e T35 corrige o identificador do alvo escalável. Match. |
+| Quality | T26-T36 | Hardening precede benchmark; benchmark precede docs e validação; a janela comercial sucede a baseline validada; os painéis operacional e de negócio sucedem a infraestrutura implantada; o roteamento do Budget precede a Lambda de corte, T35 corrige o identificador do alvo escalável e T36 depende da rede e do plano de dados existentes. Match. |
 
 ## Test Co-location Validation
 
@@ -542,3 +553,4 @@ T34 -> T35
 | T33 | Budget/SNS | terraform test | O roteamento e a política SNS são verificados junto da alteração Terraform | OK |
 | T34 | Lambda de corte | unit/terraform test | O comportamento idempotente e as permissões são verificados junto da Lambda | OK |
 | T35 | Lambda de corte | unit/terraform test | ARN e nome do cluster são distinguidos no teste da integração de autoscaling | OK |
+| T36 | Administração RDS temporária | terraform test/validate/remote read | Rota, endpoint, TLS e `/32` são verificados junto da alteração Terraform | OK |

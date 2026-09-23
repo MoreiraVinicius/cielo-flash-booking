@@ -500,3 +500,25 @@ No test SNS message was published and no remote Lambda invocation was made: thos
 | DEMO-11 | Implemented | Validated |
 
 **Final verdict:** PASS — the orchestrator may mark DEMO-11 `Validated` and complete the handoff.
+
+## Independent verification — DEMO-12 / T36 temporary DataGrip access
+
+**Date:** 2026-09-23
+
+**Scope:** A two-day, demo-only exception for direct local DataGrip administration. No diagram was changed and no high-load resource was introduced.
+
+| Criterion | Evidence | Result |
+| --- | --- | --- |
+| RDS endpoint is public only for the temporary demo path | AWS `describe-db-instances` returned `PubliclyAccessible=true`, `available`, a regional RDS endpoint on `5432`, and the original subnet group `flash-booking-demo-postgres`. | PASS |
+| Administrative exposure is limited | AWS security-group read returned PostgreSQL ingress only from the configured administrative IPv4 `/32` and the ECS tasks security group. | PASS |
+| TLS and route are effective | RDS parameter group reported `rds.force_ssl=1` with `ParameterApplyStatus=in-sync` after the controlled reboot; route table `rtb-0ae78ac0753504daf` has only the required `0.0.0.0/0 → igw-0c5008602daa65ed1` exception. | PASS |
+| Local path reaches only the database port | `Test-NetConnection` from the operator machine to the RDS endpoint on `5432` returned `TcpTestSucceeded=True`; no password or data operation was performed. | PASS |
+| Versioned guardrails preserve the temporary boundary | `terraform test` passed 2/2 in `infra/modules/network` and 3/3 in `infra/modules/data-plane`; the tests require the default private route, the `/32`, retained DB subnet group, and explicit public-access flag. | PASS |
+
+The remote full Terraform plan after convergence contains no remaining change for DEMO-12. It still proposes pre-existing, out-of-scope drift for the operational SNS email subscription and API Gateway policy canonicalization; neither was applied.
+
+### Requirement traceability update
+
+| Requirement | Previous status | Verified status |
+| --- | --- | --- |
+| DEMO-12 | Implemented | Validated |

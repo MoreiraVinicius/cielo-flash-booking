@@ -1,6 +1,8 @@
 # Acesso temporário ao RDS pelo DataGrip
 
-Use este procedimento somente enquanto `database_administrative_access_enabled = true` na demo. Ele libera o PostgreSQL para uma única IPv4 `/32`; não use `0.0.0.0/0`.
+Use este procedimento somente durante os dois dias da demo e enquanto `database_administrative_access_enabled = true`. Ele libera o PostgreSQL para uma única IPv4 `/32`, exige TLS e adiciona temporariamente uma rota de Internet Gateway aos subnets de dados existentes; não use `0.0.0.0/0`.
+
+Isso **não é** a arquitetura high-load nem uma configuração de produção: em high-load o banco permanece privado atrás de Aurora/RDS Proxy. Valkey não recebe regra de entrada pública, mas a camada de dados perde o isolamento de rota enquanto esta exceção estiver ligada. Desligue a flag assim que o acesso local não for mais necessário.
 
 ## Ativar ou atualizar o IP
 
@@ -23,7 +25,7 @@ Quando o IP mudar, substitua apenas o valor de `database_administrative_cidr` pe
 
 No console AWS, abra **RDS → Databases → `flash-booking-demo-postgres`** e copie o endpoint e a porta `5432`. O banco é `flashbooking` e o usuário mestre é `flashbooking`.
 
-Na mesma tela, abra o segredo mestre associado em **Secrets Manager** e use o valor de `password`. Não copie a senha para `demo.tfvars`, arquivos `.env`, repositório ou histórico do terminal.
+Na mesma tela, abra o segredo mestre associado em **Secrets Manager** e use o valor de `password`. Não copie a senha para `demo.tfvars`, arquivos `.env`, repositório ou histórico do terminal. A ativação inicial do TLS exige um reboot breve do RDS; aguarde o estado **available** antes de testar.
 
 Baixe o bundle CA regional/global atual do RDS pela documentação da AWS e guarde-o fora do repositório. O DataGrip precisa desse arquivo para validar o certificado do servidor.
 

@@ -57,6 +57,12 @@ variable "isolated_data_subnet_cidrs" {
   }
 }
 
+variable "data_subnets_publicly_routable" {
+  description = "Demo-only exception that adds an Internet Gateway route to data subnets for direct RDS administration; never enable for high-load."
+  type        = bool
+  default     = false
+}
+
 variable "application_port" {
   description = "HTTP port exposed by the private application load balancer and ECS tasks."
   type        = number
