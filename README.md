@@ -37,6 +37,18 @@ Para a suite completa de testes:
 - A arquitetura high-load é somente desenho de evolução. Não foi provisionada, submetida a carga remota ou validada quanto a failover.
 - A evidência atual da aplicação está nas validações em `.specs/`; a execução local mais recente aprovou 121 testes, incluindo 68 integrações.
 
+## Visões de estudo
+
+O modelo completo e os contratos de consistência permanecem nas [especificações da demo](.specs/features/flash-booking-demo/design.md). Estes diagramas oferecem uma leitura rápida da persistência e do fluxo assíncrono.
+
+### Modelo de dados
+
+![Diagrama do modelo de dados PostgreSQL: Event e Customer possuem reservas; idempotência e outbox apoiam o processamento transacional](docs/images/flash-booking-data-model.png)
+
+### Transactional outbox sob pico de requisições
+
+![Diagrama: a reserva e o evento da outbox são gravados na mesma transação PostgreSQL; um worker publica depois e pode tentar novamente em caso de falha](docs/images/flash-booking-transactional-outbox.png)
+
 ## Material operacional e evidências complementares
 
 | Material | Uso |
