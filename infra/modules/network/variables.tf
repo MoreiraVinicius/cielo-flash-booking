@@ -67,3 +67,15 @@ variable "application_port" {
     error_message = "application_port must be a valid TCP port."
   }
 }
+
+variable "rds_administrative_cidr" {
+  description = "Optional single IPv4 /32 granted temporary direct PostgreSQL access."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.rds_administrative_cidr == null || (can(cidrhost(var.rds_administrative_cidr, 0)) && can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/32$", var.rds_administrative_cidr)))
+    error_message = "rds_administrative_cidr must be a single IPv4 /32."
+  }
+}

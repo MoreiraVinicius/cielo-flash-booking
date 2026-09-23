@@ -8,3 +8,7 @@ trusted_principal_arns = ["arn:aws:iam::123456789012:role/demo-operator"]
 # Current public IP of the demonstrator, deliberately with no broad default.
 allowed_cidrs      = ["203.0.113.10/32"]
 budget_alert_email = "alerts@example.com"
+
+# Temporary direct DataGrip access. Keep the actual /32 only in ignored demo.tfvars.
+database_administrative_access_enabled = false
+# database_administrative_cidr = "203.0.113.10/32"

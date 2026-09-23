@@ -44,3 +44,26 @@ variable "budget_alert_email" {
   type        = string
   description = "Recipient of the 50%, 80%, and 100% notifications for the US$5 demo budget."
 }
+
+variable "database_administrative_access_enabled" {
+  description = "Temporarily make the PostgreSQL RDS endpoint public for one administrative IPv4 /32."
+  type        = bool
+  default     = false
+}
+
+variable "database_administrative_cidr" {
+  description = "Single IPv4 /32 permitted to administer the public PostgreSQL RDS endpoint."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.database_administrative_cidr == null || (can(cidrhost(var.database_administrative_cidr, 0)) && can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/32$", var.database_administrative_cidr)))
+    error_message = "database_administrative_cidr must be a single IPv4 /32."
+  }
+
+  validation {
+    condition     = !var.database_administrative_access_enabled || var.database_administrative_cidr != null
+    error_message = "database_administrative_cidr is required when database_administrative_access_enabled is true."
+  }
+}

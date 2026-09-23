@@ -7,7 +7,7 @@ locals {
 
 resource "aws_db_subnet_group" "postgres" {
   name       = "${var.name}-postgres"
-  subnet_ids = var.isolated_data_subnet_ids
+  subnet_ids = var.database_subnet_ids
 
   tags = merge(local.tags, { Name = "${var.name}-postgres" })
 }
@@ -24,7 +24,7 @@ resource "aws_db_instance" "postgres" {
   db_name                     = var.database_name
   username                    = var.database_master_username
   manage_master_user_password = true
-  publicly_accessible         = false
+  publicly_accessible         = var.public_access_enabled
   multi_az                    = false
   backup_retention_period     = 1
   backup_window               = "03:00-03:30"
@@ -33,9 +33,23 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot         = true
   apply_immediately           = true
   db_subnet_group_name        = aws_db_subnet_group.postgres.name
+  parameter_group_name        = aws_db_parameter_group.postgres.name
   vpc_security_group_ids      = [var.rds_security_group_id]
   auto_minor_version_upgrade  = true
   copy_tags_to_snapshot       = true
+
+  tags = merge(local.tags, { Name = "${var.name}-postgres" })
+}
+
+resource "aws_db_parameter_group" "postgres" {
+  name_prefix = "${var.name}-postgres-"
+  family      = "postgres16"
+
+  parameter {
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "immediate"
+  }
 
   tags = merge(local.tags, { Name = "${var.name}-postgres" })
 }

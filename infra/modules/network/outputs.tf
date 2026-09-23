@@ -8,6 +8,11 @@ output "private_app_subnet_ids" {
   value       = [for index in ["0", "1"] : aws_subnet.private_app[index].id]
 }
 
+output "public_subnet_ids" {
+  description = "Public subnets that may host the temporary public RDS endpoint."
+  value       = [for index in ["0", "1"] : aws_subnet.public[index].id]
+}
+
 output "isolated_data_subnet_ids" {
   description = "Isolated subnets for RDS and ElastiCache subnet groups."
   value       = [for index in ["0", "1"] : aws_subnet.isolated_data[index].id]

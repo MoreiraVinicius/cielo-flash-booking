@@ -26,9 +26,10 @@ resource "aws_sns_topic_subscription" "operational_email" {
 }
 
 module "network" {
-  source             = "../../modules/network"
-  name               = var.name
-  availability_zones = var.availability_zones
+  source                  = "../../modules/network"
+  name                    = var.name
+  availability_zones      = var.availability_zones
+  rds_administrative_cidr = var.database_administrative_access_enabled ? var.database_administrative_cidr : null
 }
 
 module "data_plane" {
@@ -36,6 +37,8 @@ module "data_plane" {
   name                     = var.name
   vpc_id                   = module.network.vpc_id
   isolated_data_subnet_ids = module.network.isolated_data_subnet_ids
+  database_subnet_ids      = var.database_administrative_access_enabled ? module.network.public_subnet_ids : module.network.isolated_data_subnet_ids
+  public_access_enabled    = var.database_administrative_access_enabled
   rds_security_group_id    = module.network.rds_security_group_id
   valkey_security_group_id = module.network.valkey_security_group_id
   ses_sender_email         = var.ses_sender_email

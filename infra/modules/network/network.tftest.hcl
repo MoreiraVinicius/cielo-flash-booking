@@ -32,4 +32,24 @@ run "creates_two_private_application_and_isolated_data_subnets" {
     condition     = aws_vpc_security_group_ingress_rule.rds_from_ecs.referenced_security_group_id == aws_security_group.ecs_tasks.id && aws_vpc_security_group_ingress_rule.valkey_from_ecs.referenced_security_group_id == aws_security_group.ecs_tasks.id
     error_message = "Only ECS tasks may reach PostgreSQL and Valkey."
   }
+
+  assert {
+    condition     = length(aws_vpc_security_group_ingress_rule.rds_from_administrator) == 0
+    error_message = "No IPv4 administrator may reach PostgreSQL unless an explicit /32 is configured."
+  }
+}
+
+run "limits_rds_administrative_access_to_one_ipv4" {
+  command = apply
+
+  variables {
+    name                    = "flash-booking-demo"
+    availability_zones      = ["sa-east-1a", "sa-east-1c"]
+    rds_administrative_cidr = "203.0.113.10/32"
+  }
+
+  assert {
+    condition     = length(aws_vpc_security_group_ingress_rule.rds_from_administrator) == 1 && aws_vpc_security_group_ingress_rule.rds_from_administrator[0].cidr_ipv4 == "203.0.113.10/32" && aws_vpc_security_group_ingress_rule.rds_from_administrator[0].from_port == 5432 && aws_vpc_security_group_ingress_rule.rds_from_administrator[0].to_port == 5432 && aws_vpc_security_group_ingress_rule.rds_from_ecs.referenced_security_group_id == aws_security_group.ecs_tasks.id
+    error_message = "Only the explicit administrator IPv4 and ECS tasks may reach PostgreSQL."
+  }
 }
