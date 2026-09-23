@@ -302,7 +302,7 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "OUTBOX_PUBLISHER_REGION", value = var.aws_region },
       { name = "EXPIRATION_CONSUMER_ENABLED", value = "true" },
       { name = "EXPIRATION_CONSUMER_QUEUE_URL", value = var.expiration_queue_url },
-      { name = "NOTIFICATION_CONSUMER_ENABLED", value = "true" },
+      { name = "NOTIFICATION_CONSUMER_ENABLED", value = tostring(var.notification_consumer_enabled) },
       { name = "NOTIFICATION_CONSUMER_QUEUE_URL", value = var.notification_queue_url },
       { name = "NOTIFICATION_EMAIL_PROVIDER", value = "ses" },
       { name = "NOTIFICATION_EMAIL_FROM_ADDRESS", value = var.ses_sender_email },

@@ -30,6 +30,11 @@ variable "expiration_queue_arn" { type = string }
 variable "expiration_queue_url" { type = string }
 variable "notification_queue_arn" { type = string }
 variable "notification_queue_url" { type = string }
+variable "notification_consumer_enabled" {
+  description = "Whether the worker consumes reservation-notification messages and invokes the configured email provider."
+  type        = bool
+  default     = true
+}
 variable "ses_sender_email" { type = string }
 variable "alarm_topic_arn" {
   type    = string

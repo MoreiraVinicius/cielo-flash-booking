@@ -75,6 +75,11 @@ run "uses_one_image_with_separate_least_privilege_services" {
   }
 
   assert {
+    condition     = one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "NOTIFICATION_CONSUMER_ENABLED"]) == "true"
+    error_message = "The notification consumer must be enabled by default."
+  }
+
+  assert {
     condition     = alltrue([for definition in [aws_ecs_task_definition.query_api, aws_ecs_task_definition.command_api] : one([for item in jsondecode(definition.container_definitions)[0].environment : item.value if item.name == "MANAGEMENT_HEALTH_REDIS_ENABLED"]) == "false"])
     error_message = "ALB health checks must not fail when the optional Valkey cache falls back to PostgreSQL."
   }
@@ -82,5 +87,39 @@ run "uses_one_image_with_separate_least_privilege_services" {
   assert {
     condition     = !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[0].Action, "secretsmanager:GetSecretValue") && contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ReceiveMessage") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ChangeMessageVisibility") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[2].Action, "ses:SendRawEmail")
     error_message = "Only the execution role reads the database secret, while the worker receives queue messages."
+  }
+}
+
+run "pauses_only_notification_consumer" {
+  command = plan
+
+  variables {
+    name                          = "flash-booking-demo"
+    aws_region                    = "sa-east-1"
+    vpc_id                        = "vpc-123"
+    private_app_subnet_ids        = ["subnet-app-a", "subnet-app-b"]
+    ecs_tasks_security_group_id   = "sg-ecs"
+    database_host                 = "database.internal"
+    database_port                 = 5432
+    database_secret_arn           = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:database"
+    valkey_primary_endpoint       = "valkey.internal"
+    valkey_port                   = 6379
+    expiration_queue_arn          = "arn:aws:sqs:sa-east-1:123456789012:expiration"
+    expiration_queue_url          = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
+    notification_queue_arn        = "arn:aws:sqs:sa-east-1:123456789012:notification"
+    notification_queue_url        = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
+    notification_consumer_enabled = false
+    ses_sender_email              = "demo@example.com"
+    alarm_topic_arn               = "arn:aws:sns:sa-east-1:123456789012:alerts"
+  }
+
+  assert {
+    condition     = one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "NOTIFICATION_CONSUMER_ENABLED"]) == "false"
+    error_message = "The worker must receive a disabled notification consumer when the flag is false."
+  }
+
+  assert {
+    condition     = one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "OUTBOX_PUBLISHER_ENABLED"]) == "true" && one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "EXPIRATION_CONSUMER_ENABLED"]) == "true"
+    error_message = "Pausing notification delivery must not pause outbox publication or expiration."
   }
 }

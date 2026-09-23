@@ -46,24 +46,25 @@ module "data_plane" {
 }
 
 module "compute" {
-  source                      = "../../modules/compute"
-  name                        = var.name
-  aws_region                  = var.aws_region
-  vpc_id                      = module.network.vpc_id
-  private_app_subnet_ids      = module.network.private_app_subnet_ids
-  ecs_tasks_security_group_id = module.network.ecs_tasks_security_group_id
-  image_tag                   = var.image_tag
-  database_host               = module.data_plane.database_host
-  database_port               = module.data_plane.database_port
-  database_secret_arn         = module.data_plane.database_secret_arn
-  valkey_primary_endpoint     = module.data_plane.valkey_primary_endpoint
-  valkey_port                 = module.data_plane.valkey_port
-  expiration_queue_arn        = module.data_plane.expiration_queue_arn
-  expiration_queue_url        = module.data_plane.expiration_queue_url
-  notification_queue_arn      = module.data_plane.notification_queue_arn
-  notification_queue_url      = module.data_plane.notification_queue_url
-  ses_sender_email            = module.data_plane.ses_sender_email
-  alarm_topic_arn             = aws_sns_topic.operational_alerts.arn
+  source                        = "../../modules/compute"
+  name                          = var.name
+  aws_region                    = var.aws_region
+  vpc_id                        = module.network.vpc_id
+  private_app_subnet_ids        = module.network.private_app_subnet_ids
+  ecs_tasks_security_group_id   = module.network.ecs_tasks_security_group_id
+  image_tag                     = var.image_tag
+  database_host                 = module.data_plane.database_host
+  database_port                 = module.data_plane.database_port
+  database_secret_arn           = module.data_plane.database_secret_arn
+  valkey_primary_endpoint       = module.data_plane.valkey_primary_endpoint
+  valkey_port                   = module.data_plane.valkey_port
+  expiration_queue_arn          = module.data_plane.expiration_queue_arn
+  expiration_queue_url          = module.data_plane.expiration_queue_url
+  notification_queue_arn        = module.data_plane.notification_queue_arn
+  notification_queue_url        = module.data_plane.notification_queue_url
+  notification_consumer_enabled = var.notification_consumer_enabled
+  ses_sender_email              = module.data_plane.ses_sender_email
+  alarm_topic_arn               = aws_sns_topic.operational_alerts.arn
 }
 
 module "edge_observability" {

@@ -204,6 +204,14 @@
 - **Trade-off:** A camada de dados deixa de ser isolada enquanto a flag estiver ativa. Valkey continua sem entrada pública porque seu security group só aceita ECS, mas compartilha a rota temporária. Isso reduz a defesa em profundidade e não é uma topologia aceitável para produção ou alta carga.
 - **Scope:** Apenas a demo AWS temporária; a arquitetura high-load mantém Aurora/RDS Proxy, subnets privadas e nenhum endpoint administrativo público.
 
+### AD-028 - Pausa declarativa do consumidor de notificações
+
+- **Status:** active
+- **Decision:** A demo expõe `notification_consumer_enabled`, com default `true`, e o repassa à task worker como `NOTIFICATION_CONSUMER_ENABLED`. Quando `false`, somente o consumidor SQS/SES de notificações deixa de iniciar; publisher de outbox e consumidor de expiração permanecem habilitados.
+- **Reason:** A semeadura AWS com clientes fake precisa persistir reservas sem iniciar envios de e-mail, retries ou DLQ desnecessários.
+- **Trade-off:** Mensagens de notificação acumulam na SQS e podem ser processadas quando a flag voltar a `true`; a pausa não descarta dados nem torna a entrega exatamente uma vez.
+- **Scope:** Configuração Terraform do ambiente demo e criação condicional do consumidor Spring.
+
 ## Handoff
 
 - **Feature**: `flash-booking-demo`

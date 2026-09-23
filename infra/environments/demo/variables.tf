@@ -30,6 +30,12 @@ variable "ses_sender_email" {
   description = "Verified SES sender identity for reservation notifications."
 }
 
+variable "notification_consumer_enabled" {
+  description = "Temporarily enable or pause the worker notification consumer without stopping outbox publication or reservation expiration."
+  type        = bool
+  default     = true
+}
+
 variable "trusted_principal_arns" {
   type        = list(string)
   description = "Principals that may assume ApiInvokerRole."
