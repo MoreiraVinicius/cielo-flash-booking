@@ -6,10 +6,10 @@ Cada reserva publicada na demo AWS aciona a fila de notificações e o consumido
 
 ## Goals
 
-- [ ] Expor uma flag Terraform da demo para habilitar ou pausar somente o consumidor de notificações.
-- [ ] Manter o comportamento atual habilitado quando a flag não for definida.
-- [ ] Preservar outbox, expiração, persistência de clientes e reservas enquanto o consumidor estiver pausado.
-- [ ] Documentar a ativação temporária antes da semeadura e a reativação obrigatória depois.
+- [x] Expor uma flag Terraform da demo para habilitar ou pausar somente o consumidor de notificações.
+- [x] Manter o comportamento atual habilitado quando a flag não for definida.
+- [x] Preservar outbox, expiração, persistência de clientes e reservas enquanto o consumidor estiver pausado.
+- [x] Documentar a ativação temporária antes da semeadura e a reativação obrigatória depois.
 
 ## Out of Scope
 
@@ -73,12 +73,12 @@ Cada reserva publicada na demo AWS aciona a fila de notificações e o consumido
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| NOTIFY-01 | Flag da task worker | Execute | Implemented |
-| NOTIFY-02 | Pausa sem interromper fluxos críticos | Execute | Implemented |
-| NOTIFY-03 | Reativação operacional | Execute | Implemented |
+| NOTIFY-01 | Flag da task worker | Verify | Verified |
+| NOTIFY-02 | Pausa sem interromper fluxos críticos | Verify | Verified |
+| NOTIFY-03 | Reativação operacional | Verify | Verified |
 
 ## Success Criteria
 
-- [ ] Terraform prova o default habilitado e a pausa explícita.
-- [ ] A configuração Spring prova ausência do consumidor quando `enabled=false`.
-- [ ] O procedimento de pausa e restauração não contém credenciais e não altera dados persistidos.
+- [x] Terraform prova o default habilitado e a pausa explícita.
+- [x] A configuração Spring prova ausência do consumidor quando `enabled=false`.
+- [x] O procedimento de pausa e restauração não contém credenciais e não altera dados persistidos.
