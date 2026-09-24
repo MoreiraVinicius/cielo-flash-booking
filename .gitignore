@@ -26,6 +26,8 @@ target/
 
 # Dynamic-load disposable evidence
 performance/dynamic-load/results/
+performance/aws-seed/node_modules/
+performance/aws-seed/results/
 
 # Operating system files
 .DS_Store

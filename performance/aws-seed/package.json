@@ -1,0 +1,16 @@
+{
+  "name": "flash-booking-aws-seed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@aws-sdk/client-sts": "^3.900.0",
+    "@aws-sdk/credential-providers": "^3.900.0",
+    "@smithy/protocol-http": "^5.3.0",
+    "@smithy/signature-v4": "^5.3.0",
+    "@faker-js/faker": "^10.0.0"
+  }
+}
