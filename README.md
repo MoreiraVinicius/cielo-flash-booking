@@ -37,6 +37,26 @@ Para a suite completa de testes:
 - A arquitetura high-load é somente desenho de evolução. Não foi provisionada, submetida a carga remota ou validada quanto a failover.
 - A evidência atual da aplicação está nas validações em `.specs/`; a execução local mais recente aprovou 121 testes, incluindo 68 integrações.
 
+## E-mail de reserva temporária
+
+Ao registrar uma reserva, o worker publica a notificação pela fila SQS e a entrega pelo provedor configurado (SES na demo AWS). O conteúdo atual é texto simples; ele informa que a reserva **não** confirma compra nem pagamento.
+
+```text
+Para: ana.silva@example.test
+Assunto: Reserva temporária registrada
+
+Sua reserva temporária foi registrada.
+
+Reserva: 6d637907-46e1-4fbc-9af1-6972b5942892
+Evento: Festival de Música
+Quantidade: 2
+Válida até: 2026-09-24T15:30:00Z
+
+Esta reserva é temporária e não confirma compra nem pagamento.
+```
+
+Durante uma semeadura com dados fake, é possível pausar somente esse consumidor, mantendo outbox e expiração ativos. O procedimento para desligar e reativar `notification_consumer_enabled` está em [Pausar notificações durante a semeadura AWS](docs/pausar-notificacoes-semeadura.md). Mensagens já publicadas permanecem na SQS para processamento quando o consumidor voltar a ser habilitado.
+
 ## Visões de estudo
 
 O modelo completo e os contratos de consistência permanecem nas [especificações da demo](.specs/features/flash-booking-demo/design.md). Estes diagramas oferecem uma leitura rápida da persistência e do fluxo assíncrono.
