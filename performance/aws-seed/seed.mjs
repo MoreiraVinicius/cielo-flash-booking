@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { Sha256 } from '@aws-crypto/sha256-js';
 import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { fromIni } from '@aws-sdk/credential-providers';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { HttpRequest } from '@smithy/protocol-http';
 import { SignatureV4 } from '@smithy/signature-v4';
 import { faker } from '@faker-js/faker';
@@ -21,6 +22,14 @@ function argumentsByName(argumentsList) {
 function resourceUrl(endpoint, resourcePath) {
   const basePath = endpoint.pathname.replace(/\/$/, '');
   return new URL(`${basePath}${resourcePath}`, endpoint);
+}
+
+async function readResponseBody(body) {
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 async function createInvoker(config) {
@@ -44,6 +53,7 @@ async function createInvoker(config) {
     service: 'execute-api',
     sha256: Sha256,
   });
+  const httpHandler = new NodeHttpHandler({ requestTimeout: 15_000 });
   return async (method, resourcePath, body, idempotencyKey) => {
     const url = resourceUrl(config.endpoint, resourcePath);
     const serializedBody = body === undefined ? undefined : JSON.stringify(body);
@@ -62,19 +72,20 @@ async function createInvoker(config) {
       headers,
       body: serializedBody,
     }));
-    const response = await fetch(url, { method, headers: signed.headers, body: serializedBody });
-    const text = await response.text();
+    const { response } = await httpHandler.handle(signed);
+    const text = await readResponseBody(response.body);
     let payload;
     if (text) {
       try { payload = JSON.parse(text); } catch { payload = undefined; }
     }
-    return { status: response.status, payload };
+    return { status: response.statusCode, payload };
   };
 }
 
 function requireStatus(response, expectedStatus, operation) {
   if (response.status !== expectedStatus) {
-    throw new Error(`${operation} returned HTTP ${response.status}, expected ${expectedStatus}`);
+    const reason = response.payload?.message || response.payload?.title || 'no API error message';
+    throw new Error(`${operation} returned HTTP ${response.status}, expected ${expectedStatus}: ${reason}`);
   }
   return response.payload;
 }
