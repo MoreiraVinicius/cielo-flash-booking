@@ -18,9 +18,7 @@ public class SqsExpirationConsumer {
     private final ObjectMapper objectMapper;
 
     public SqsExpirationConsumer(
-            SqsClient sqsClient,
-            ExpireReservationService expireReservationService,
-            String queueUrl) {
+            SqsClient sqsClient, ExpireReservationService expireReservationService, String queueUrl) {
         this.sqsClient = sqsClient;
         this.expireReservationService = expireReservationService;
         this.queueUrl = queueUrl;
@@ -29,17 +27,17 @@ public class SqsExpirationConsumer {
 
     @Scheduled(fixedDelayString = "${expiration.consumer.fixed-delay:1s}")
     public void poll() {
-        sqsClient.receiveMessage(request -> request
-                        .queueUrl(queueUrl)
-                        .maxNumberOfMessages(10)
-                        .waitTimeSeconds(1))
+        sqsClient
+                .receiveMessage(request ->
+                        request.queueUrl(queueUrl).maxNumberOfMessages(10).waitTimeSeconds(1))
                 .messages()
                 .forEach(this::process);
     }
 
     private void process(Message message) {
         try {
-            UUID reservationId = UUID.fromString(objectMapper.readTree(message.body())
+            UUID reservationId = UUID.fromString(objectMapper
+                    .readTree(message.body())
                     .required("reservationId")
                     .asText());
             expireReservationService.expire(reservationId);

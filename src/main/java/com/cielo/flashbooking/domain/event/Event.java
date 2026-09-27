@@ -17,13 +17,7 @@ public final class Event {
     private final Instant endsAt;
 
     private Event(
-            UUID id,
-            String name,
-            int capacity,
-            int available,
-            Instant createdAt,
-            Instant startsAt,
-            Instant endsAt) {
+            UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.name = normalizeName(name);
         validateCapacity(capacity);
@@ -50,13 +44,7 @@ public final class Event {
     }
 
     public static Event restore(
-            UUID id,
-            String name,
-            int capacity,
-            int available,
-            Instant createdAt,
-            Instant startsAt,
-            Instant endsAt) {
+            UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {
         return new Event(id, name, capacity, available, createdAt, startsAt, endsAt);
     }
 

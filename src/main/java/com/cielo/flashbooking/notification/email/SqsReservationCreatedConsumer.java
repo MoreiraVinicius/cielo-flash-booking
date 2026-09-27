@@ -31,8 +31,8 @@ public class SqsReservationCreatedConsumer {
 
     @Scheduled(fixedDelayString = "${notification.consumer.fixed-delay:1s}")
     public void poll() {
-        sqsClient.receiveMessage(request -> request
-                        .queueUrl(queueUrl)
+        sqsClient
+                .receiveMessage(request -> request.queueUrl(queueUrl)
                         .maxNumberOfMessages(10)
                         .messageAttributeNames("All")
                         .waitTimeSeconds(1))
@@ -44,17 +44,20 @@ public class SqsReservationCreatedConsumer {
         try {
             requireReservationCreated(message);
             UUID outboxEventId = UUID.fromString(requiredAttribute(message, "outboxEventId"));
-            UUID reservationId = UUID.fromString(objectMapper.readTree(message.body())
+            UUID reservationId = UUID.fromString(objectMapper
+                    .readTree(message.body())
                     .required("reservationId")
                     .asText());
-            ReservationEmailService.ProcessingResult result = reservationEmailService.process(outboxEventId, reservationId);
+            ReservationEmailService.ProcessingResult result =
+                    reservationEmailService.process(outboxEventId, reservationId);
             if (result.acknowledged()) {
                 sqsClient.deleteMessage(request -> request.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));
             } else {
                 LOGGER.warn("notification delivery remains available for retry: outboxEventId={}", outboxEventId);
             }
         } catch (Exception exception) {
-            LOGGER.warn("notification message remains available for retry exceptionType={}",
+            LOGGER.warn(
+                    "notification message remains available for retry exceptionType={}",
                     exception.getClass().getSimpleName());
         }
     }

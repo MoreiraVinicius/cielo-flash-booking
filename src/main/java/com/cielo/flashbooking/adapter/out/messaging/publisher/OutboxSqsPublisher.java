@@ -53,14 +53,16 @@ public class OutboxSqsPublisher {
                     .queueUrl(queueUrlFor(event))
                     .messageBody(event.payload())
                     .messageAttributes(Map.of(
-                            "eventType", MessageAttributeValue.builder()
-                                    .dataType("String")
-                                    .stringValue(event.eventType())
-                                    .build(),
-                            "outboxEventId", MessageAttributeValue.builder()
-                                    .dataType("String")
-                                    .stringValue(event.id().toString())
-                                    .build()))
+                            "eventType",
+                                    MessageAttributeValue.builder()
+                                            .dataType("String")
+                                            .stringValue(event.eventType())
+                                            .build(),
+                            "outboxEventId",
+                                    MessageAttributeValue.builder()
+                                            .dataType("String")
+                                            .stringValue(event.id().toString())
+                                            .build()))
                     .delaySeconds(delaySecondsFor(event))
                     .build());
             outboxEventStore.markPublished(event.id(), clock.instant());
@@ -82,7 +84,8 @@ public class OutboxSqsPublisher {
             return 0;
         }
         try {
-            Instant expiresAt = Instant.parse(objectMapper.readTree(event.payload()).required("expiresAt").asText());
+            Instant expiresAt = Instant.parse(
+                    objectMapper.readTree(event.payload()).required("expiresAt").asText());
             Duration remaining = Duration.between(clock.instant(), expiresAt);
             if (remaining.isNegative() || remaining.isZero()) {
                 return 0;

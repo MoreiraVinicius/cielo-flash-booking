@@ -34,7 +34,13 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
         try {
             CacheEntry entry = objectMapper.readValue(value, CacheEntry.class);
             return Optional.of(Event.restore(
-                    entry.id(), entry.name(), entry.capacity(), entry.available(), entry.createdAt(), entry.startsAt(), entry.endsAt()));
+                    entry.id(),
+                    entry.name(),
+                    entry.capacity(),
+                    entry.available(),
+                    entry.createdAt(),
+                    entry.startsAt(),
+                    entry.endsAt()));
         } catch (JsonProcessingException invalidCacheEntry) {
             throw new IllegalStateException("invalid event cache entry", invalidCacheEntry);
         }
@@ -43,10 +49,15 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
     @Override
     public void put(Event event) {
         CacheEntry entry = new CacheEntry(
-                event.id(), event.name(), event.capacity(), event.available(), event.createdAt(), event.startsAt(), event.endsAt());
+                event.id(),
+                event.name(),
+                event.capacity(),
+                event.available(),
+                event.createdAt(),
+                event.startsAt(),
+                event.endsAt());
         try {
-            redisTemplate.opsForValue().set(
-                    key(event.id()), objectMapper.writeValueAsString(entry), TTL);
+            redisTemplate.opsForValue().set(key(event.id()), objectMapper.writeValueAsString(entry), TTL);
         } catch (JsonProcessingException serializationFailure) {
             throw new IllegalStateException("could not serialize event cache entry", serializationFailure);
         }
@@ -62,6 +73,5 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
     }
 
     private record CacheEntry(
-            UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {
-    }
+            UUID id, String name, int capacity, int available, Instant createdAt, Instant startsAt, Instant endsAt) {}
 }

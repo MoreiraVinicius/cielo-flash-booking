@@ -70,7 +70,9 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
                 .region(Region.of(LOCALSTACK.getRegion()))
                 .build();
-        queueUrl = sqsClient.createQueue(request -> request.queueName("notification-" + UUID.randomUUID())).queueUrl();
+        queueUrl = sqsClient
+                .createQueue(request -> request.queueName("notification-" + UUID.randomUUID()))
+                .queueUrl();
     }
 
     @AfterEach
@@ -87,18 +89,26 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
         consumer().poll();
 
         String email = deliveredEmail();
-        assertThat(email).contains(
-                reservationId.toString(),
-                "Email event",
-                "Quantidade: 2",
-                "Esta reserva é temporária e não confirma compra nem pagamento.");
+        assertThat(email)
+                .contains(
+                        reservationId.toString(),
+                        "Email event",
+                        "Quantidade: 2",
+                        "Esta reserva é temporária e não confirma compra nem pagamento.");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT status FROM notification_delivery WHERE outbox_event_id = ?", String.class, outboxEventId))
+                        "SELECT status FROM notification_delivery WHERE outbox_event_id = ?",
+                        String.class,
+                        outboxEventId))
                 .isEqualTo("SENT");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempts FROM notification_delivery WHERE outbox_event_id = ?", Integer.class, outboxEventId))
+                        "SELECT attempts FROM notification_delivery WHERE outbox_event_id = ?",
+                        Integer.class,
+                        outboxEventId))
                 .isEqualTo(1);
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(queueUrl)).messages()).isEmpty();
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(queueUrl))
+                        .messages())
+                .isEmpty();
     }
 
     @Test
@@ -113,7 +123,9 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
 
         assertThat(mailboxMessages().path("messages")).hasSize(1);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempts FROM notification_delivery WHERE outbox_event_id = ?", Integer.class, outboxEventId))
+                        "SELECT attempts FROM notification_delivery WHERE outbox_event_id = ?",
+                        Integer.class,
+                        outboxEventId))
                 .isEqualTo(1);
     }
 
@@ -139,8 +151,7 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
 
     private void send(UUID outboxEventId, UUID reservationId) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("reservationId", reservationId.toString()));
-        sqsClient.sendMessage(request -> request
-                .queueUrl(queueUrl)
+        sqsClient.sendMessage(request -> request.queueUrl(queueUrl)
                 .messageBody(body)
                 .messageAttributes(Map.of(
                         "eventType", messageAttribute("ReservationCreated"),
@@ -148,7 +159,10 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
     }
 
     private MessageAttributeValue messageAttribute(String value) {
-        return MessageAttributeValue.builder().dataType("String").stringValue(value).build();
+        return MessageAttributeValue.builder()
+                .dataType("String")
+                .stringValue(value)
+                .build();
     }
 
     private UUID insertPendingReservation() {
@@ -159,38 +173,60 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
         Instant expiresAt = createdAt.plusSeconds(600);
         jdbcTemplate.update(
                 "INSERT INTO event (id, name, capacity, available, created_at) VALUES (?, ?, ?, ?, ?)",
-                eventId, "Email event", 10, 8, java.sql.Timestamp.from(createdAt));
+                eventId,
+                "Email event",
+                10,
+                8,
+                java.sql.Timestamp.from(createdAt));
         jdbcTemplate.update(
                 "INSERT INTO customer (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                customerId, "Email customer", "customer@example.com", java.sql.Timestamp.from(createdAt), java.sql.Timestamp.from(createdAt));
-        jdbcTemplate.update("""
+                customerId,
+                "Email customer",
+                "customer@example.com",
+                java.sql.Timestamp.from(createdAt),
+                java.sql.Timestamp.from(createdAt));
+        jdbcTemplate.update(
+                """
                 INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?)
-                """, reservationId, eventId, customerId, 2, java.sql.Timestamp.from(expiresAt),
-                java.sql.Timestamp.from(createdAt), java.sql.Timestamp.from(createdAt));
+                """,
+                reservationId,
+                eventId,
+                customerId,
+                2,
+                java.sql.Timestamp.from(expiresAt),
+                java.sql.Timestamp.from(createdAt),
+                java.sql.Timestamp.from(createdAt));
         return reservationId;
     }
 
     private UUID insertReservationCreatedEvent(UUID reservationId) throws Exception {
         UUID outboxEventId = UUID.randomUUID();
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO outbox_event (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
                 VALUES (?, 'Reservation', ?, 'ReservationCreated', ?::jsonb, ?)
-                """, outboxEventId, reservationId,
+                """,
+                outboxEventId,
+                reservationId,
                 objectMapper.writeValueAsString(Map.of("reservationId", reservationId.toString())),
                 java.sql.Timestamp.from(databaseNow()));
         return outboxEventId;
     }
 
     private Instant databaseNow() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class)
+                .toInstant();
     }
 
     private void clearMailbox() throws Exception {
-        HttpResponse<Void> response = HTTP_CLIENT.send(HttpRequest.newBuilder(mailpitUri("/api/v1/messages"))
-                .DELETE()
-                .timeout(Duration.ofSeconds(3))
-                .build(), HttpResponse.BodyHandlers.discarding());
+        HttpResponse<Void> response = HTTP_CLIENT.send(
+                HttpRequest.newBuilder(mailpitUri("/api/v1/messages"))
+                        .DELETE()
+                        .timeout(Duration.ofSeconds(3))
+                        .build(),
+                HttpResponse.BodyHandlers.discarding());
         assertThat(response.statusCode()).isBetween(200, 299);
     }
 
@@ -198,19 +234,23 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
         JsonNode messages = mailboxMessages().required("messages");
         assertThat(messages).hasSize(1);
         String messageId = messages.get(0).required("ID").asText();
-        HttpResponse<String> response = HTTP_CLIENT.send(HttpRequest.newBuilder(mailpitUri("/api/v1/message/" + messageId))
-                .timeout(Duration.ofSeconds(3))
-                .GET()
-                .build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(
+                HttpRequest.newBuilder(mailpitUri("/api/v1/message/" + messageId))
+                        .timeout(Duration.ofSeconds(3))
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);
         return response.body();
     }
 
     private JsonNode mailboxMessages() throws Exception {
-        HttpResponse<String> response = HTTP_CLIENT.send(HttpRequest.newBuilder(mailpitUri("/api/v1/messages"))
-                .timeout(Duration.ofSeconds(3))
-                .GET()
-                .build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(
+                HttpRequest.newBuilder(mailpitUri("/api/v1/messages"))
+                        .timeout(Duration.ofSeconds(3))
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);
         return objectMapper.readTree(response.body());
     }

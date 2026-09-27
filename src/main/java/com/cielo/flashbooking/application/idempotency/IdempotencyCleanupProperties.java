@@ -9,9 +9,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "idempotency.cleanup")
 public record IdempotencyCleanupProperties(
-        @Min(1) @Max(10_000) Integer batchSize,
-        Duration fixedDelay,
-        Duration initialDelay) {
+        @Min(1) @Max(10_000) Integer batchSize, Duration fixedDelay, Duration initialDelay) {
 
     private static final int DEFAULT_BATCH_SIZE = 500;
     private static final Duration DEFAULT_DELAY = Duration.ofSeconds(5);

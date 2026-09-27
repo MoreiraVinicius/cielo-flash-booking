@@ -45,8 +45,10 @@ class ReservationCancellationController {
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             HttpServletRequest servletRequest) {
         IdempotencyResult result = idempotencyService.execute(
-                IdempotencyCommand.from(idempotencyKey, "DELETE", "/reservations/" + id, java.util.Map.of(), objectMapper),
-                () -> new IdempotencyResponse(200, ReservationDetailsResponse.from(cancelReservationService.cancel(id))),
+                IdempotencyCommand.from(
+                        idempotencyKey, "DELETE", "/reservations/" + id, java.util.Map.of(), objectMapper),
+                () -> new IdempotencyResponse(
+                        200, ReservationDetailsResponse.from(cancelReservationService.cancel(id))),
                 exception -> {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
                     return new IdempotencyResponse(problem.getStatus(), problem);

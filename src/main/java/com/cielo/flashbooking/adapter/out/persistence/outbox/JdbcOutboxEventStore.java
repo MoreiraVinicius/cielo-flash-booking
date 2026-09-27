@@ -20,17 +20,20 @@ public class JdbcOutboxEventStore implements OutboxEventStore {
 
     @Override
     public List<OutboxEvent> findPending(int limit) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 SELECT id, event_type, payload::text, occurred_at
                 FROM outbox_event
                 WHERE published_at IS NULL
                 ORDER BY occurred_at, id
                 LIMIT ?
-                """, (resultSet, rowNum) -> new OutboxEvent(
-                resultSet.getObject("id", UUID.class),
-                resultSet.getString("event_type"),
-                resultSet.getString("payload"),
-                resultSet.getTimestamp("occurred_at").toInstant()), limit);
+                """,
+                (resultSet, rowNum) -> new OutboxEvent(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getString("event_type"),
+                        resultSet.getString("payload"),
+                        resultSet.getTimestamp("occurred_at").toInstant()),
+                limit);
     }
 
     @Override

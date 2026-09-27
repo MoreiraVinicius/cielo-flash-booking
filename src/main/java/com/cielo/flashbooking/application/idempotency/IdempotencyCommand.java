@@ -21,10 +21,7 @@ public record IdempotencyCommand(String key, String operation, String normalized
         }
         try {
             return new IdempotencyCommand(
-                    normalizedKey,
-                    operation,
-                    normalizedTarget,
-                    sha256(objectMapper.writeValueAsString(payload)));
+                    normalizedKey, operation, normalizedTarget, sha256(objectMapper.writeValueAsString(payload)));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("could not serialize idempotency payload", exception);
         }

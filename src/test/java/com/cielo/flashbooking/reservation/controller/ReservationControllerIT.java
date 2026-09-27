@@ -69,10 +69,10 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "quantity", 3,
-                                "customer", Map.of("name", " Ana ", "email", "ANA@EXAMPLE.COM")))))
+                                "quantity", 3, "customer", Map.of("name", " Ana ", "email", "ANA@EXAMPLE.COM")))))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/reservations/[0-9a-f-]{36}")))
+                .andExpect(header().string(
+                                "Location", org.hamcrest.Matchers.matchesPattern("/reservations/[0-9a-f-]{36}")))
                 .andExpect(jsonPath("$.eventId").value(eventId.toString()))
                 .andExpect(jsonPath("$.customer.name").value("Ana"))
                 .andExpect(jsonPath("$.customer.email").value("ana@example.com"))
@@ -84,14 +84,18 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                 .getResponse()
                 .getContentAsString();
 
-        UUID reservationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+        UUID reservationId =
+                UUID.fromString(objectMapper.readTree(response).get("id").asText());
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(7);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation WHERE id = ?", Integer.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM reservation WHERE id = ?", Integer.class, reservationId))
                 .isEqualTo(1);
         List<Map<String, Object>> outboxEvents = jdbcTemplate.queryForList(
-                "SELECT event_type, payload FROM outbox_event WHERE aggregate_id = ? ORDER BY event_type", reservationId);
+                "SELECT event_type, payload FROM outbox_event WHERE aggregate_id = ? ORDER BY event_type",
+                reservationId);
         assertThat(outboxEvents).hasSize(2);
         assertThat(outboxEvents)
                 .extracting(event -> event.get("event_type"))
@@ -117,9 +121,12 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(10);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -136,7 +143,8 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(jsonPath("$.customer.name").value("Ana"))
                 .andExpect(jsonPath("$.customer.email").value("ana@example.com"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT email FROM customer", String.class)).isEqualTo("ana@example.com");
+        assertThat(jdbcTemplate.queryForObject("SELECT email FROM customer", String.class))
+                .isEqualTo("ana@example.com");
     }
 
     @Test
@@ -163,7 +171,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(jsonPath("$.customer.name").value("Ana Original"));
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT name FROM customer WHERE email = 'ana@example.com'", String.class))
+                        "SELECT name FROM customer WHERE email = 'ana@example.com'", String.class))
                 .isEqualTo("Ana Original");
     }
 
@@ -176,9 +184,12 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("resource-not-found"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -194,16 +205,20 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
 
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(2);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class))
+                .isZero();
     }
 
     @Test
     void create_whenSaleHasNotStarted_replaysConflictWithoutPartialEffects() throws Exception {
         UUID eventId = insertEvent(10, 10);
         String key = UUID.randomUUID().toString();
-        jdbcTemplate.update("UPDATE event SET starts_at = clock_timestamp() + interval '10 minutes' WHERE id = ?", eventId);
+        jdbcTemplate.update(
+                "UPDATE event SET starts_at = clock_timestamp() + interval '10 minutes' WHERE id = ?", eventId);
 
         for (int attempt = 0; attempt < 2; attempt++) {
             mockMvc.perform(post("/events/{eventId}/reservations", eventId)
@@ -215,7 +230,8 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
         }
 
         assertWindowRejectionHasNoReservationEffects(eventId, 10);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
@@ -234,17 +250,19 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
     }
 
     private String validRequest(int quantity) throws Exception {
-        return objectMapper.writeValueAsString(Map.of(
-                "quantity", quantity,
-                "customer", Map.of("name", "Ana", "email", "ana@example.com")));
+        return objectMapper.writeValueAsString(
+                Map.of("quantity", quantity, "customer", Map.of("name", "Ana", "email", "ana@example.com")));
     }
 
     private void assertWindowRejectionHasNoReservationEffects(UUID eventId, int expectedAvailable) {
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(expectedAvailable);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class))
+                .isZero();
     }
 
     private UUID insertEvent(int capacity, int available) {

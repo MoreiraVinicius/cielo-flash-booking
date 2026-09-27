@@ -7,11 +7,9 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record CreateReservationRequest(
-        @NotNull @Positive Integer quantity,
-        @NotNull @Valid CustomerRequest customer) {
+        @NotNull @Positive Integer quantity, @NotNull @Valid CustomerRequest customer) {
 
     public record CustomerRequest(
             @NotBlank @Size(max = 200) String name,
-            @NotBlank @Size(max = 320) String email) {
-    }
+            @NotBlank @Size(max = 320) String email) {}
 }

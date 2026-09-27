@@ -14,8 +14,8 @@ import org.springframework.core.env.SystemEnvironmentPropertySource;
 
 class IdempotencyCleanupPropertiesTest {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(PropertiesConfiguration.class);
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner().withUserConfiguration(PropertiesConfiguration.class);
 
     @Test
     void binding_whenSettingsAreAbsent_usesSafeDefaults() {
@@ -30,11 +30,15 @@ class IdempotencyCleanupPropertiesTest {
 
     @Test
     void binding_whenEnvironmentOverridesAreProvided_bindsExplicitUnitsAndValues() {
-        contextRunner.withInitializer(context -> context.getEnvironment().getPropertySources().addFirst(
-                new SystemEnvironmentPropertySource("cleanup-test-systemEnvironment", Map.<String, Object>of(
-                        "IDEMPOTENCY_CLEANUP_BATCHSIZE", "25",
-                        "IDEMPOTENCY_CLEANUP_FIXEDDELAY", "2s",
-                        "IDEMPOTENCY_CLEANUP_INITIALDELAY", "0s"))))
+        contextRunner
+                .withInitializer(context -> context.getEnvironment()
+                        .getPropertySources()
+                        .addFirst(new SystemEnvironmentPropertySource(
+                                "cleanup-test-systemEnvironment",
+                                Map.<String, Object>of(
+                                        "IDEMPOTENCY_CLEANUP_BATCHSIZE", "25",
+                                        "IDEMPOTENCY_CLEANUP_FIXEDDELAY", "2s",
+                                        "IDEMPOTENCY_CLEANUP_INITIALDELAY", "0s"))))
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     IdempotencyCleanupProperties properties = context.getBean(IdempotencyCleanupProperties.class);
@@ -47,25 +51,27 @@ class IdempotencyCleanupPropertiesTest {
     @ParameterizedTest
     @ValueSource(ints = {0, -1, 10_001})
     void binding_whenBatchSizeIsOutsideSafeBounds_failsStartup(int batchSize) {
-        contextRunner.withPropertyValues("idempotency.cleanup.batch-size=" + batchSize)
+        contextRunner
+                .withPropertyValues("idempotency.cleanup.batch-size=" + batchSize)
                 .run(context -> assertThat(context).hasFailed());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"0s", "-1s"})
     void binding_whenFixedDelayIsNotPositive_failsStartup(String fixedDelay) {
-        contextRunner.withPropertyValues("idempotency.cleanup.fixed-delay=" + fixedDelay)
+        contextRunner
+                .withPropertyValues("idempotency.cleanup.fixed-delay=" + fixedDelay)
                 .run(context -> assertThat(context).hasFailed());
     }
 
     @Test
     void binding_whenInitialDelayIsNegative_failsStartup() {
-        contextRunner.withPropertyValues("idempotency.cleanup.initial-delay=-1s")
+        contextRunner
+                .withPropertyValues("idempotency.cleanup.initial-delay=-1s")
                 .run(context -> assertThat(context).hasFailed());
     }
 
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(IdempotencyCleanupProperties.class)
-    static class PropertiesConfiguration {
-    }
+    static class PropertiesConfiguration {}
 }

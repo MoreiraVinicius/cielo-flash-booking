@@ -49,19 +49,20 @@ class PersistentIdempotencyIT extends LocalIntegrationInfrastructure {
 
     @Test
     void execute_whenUnexpectedFailureOccurs_rollsBackTheClaim() {
-        IdempotencyCommand command = IdempotencyCommand.from(
-                "failed-command", "POST", "/events", Map.of("capacity", 10), objectMapper);
+        IdempotencyCommand command =
+                IdempotencyCommand.from("failed-command", "POST", "/events", Map.of("capacity", 10), objectMapper);
 
         assertThatThrownBy(() -> idempotencyService.execute(
-                command,
-                () -> {
-                    throw new IllegalStateException("database unavailable");
-                },
-                exception -> new IdempotencyResponse(400, Map.of("code", "invalid-request"))))
+                        command,
+                        () -> {
+                            throw new IllegalStateException("database unavailable");
+                        },
+                        exception -> new IdempotencyResponse(400, Map.of("code", "invalid-request"))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("database unavailable");
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -73,17 +74,16 @@ class PersistentIdempotencyIT extends LocalIntegrationInfrastructure {
 
         assertThat(idempotencyRecordCleaner.deleteExpiredRecords()).isEqualTo(2);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM idempotency_record WHERE expires_at <= clock_timestamp()",
-                        Integer.class))
+                        "SELECT count(*) FROM idempotency_record WHERE expires_at <= clock_timestamp()", Integer.class))
                 .isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM idempotency_record WHERE idempotency_key = 'active'",
-                        Integer.class))
+                        "SELECT count(*) FROM idempotency_record WHERE idempotency_key = 'active'", Integer.class))
                 .isEqualTo(1);
 
         assertThat(idempotencyRecordCleaner.deleteExpiredRecords()).isEqualTo(1);
         assertThat(idempotencyRecordCleaner.deleteExpiredRecords()).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isEqualTo(1);
     }
 
     private void insertIdempotencyRecord(String key, String createdOffset, String expiresOffset) {

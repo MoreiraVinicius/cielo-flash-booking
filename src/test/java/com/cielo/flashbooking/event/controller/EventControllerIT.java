@@ -1,18 +1,18 @@
 package com.cielo.flashbooking.event.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Map;
-import java.util.UUID;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -23,12 +23,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -91,8 +91,8 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .getContentAsString();
 
         String id = objectMapper.readTree(response).get("id").asText();
-        Map<String, Object> persisted = jdbcTemplate.queryForMap(
-                "SELECT name, capacity, available FROM event WHERE id = ?::uuid", id);
+        Map<String, Object> persisted =
+                jdbcTemplate.queryForMap("SELECT name, capacity, available FROM event WHERE id = ?::uuid", id);
         assertThat(persisted)
                 .containsEntry("name", "Arena show")
                 .containsEntry("capacity", 120)
@@ -111,7 +111,8 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(header().exists("X-Correlation-ID"))
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isZero();
     }
 
     private static Stream<Arguments> invalidEvents() {
@@ -138,7 +139,8 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(jsonPath("$.startsAt").value(startsAt.toString()))
                 .andExpect(jsonPath("$.endsAt").value(endsAt.toString()));
 
-        Long ttlMillis = redisTemplate.getExpire("event-availability:" + id, java.util.concurrent.TimeUnit.MILLISECONDS);
+        Long ttlMillis =
+                redisTemplate.getExpire("event-availability:" + id, java.util.concurrent.TimeUnit.MILLISECONDS);
         assertThat(ttlMillis).isNotNull().isPositive().isLessThanOrEqualTo(1_000L);
 
         jdbcTemplate.update("DELETE FROM event WHERE id = ?", id);
@@ -201,7 +203,8 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isEqualTo(1);
     }
 
     private UUID insertEvent(int capacity, int available) {

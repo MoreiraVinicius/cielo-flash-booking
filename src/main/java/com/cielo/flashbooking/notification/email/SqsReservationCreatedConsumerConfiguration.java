@@ -1,5 +1,7 @@
 package com.cielo.flashbooking.notification.email;
 
+import com.cielo.flashbooking.reservation.application.ReservationReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,8 +16,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
 import software.amazon.awssdk.services.sesv2.SesV2ClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import com.cielo.flashbooking.reservation.application.ReservationReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
 @Profile({"worker", "all"})
@@ -24,7 +24,8 @@ class SqsReservationCreatedConsumerConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "notification.email", name = "provider", havingValue = "smtp")
-    ReservationEmailSender smtpReservationEmailSender(JavaMailSender mailSender, NotificationEmailProperties properties) {
+    ReservationEmailSender smtpReservationEmailSender(
+            JavaMailSender mailSender, NotificationEmailProperties properties) {
         Assert.hasText(properties.fromAddress(), "notification.email.from-address must be configured");
         return new SmtpReservationEmailSender(mailSender, properties.fromAddress());
     }
@@ -58,10 +59,7 @@ class SqsReservationCreatedConsumerConfiguration {
             ReservationEmailSender reservationEmailSender,
             NotificationConsumerProperties properties) {
         return new ReservationEmailService(
-                notificationDeliveryStore,
-                reservationReader,
-                reservationEmailSender,
-                properties);
+                notificationDeliveryStore, reservationReader, reservationEmailSender, properties);
     }
 
     @Bean
@@ -71,6 +69,7 @@ class SqsReservationCreatedConsumerConfiguration {
             NotificationConsumerProperties properties,
             ObjectMapper objectMapper) {
         Assert.hasText(properties.queueUrl(), "notification.consumer.queue-url must be configured");
-        return new SqsReservationCreatedConsumer(sqsClient, reservationEmailService, properties.queueUrl(), objectMapper);
+        return new SqsReservationCreatedConsumer(
+                sqsClient, reservationEmailService, properties.queueUrl(), objectMapper);
     }
 }

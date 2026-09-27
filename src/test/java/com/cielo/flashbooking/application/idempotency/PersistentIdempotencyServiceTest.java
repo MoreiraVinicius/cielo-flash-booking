@@ -29,10 +29,11 @@ class PersistentIdempotencyServiceTest {
         IdempotencyCommand command = command("key-1", Map.of("capacity", 10));
         when(idempotencyStore.claim(command)).thenReturn(true);
 
-        IdempotencyResult result = service().execute(
-                command,
-                () -> new IdempotencyResponse(201, Map.of("id", "event-1")),
-                exception -> throwUnexpected(exception));
+        IdempotencyResult result = service()
+                .execute(
+                        command,
+                        () -> new IdempotencyResponse(201, Map.of("id", "event-1")),
+                        exception -> throwUnexpected(exception));
 
         assertThat(result.status()).isEqualTo(201);
         assertThat(result.responseBody()).isEqualTo("{\"id\":\"event-1\"}");
@@ -46,19 +47,25 @@ class PersistentIdempotencyServiceTest {
     void execute_whenKeyMatchesExistingRequest_returnsStoredResultWithoutExecutingAgain() {
         IdempotencyCommand command = command("key-1", Map.of("capacity", 10));
         when(idempotencyStore.claim(command)).thenReturn(false);
-        when(idempotencyStore.findByKey(command.key())).thenReturn(java.util.Optional.of(
-                new IdempotencyStore.StoredIdempotencyResponse(
-                        command.operation(), command.normalizedTarget(), command.payloadHash(), 201, "{\"id\":\"event-1\"}")));
+        when(idempotencyStore.findByKey(command.key()))
+                .thenReturn(java.util.Optional.of(new IdempotencyStore.StoredIdempotencyResponse(
+                        command.operation(),
+                        command.normalizedTarget(),
+                        command.payloadHash(),
+                        201,
+                        "{\"id\":\"event-1\"}")));
 
-        IdempotencyResult result = service().execute(
-                command,
-                () -> {
-                    throw new AssertionError("the command must not execute twice");
-                },
-                exception -> throwUnexpected(exception));
+        IdempotencyResult result = service()
+                .execute(
+                        command,
+                        () -> {
+                            throw new AssertionError("the command must not execute twice");
+                        },
+                        exception -> throwUnexpected(exception));
 
         assertThat(result).isEqualTo(new IdempotencyResult(201, "{\"id\":\"event-1\"}"));
-        verify(idempotencyStore, never()).complete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        verify(idempotencyStore, never())
+                .complete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -66,14 +73,15 @@ class PersistentIdempotencyServiceTest {
         IdempotencyCommand original = command("key-1", Map.of("capacity", 10));
         IdempotencyCommand changed = command("key-1", Map.of("capacity", 11));
         when(idempotencyStore.claim(changed)).thenReturn(false);
-        when(idempotencyStore.findByKey(changed.key())).thenReturn(java.util.Optional.of(
-                new IdempotencyStore.StoredIdempotencyResponse(
+        when(idempotencyStore.findByKey(changed.key()))
+                .thenReturn(java.util.Optional.of(new IdempotencyStore.StoredIdempotencyResponse(
                         original.operation(), original.normalizedTarget(), original.payloadHash(), 201, "{}")));
 
-        assertThatThrownBy(() -> service().execute(
-                changed,
-                () -> new IdempotencyResponse(201, Map.of()),
-                exception -> throwUnexpected(exception)))
+        assertThatThrownBy(() -> service()
+                        .execute(
+                                changed,
+                                () -> new IdempotencyResponse(201, Map.of()),
+                                exception -> throwUnexpected(exception)))
                 .isInstanceOf(ResourceConflictException.class);
     }
 
@@ -82,16 +90,18 @@ class PersistentIdempotencyServiceTest {
         IdempotencyCommand command = command("key-1", Map.of("quantity", 2));
         when(idempotencyStore.claim(command)).thenReturn(true);
 
-        IdempotencyResult result = service().execute(
-                command,
-                () -> {
-                    throw new ResourceConflictException("capacity");
-                },
-                exception -> new IdempotencyResponse(409, Map.of("code", "resource-conflict")));
+        IdempotencyResult result = service()
+                .execute(
+                        command,
+                        () -> {
+                            throw new ResourceConflictException("capacity");
+                        },
+                        exception -> new IdempotencyResponse(409, Map.of("code", "resource-conflict")));
 
         assertThat(result.status()).isEqualTo(409);
         assertThat(result.responseBody()).contains("resource-conflict");
-        verify(idempotencyStore).complete(command.key(), new IdempotencyResponse(409, Map.of("code", "resource-conflict")));
+        verify(idempotencyStore)
+                .complete(command.key(), new IdempotencyResponse(409, Map.of("code", "resource-conflict")));
     }
 
     @Test
@@ -99,16 +109,18 @@ class PersistentIdempotencyServiceTest {
         IdempotencyCommand command = command("key-1", Map.of("capacity", 10));
         when(idempotencyStore.claim(command)).thenReturn(true);
 
-        assertThatThrownBy(() -> service().execute(
-                command,
-                () -> {
-                    throw new IllegalStateException("database unavailable");
-                },
-                exception -> throwUnexpected(exception)))
+        assertThatThrownBy(() -> service()
+                        .execute(
+                                command,
+                                () -> {
+                                    throw new IllegalStateException("database unavailable");
+                                },
+                                exception -> throwUnexpected(exception)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("database unavailable");
 
-        verify(idempotencyStore, never()).complete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        verify(idempotencyStore, never())
+                .complete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
     }
 
     private PersistentIdempotencyService service() {

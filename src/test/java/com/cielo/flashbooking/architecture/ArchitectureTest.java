@@ -20,8 +20,16 @@ class ArchitectureTest {
 
     private static final String ROOT = "com.cielo.flashbooking";
     private static final Set<String> MODULES = Set.of(
-            "adapter", "application", "config", "controller", "domain", "event", "inventory",
-            "notification", "operations", "reservation");
+            "adapter",
+            "application",
+            "config",
+            "controller",
+            "domain",
+            "event",
+            "inventory",
+            "notification",
+            "operations",
+            "reservation");
 
     private static JavaClasses productionClasses() {
         return new ClassFileImporter()
@@ -51,7 +59,8 @@ class ArchitectureTest {
             assertThat(javaClass.getPackageName())
                     .as("production class %s belongs to one named module", name)
                     .startsWith(ROOT + ".");
-            String module = javaClass.getPackageName().substring(ROOT.length() + 1).split("\\.")[0];
+            String module =
+                    javaClass.getPackageName().substring(ROOT.length() + 1).split("\\.")[0];
             assertThat(module).as("module for %s", name).isIn(MODULES);
         }
     }
@@ -94,9 +103,14 @@ class ArchitectureTest {
         return noClasses()
                 .that()
                 .resideInAnyPackage(
-                        ROOT + ".domain..", ROOT + ".application..", ROOT + ".event..",
-                        ROOT + ".reservation..", ROOT + ".inventory..", ROOT + ".notification..",
-                        ROOT + ".operations..", ROOT + ".controller..")
+                        ROOT + ".domain..",
+                        ROOT + ".application..",
+                        ROOT + ".event..",
+                        ROOT + ".reservation..",
+                        ROOT + ".inventory..",
+                        ROOT + ".notification..",
+                        ROOT + ".operations..",
+                        ROOT + ".controller..")
                 .should()
                 .dependOnClassesThat()
                 .resideInAPackage(ROOT + ".adapter..");

@@ -29,7 +29,7 @@ Essas movimentações mudam nomes internos de classes, imports e localização d
 
 ## Formatter e revisão AWS
 
-- Spotless é ligado ao lifecycle `validate` com `check`; `apply` é comando explícito. O formato abrange apenas `src/main/java` e `src/test/java`. Escolher e fixar versões do plugin e do formatter no POM antes da normalização mecânica.
+- Spotless Maven `3.10.3` é ligado ao lifecycle `validate` com `check`; `apply` é comando explícito. Palantir Java Format `2.98.0` formata apenas `src/main/java` e `src/test/java`. Ambos têm versões fixas no POM. A escolha mantém indentação de quatro espaços e linhas mais largas que Google Java Format padrão; o custo é um commit mecânico que normaliza a árvore Java existente.
 - A revisão AWS examina código, IaC e specs, sem consultar segredos nem afirmar operação high-load. `Evidência insuficiente` preserva lacunas verificáveis.
 
 ## Technical Decisions

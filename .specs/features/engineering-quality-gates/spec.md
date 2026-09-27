@@ -74,7 +74,7 @@ O build atual não verifica as fronteiras do monólito nem a formatação Java. 
 | Requirement ID | Criteria | Status |
 | --- | --- | --- |
 | GATE-01 | 1–4 | Implemented, pending independent verification |
-| GATE-02 | 5–7 | Planned |
+| GATE-02 | 5–7 | Implemented, pending independent verification |
 | GATE-03 | 8 | Planned |
 
 ## Success Criteria

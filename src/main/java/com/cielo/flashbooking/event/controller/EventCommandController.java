@@ -48,7 +48,8 @@ class EventCommandController {
         IdempotencyResult result = idempotencyService.execute(
                 IdempotencyCommand.from(idempotencyKey, "POST", "/events", request, objectMapper),
                 () -> new IdempotencyResponse(
-                        201, EventResponse.from(createEventService.create(
+                        201,
+                        EventResponse.from(createEventService.create(
                                 request.name(), request.capacity(), request.startsAt(), request.endsAt()))),
                 exception -> {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
@@ -58,7 +59,8 @@ class EventCommandController {
                 .contentType(result.status() >= 400 ? MediaType.APPLICATION_PROBLEM_JSON : MediaType.APPLICATION_JSON);
         if (result.status() == 201) {
             try {
-                builder.location(URI.create("/events/" + objectMapper.readTree(result.responseBody()).get("id").asText()));
+                builder.location(URI.create("/events/"
+                        + objectMapper.readTree(result.responseBody()).get("id").asText()));
             } catch (Exception exception) {
                 throw new IllegalStateException("could not read idempotency response location", exception);
             }

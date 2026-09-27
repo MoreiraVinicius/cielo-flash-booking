@@ -77,8 +77,8 @@ public class GetEventService {
     }
 
     private Event loadFromDatabase(UUID id, boolean populateCache) {
-        Event event = eventReader.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("event not found: " + id));
+        Event event =
+                eventReader.findById(id).orElseThrow(() -> new ResourceNotFoundException("event not found: " + id));
         if (populateCache) {
             writeCache(event);
         }

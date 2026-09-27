@@ -57,7 +57,7 @@ T02 -> T03
 
 ### T02: Ligar Spotless ao build
 
-**Status:** Planned
+**Status:** Complete
 **What:** Fixar plugin e formatter, aplicar somente à árvore Java e provar check, falha e segunda aplicação sem diff.
 **Where:** `pom.xml`, `src/main/java/`, `src/test/java/`, `.specs/features/engineering-quality-gates/`.
 **Depends on:** T01
@@ -66,6 +66,7 @@ T02 -> T03
 **Tests:** `spotless:check`, prova negativa em scratch e hashes após aplicar duas vezes.
 **Gate:** Format, Full
 **Commit:** `build(java): enforce reproducible formatting`
+**Result:** `spotless:apply` normalizou os 117 arquivos Java; a segunda execução alterou 0 hashes. `spotless:check` passou. Um arquivo temporário desformatado fez `verify` falhar no `validate` com seu caminho no erro e foi removido. `clean verify -Pintegration` passou depois da formatação, com 61 testes unitários e 68 de integração.
 
 ## Phase 2: Revisão AWS
 

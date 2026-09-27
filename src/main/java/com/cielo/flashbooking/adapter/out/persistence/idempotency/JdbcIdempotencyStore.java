@@ -23,7 +23,8 @@ class JdbcIdempotencyStore implements IdempotencyStore {
 
     @Override
     public boolean claim(IdempotencyCommand command) {
-        return jdbcTemplate.update("""
+        return jdbcTemplate.update(
+                        """
                 INSERT INTO idempotency_record (
                     id, idempotency_key, operation, normalized_target, payload_hash,
                     response_status, response_body, created_at, expires_at)
@@ -40,27 +41,31 @@ class JdbcIdempotencyStore implements IdempotencyStore {
                     expires_at = clock_timestamp() + interval '24 hours'
                 WHERE idempotency_record.expires_at <= clock_timestamp()
                 """,
-                UUID.randomUUID(),
-                command.key(),
-                command.operation(),
-                command.normalizedTarget(),
-                command.payloadHash()) == 1;
+                        UUID.randomUUID(),
+                        command.key(),
+                        command.operation(),
+                        command.normalizedTarget(),
+                        command.payloadHash())
+                == 1;
     }
 
     @Override
     public Optional<StoredIdempotencyResponse> findByKey(String key) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 SELECT operation, normalized_target, payload_hash, response_status, response_body::text
                 FROM idempotency_record
                 WHERE idempotency_key = ?
-                """, resultSet -> resultSet.next()
-                ? Optional.of(new StoredIdempotencyResponse(
-                        resultSet.getString("operation"),
-                        resultSet.getString("normalized_target"),
-                        resultSet.getString("payload_hash"),
-                        resultSet.getInt("response_status"),
-                        resultSet.getString("response_body")))
-                : Optional.empty(), key);
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new StoredIdempotencyResponse(
+                                resultSet.getString("operation"),
+                                resultSet.getString("normalized_target"),
+                                resultSet.getString("payload_hash"),
+                                resultSet.getInt("response_status"),
+                                resultSet.getString("response_body")))
+                        : Optional.empty(),
+                key);
     }
 
     @Override

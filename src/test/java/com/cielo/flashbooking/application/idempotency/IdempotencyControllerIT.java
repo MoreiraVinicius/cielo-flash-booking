@@ -83,17 +83,23 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                         .content(request))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.available").value(10))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         String repeated = mockMvc.perform(post("/events")
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
         assertThat(objectMapper.readTree(repeated)).isEqualTo(objectMapper.readTree(first));
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
                 .isEqualTo(201);
     }
 
@@ -113,44 +119,44 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("resource-conflict"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
     void createReservation_whenKeyExpires_allowsOneNewEffectAcrossParallelRetries() throws Exception {
         UUID eventId = insertEvent(10, 10);
         String key = UUID.randomUUID().toString();
-        String request = objectMapper.writeValueAsString(Map.of(
-                "quantity", 1,
-                "customer", Map.of("name", "Ana", "email", "ana@example.com")));
+        String request = objectMapper.writeValueAsString(
+                Map.of("quantity", 1, "customer", Map.of("name", "Ana", "email", "ana@example.com")));
         List<String> initialResponses = performParallelReservationRequests(eventId, key, request);
 
         assertThat(objectMapper.readTree(initialResponses.get(1)))
                 .isEqualTo(objectMapper.readTree(initialResponses.getFirst()));
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(9);
 
-        jdbcTemplate.update(
-                """
+        jdbcTemplate.update("""
                 UPDATE idempotency_record
                 SET created_at = clock_timestamp() - interval '25 hours',
                     expires_at = clock_timestamp() - interval '1 second'
                 WHERE idempotency_key = ?
-                """,
-                key);
-        String newRequest = objectMapper.writeValueAsString(Map.of(
-                "quantity", 1,
-                "customer", Map.of("name", "Bia", "email", "bia@example.com")));
+                """, key);
+        String newRequest = objectMapper.writeValueAsString(
+                Map.of("quantity", 1, "customer", Map.of("name", "Bia", "email", "bia@example.com")));
 
         List<String> reclaimedResponses = performParallelReservationRequests(eventId, key, newRequest);
 
         assertThat(objectMapper.readTree(reclaimedResponses.get(1)))
                 .isEqualTo(objectMapper.readTree(reclaimedResponses.getFirst()));
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isEqualTo(2);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(8);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
                         "SELECT expires_at > clock_timestamp() FROM idempotency_record WHERE idempotency_key = ?",
                         Boolean.class,
@@ -168,9 +174,11 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("resource-not-found"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
                 .isEqualTo(404);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -186,7 +194,9 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                         .content(request))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("resource-conflict"))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         String repeated = mockMvc.perform(post("/events/{eventId}/reservations", eventId)
                         .header("Idempotency-Key", key)
                         .header("X-Correlation-ID", "replayed-attempt")
@@ -195,30 +205,41 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.correlationId").value("replayed-attempt"))
                 .andExpect(header().string("X-Correlation-ID", "replayed-attempt"))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
         assertThat(objectMapper.readTree(first).get("code").asText()).isEqualTo("resource-conflict");
         assertThat(objectMapper.readTree(repeated).get("code").asText()).isEqualTo("resource-conflict");
-        assertThat(jdbcTemplate.queryForObject("SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
                 .isEqualTo(409);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
     }
 
     @Test
     void cancel_whenRequestRepeats_returnsTheStoredTerminalResponseWithoutASecondCapacityReturn() throws Exception {
         UUID reservationId = insertPendingReservation();
-        UUID eventId = jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
         String key = UUID.randomUUID().toString();
 
-        String first = mockMvc.perform(delete("/reservations/{id}", reservationId).header("Idempotency-Key", key))
+        String first = mockMvc.perform(
+                        delete("/reservations/{id}", reservationId).header("Idempotency-Key", key))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
-                .andReturn().getResponse().getContentAsString();
-        String repeated = mockMvc.perform(delete("/reservations/{id}", reservationId).header("Idempotency-Key", key))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String repeated = mockMvc.perform(
+                        delete("/reservations/{id}", reservationId).header("Idempotency-Key", key))
                 .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
         assertThat(objectMapper.readTree(repeated)).isEqualTo(objectMapper.readTree(first));
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
@@ -233,8 +254,10 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -246,8 +269,10 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM idempotency_record", Integer.class))
+                .isZero();
     }
 
     @Test
@@ -262,19 +287,22 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
 
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(10);
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM reservation", Integer.class))
+                .isZero();
     }
 
     @Test
     void cancel_whenIdempotencyKeyIsMissing_returnsBadRequestWithoutChangingTheReservation() throws Exception {
         UUID reservationId = insertPendingReservation();
-        UUID eventId = jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
 
         mockMvc.perform(delete("/reservations/{id}", reservationId))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("invalid-request"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("PENDING");
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(7);
@@ -300,7 +328,9 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(request))
                     .andExpect(status().isCreated())
-                    .andReturn().getResponse().getContentAsString());
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString());
         }
 
         List<String> responses = new ArrayList<>();
@@ -322,10 +352,7 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("""
                 INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, 3, 'PENDING', clock_timestamp() + interval '10 minutes', clock_timestamp(), clock_timestamp())
-                """,
-                reservationId,
-                eventId,
-                customerId);
+                """, reservationId, eventId, customerId);
         return reservationId;
     }
 }

@@ -55,8 +55,12 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
                 .region(Region.of(LOCALSTACK.getRegion()))
                 .build();
-        expirationQueueUrl = sqsClient.createQueue(request -> request.queueName("expiration-" + UUID.randomUUID())).queueUrl();
-        notificationQueueUrl = sqsClient.createQueue(request -> request.queueName("notification-" + UUID.randomUUID())).queueUrl();
+        expirationQueueUrl = sqsClient
+                .createQueue(request -> request.queueName("expiration-" + UUID.randomUUID()))
+                .queueUrl();
+        notificationQueueUrl = sqsClient
+                .createQueue(request -> request.queueName("notification-" + UUID.randomUUID()))
+                .queueUrl();
     }
 
     @AfterEach
@@ -67,22 +71,26 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
     @Test
     void publishesEachOutboxTypeToItsDedicatedQueueOnlyOnce() throws Exception {
         UUID notificationEvent = insertOutboxEvent("ReservationCreated", Instant.parse("2026-09-09T12:10:00Z"));
-        UUID expirationEvent = insertOutboxEvent("ReservationExpirationScheduled", Instant.parse("2026-09-09T11:59:00Z"));
+        UUID expirationEvent =
+                insertOutboxEvent("ReservationExpirationScheduled", Instant.parse("2026-09-09T11:59:00Z"));
 
         publisher(expirationQueueUrl).publishPendingEvents();
 
-        var notificationMessages = sqsClient.receiveMessage(request -> request.queueUrl(notificationQueueUrl)
-                        .messageAttributeNames("All"))
+        var notificationMessages = sqsClient
+                .receiveMessage(
+                        request -> request.queueUrl(notificationQueueUrl).messageAttributeNames("All"))
                 .messages();
-        var expirationMessages = sqsClient.receiveMessage(request -> request.queueUrl(expirationQueueUrl)
-                        .messageAttributeNames("All"))
+        var expirationMessages = sqsClient
+                .receiveMessage(request -> request.queueUrl(expirationQueueUrl).messageAttributeNames("All"))
                 .messages();
         assertThat(notificationMessages).hasSize(1);
         assertThat(expirationMessages).hasSize(1);
         var notificationMessage = notificationMessages.getFirst();
         var expirationMessage = expirationMessages.getFirst();
-        assertThat(notificationMessage.messageAttributes().get("eventType").stringValue()).isEqualTo("ReservationCreated");
-        assertThat(expirationMessage.messageAttributes().get("eventType").stringValue()).isEqualTo("ReservationExpirationScheduled");
+        assertThat(notificationMessage.messageAttributes().get("eventType").stringValue())
+                .isEqualTo("ReservationCreated");
+        assertThat(expirationMessage.messageAttributes().get("eventType").stringValue())
+                .isEqualTo("ReservationExpirationScheduled");
         assertThat(notificationMessage.messageAttributes().get("outboxEventId").stringValue())
                 .isEqualTo(notificationEvent.toString());
         assertThat(expirationMessage.messageAttributes().get("outboxEventId").stringValue())
@@ -96,25 +104,38 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
         assertThat(published(notificationEvent)).isNotNull();
         assertThat(published(expirationEvent)).isNotNull();
 
-        sqsClient.deleteMessage(request -> request.queueUrl(notificationQueueUrl).receiptHandle(notificationMessage.receiptHandle()));
-        sqsClient.deleteMessage(request -> request.queueUrl(expirationQueueUrl).receiptHandle(expirationMessage.receiptHandle()));
+        sqsClient.deleteMessage(
+                request -> request.queueUrl(notificationQueueUrl).receiptHandle(notificationMessage.receiptHandle()));
+        sqsClient.deleteMessage(
+                request -> request.queueUrl(expirationQueueUrl).receiptHandle(expirationMessage.receiptHandle()));
         publisher(expirationQueueUrl).publishPendingEvents();
 
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(notificationQueueUrl)).messages()).isEmpty();
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(expirationQueueUrl)).messages()).isEmpty();
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(notificationQueueUrl))
+                        .messages())
+                .isEmpty();
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(expirationQueueUrl))
+                        .messages())
+                .isEmpty();
     }
 
     @Test
     void limitsExpirationDelayToFifteenMinutes() {
-        UUID eventId = insertOutboxEvent("ReservationExpirationScheduled", clock.instant().plusSeconds(1_200));
+        UUID eventId = insertOutboxEvent(
+                "ReservationExpirationScheduled", clock.instant().plusSeconds(1_200));
 
         publisher(expirationQueueUrl).publishPendingEvents();
 
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(expirationQueueUrl)).messages()).isEmpty();
-        assertThat(sqsClient.getQueueAttributes(request -> request.queueUrl(expirationQueueUrl)
-                        .attributeNamesWithStrings("ApproximateNumberOfMessagesDelayed"))
-                .attributesAsStrings()
-                .get("ApproximateNumberOfMessagesDelayed"))
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(expirationQueueUrl))
+                        .messages())
+                .isEmpty();
+        assertThat(sqsClient
+                        .getQueueAttributes(request -> request.queueUrl(expirationQueueUrl)
+                                .attributeNamesWithStrings("ApproximateNumberOfMessagesDelayed"))
+                        .attributesAsStrings()
+                        .get("ApproximateNumberOfMessagesDelayed"))
                 .isEqualTo("1");
         assertThat(published(eventId)).isNotNull();
     }
@@ -132,21 +153,21 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
 
         assertThat(published(eventId)).isNotNull();
         assertThat(attempts(eventId)).isEqualTo(2);
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(expirationQueueUrl)).messages()).hasSize(1);
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(expirationQueueUrl))
+                        .messages())
+                .hasSize(1);
     }
 
     private OutboxSqsPublisher publisher(String expirationUrl) {
         return new OutboxSqsPublisher(
-                new JdbcOutboxEventStore(jdbcTemplate),
-                sqsClient,
-                expirationUrl,
-                notificationQueueUrl,
-                clock);
+                new JdbcOutboxEventStore(jdbcTemplate), sqsClient, expirationUrl, notificationQueueUrl, clock);
     }
 
     private UUID insertOutboxEvent(String eventType, Instant expiresAt) {
         UUID id = UUID.randomUUID();
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO outbox_event (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
                 VALUES (?, ?, ?, ?, ?::jsonb, ?)
                 """,
@@ -177,10 +198,12 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
     }
 
     private String payloadOf(UUID eventId) {
-        return jdbcTemplate.queryForObject("SELECT payload::text FROM outbox_event WHERE id = ?", String.class, eventId);
+        return jdbcTemplate.queryForObject(
+                "SELECT payload::text FROM outbox_event WHERE id = ?", String.class, eventId);
     }
 
     private Instant published(UUID eventId) {
-        return jdbcTemplate.queryForObject("SELECT published_at FROM outbox_event WHERE id = ?", Instant.class, eventId);
+        return jdbcTemplate.queryForObject(
+                "SELECT published_at FROM outbox_event WHERE id = ?", Instant.class, eventId);
     }
 }

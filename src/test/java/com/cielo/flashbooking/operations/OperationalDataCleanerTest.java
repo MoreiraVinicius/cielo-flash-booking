@@ -15,8 +15,8 @@ class OperationalDataCleanerTest {
         NotificationDeliveryStore deliveries = mock(NotificationDeliveryStore.class);
         OutboxEventStore outbox = mock(OutboxEventStore.class);
         Duration retention = Duration.ofDays(7);
-        OperationalDataCleaner cleaner = new OperationalDataCleaner(
-                deliveries, outbox, new OperationalDataCleanupProperties(500, retention));
+        OperationalDataCleaner cleaner =
+                new OperationalDataCleaner(deliveries, outbox, new OperationalDataCleanupProperties(500, retention));
 
         cleaner.clean();
 

@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityCache;
-import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
+import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Timestamp;
@@ -43,9 +43,8 @@ class ReservationDeadlineIT {
     private static final String EXTERNAL_URL = System.getProperty("test.postgres.url");
     private static final String EXTERNAL_USERNAME = System.getProperty("test.postgres.username", "postgres");
     private static final String EXTERNAL_PASSWORD = System.getProperty("test.postgres.password", "postgres");
-    private static final PostgreSQLContainer<?> POSTGRESQL = EXTERNAL_URL == null
-            ? new PostgreSQLContainer<>("postgres:16-alpine")
-            : null;
+    private static final PostgreSQLContainer<?> POSTGRESQL =
+            EXTERNAL_URL == null ? new PostgreSQLContainer<>("postgres:16-alpine") : null;
 
     @Autowired
     private MockMvc mockMvc;
@@ -118,15 +117,13 @@ class ReservationDeadlineIT {
         Fixture fixture = insertPendingReservation(databaseNow().minusMillis(1));
         String idempotencyKey = UUID.randomUUID().toString();
 
-        mockMvc.perform(delete("/reservations/{id}", fixture.reservationId())
-                        .header("Idempotency-Key", idempotencyKey))
+        mockMvc.perform(delete("/reservations/{id}", fixture.reservationId()).header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("EXPIRED"))
                 .andExpect(jsonPath("$.closureReason.code").value("RESERVATION_DEADLINE_REACHED"))
                 .andExpect(jsonPath("$.closureReason.description").value("Prazo da reserva encerrado"));
 
-        mockMvc.perform(delete("/reservations/{id}", fixture.reservationId())
-                        .header("Idempotency-Key", idempotencyKey))
+        mockMvc.perform(delete("/reservations/{id}", fixture.reservationId()).header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("EXPIRED"));
         mockMvc.perform(delete("/reservations/{id}", fixture.reservationId())
@@ -195,7 +192,8 @@ class ReservationDeadlineIT {
                 "ana-" + reservationId + "@example.com",
                 Timestamp.from(createdAt),
                 Timestamp.from(createdAt));
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO reservation (
                     id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, 3, 'PENDING', ?, ?, ?)
@@ -211,18 +209,20 @@ class ReservationDeadlineIT {
 
     private void assertTerminalState(Fixture fixture, String status, String reasonCode, String reasonDescription) {
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT status FROM reservation WHERE id = ?", String.class, fixture.reservationId()))
+                        "SELECT status FROM reservation WHERE id = ?", String.class, fixture.reservationId()))
                 .isEqualTo(status);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, fixture.reservationId()))
+                        "SELECT closure_reason_code FROM reservation WHERE id = ?",
+                        String.class,
+                        fixture.reservationId()))
                 .isEqualTo(reasonCode);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT closure_reason_description FROM reservation WHERE id = ?",
-                String.class,
-                fixture.reservationId()))
+                        "SELECT closure_reason_description FROM reservation WHERE id = ?",
+                        String.class,
+                        fixture.reservationId()))
                 .isEqualTo(reasonDescription);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
+                        "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
                 .isEqualTo(10);
     }
 
@@ -256,7 +256,9 @@ class ReservationDeadlineIT {
     }
 
     private Instant databaseNow() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", Timestamp.class)
+                .toInstant();
     }
 
     private Connection connection() throws Exception {
@@ -284,6 +286,5 @@ class ReservationDeadlineIT {
         return POSTGRESQL == null ? EXTERNAL_PASSWORD : POSTGRESQL.getPassword();
     }
 
-    private record Fixture(UUID eventId, UUID reservationId) {
-    }
+    private record Fixture(UUID eventId, UUID reservationId) {}
 }

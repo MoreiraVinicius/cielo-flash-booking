@@ -2,8 +2,8 @@ package com.cielo.flashbooking.reservation.reconciliation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
+import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
 import java.time.Instant;
 import java.util.List;
@@ -61,9 +61,11 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
         expirationReconciler.reconcile();
 
         assertThat(databaseNow()).isBefore(expiresAt.plusSeconds(5));
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("EXPIRED");
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
     }
 
     @Test
@@ -74,9 +76,11 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
         expirationReconciler.reconcile();
 
         assertThat(reservationReader.findExpiredPendingIds(100)).doesNotContain(reservationId);
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("PENDING");
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(7);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(7);
     }
 
     @Test
@@ -84,9 +88,7 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
         UUID eventId = insertEvent(10, 7);
         UUID reservationId = insertPendingReservation(eventId, 3, databaseNow().minusMillis(10));
         ExpirationReconciler secondWorker = new ExpirationReconciler(
-                reservationReader,
-                expireReservationService,
-                new ExpirationReconciliationProperties(null));
+                reservationReader, expireReservationService, new ExpirationReconciliationProperties(null));
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             List<Callable<Void>> workers = List.of(
@@ -103,9 +105,11 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
                 result.get();
             }
 
-            assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+            assertThat(jdbcTemplate.queryForObject(
+                            "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                     .isEqualTo("EXPIRED");
-            assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
+            assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                    .isEqualTo(10);
         } finally {
             executor.shutdownNow();
         }
@@ -124,7 +128,9 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
     }
 
     private Instant databaseNow() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class)
+                .toInstant();
     }
 
     private UUID insertPendingReservation(UUID eventId, int quantity, Instant expiresAt) {
@@ -138,7 +144,8 @@ class ExpirationReconcilerIT extends LocalIntegrationInfrastructure {
                 customerId + "@example.com",
                 java.sql.Timestamp.from(createdAt),
                 java.sql.Timestamp.from(createdAt));
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?)
                 """,

@@ -32,10 +32,12 @@ public class CreateReservationService {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional(noRollbackFor = {
-            ResourceNotFoundException.class,
-            ResourceConflictException.class,
-            IllegalArgumentException.class})
+    @Transactional(
+            noRollbackFor = {
+                ResourceNotFoundException.class,
+                ResourceConflictException.class,
+                IllegalArgumentException.class
+            })
     public CreatedReservation create(UUID eventId, int quantity, String customerName, String customerEmail) {
         Objects.requireNonNull(eventId, "eventId must not be null");
         Instant createdAt = reservationWriter.currentTime();
@@ -50,12 +52,7 @@ public class CreateReservationService {
 
         Customer customer = reservationWriter.upsertCustomer(requestedCustomer);
         Reservation reservation = Reservation.pending(
-                UUID.randomUUID(),
-                eventId,
-                customer,
-                quantity,
-                createdAt.plus(properties.holdDuration()),
-                createdAt);
+                UUID.randomUUID(), eventId, customer, quantity, createdAt.plus(properties.holdDuration()), createdAt);
         reservationWriter.save(reservation);
         reservationWriter.addReservationCreatedOutboxEvent(reservation);
         reservationWriter.addReservationExpirationScheduledOutboxEvent(reservation);

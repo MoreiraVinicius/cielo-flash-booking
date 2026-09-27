@@ -40,7 +40,8 @@ public class PersistentIdempotencyService {
     }
 
     private IdempotencyResult existingResult(IdempotencyCommand command) {
-        IdempotencyStore.StoredIdempotencyResponse existing = idempotencyStore.findByKey(command.key())
+        IdempotencyStore.StoredIdempotencyResponse existing = idempotencyStore
+                .findByKey(command.key())
                 .orElseThrow(() -> new IllegalStateException("idempotency record disappeared"));
         if (!existing.matches(command)) {
             throw new ResourceConflictException("Idempotency-Key is incompatible with this request");

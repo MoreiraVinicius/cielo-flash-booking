@@ -22,20 +22,27 @@ public class ProblemResponseFactory {
 
     public ProblemDetail expectedFailure(RuntimeException exception, HttpServletRequest request) {
         if (exception instanceof ResourceNotFoundException) {
-            return problem(HttpStatus.NOT_FOUND, "Resource not found", "The requested resource was not found.", "resource-not-found", request);
+            return problem(
+                    HttpStatus.NOT_FOUND,
+                    "Resource not found",
+                    "The requested resource was not found.",
+                    "resource-not-found",
+                    request);
         }
         if (exception instanceof ResourceConflictException) {
-            return problem(HttpStatus.CONFLICT, "Conflict", "The request conflicts with the current resource state.", "resource-conflict", request);
+            return problem(
+                    HttpStatus.CONFLICT,
+                    "Conflict",
+                    "The request conflicts with the current resource state.",
+                    "resource-conflict",
+                    request);
         }
-        return problem(HttpStatus.BAD_REQUEST, "Invalid request", "The request is invalid.", "invalid-request", request);
+        return problem(
+                HttpStatus.BAD_REQUEST, "Invalid request", "The request is invalid.", "invalid-request", request);
     }
 
     public ProblemDetail problem(
-            HttpStatus status,
-            String title,
-            String detail,
-            String code,
-            HttpServletRequest request) {
+            HttpStatus status, String title, String detail, String code, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(title);
         problem.setType(URI.create("urn:flash-booking:problem:" + code));

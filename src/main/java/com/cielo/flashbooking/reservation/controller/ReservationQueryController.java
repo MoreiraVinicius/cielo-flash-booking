@@ -23,5 +23,4 @@ class ReservationQueryController {
     ReservationDetailsResponse get(@PathVariable UUID id) {
         return ReservationDetailsResponse.from(getReservationService.get(id));
     }
-
 }

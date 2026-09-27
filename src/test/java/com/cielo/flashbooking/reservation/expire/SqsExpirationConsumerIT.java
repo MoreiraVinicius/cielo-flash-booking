@@ -66,7 +66,9 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
                 .region(Region.of(LOCALSTACK.getRegion()))
                 .build();
-        queueUrl = sqsClient.createQueue(request -> request.queueName("expiration-" + UUID.randomUUID())).queueUrl();
+        queueUrl = sqsClient
+                .createQueue(request -> request.queueName("expiration-" + UUID.randomUUID()))
+                .queueUrl();
     }
 
     @AfterEach
@@ -85,15 +87,22 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
         consumer().poll();
 
         assertThat(databaseNow()).isBefore(expiresAt.plusSeconds(5));
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("EXPIRED");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("RESERVATION_DEADLINE_REACHED");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_description FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT closure_reason_description FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("Prazo da reserva encerrado");
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
-        assertThat(sqsClient.receiveMessage(request -> request.queueUrl(queueUrl)).messages()).isEmpty();
+        assertThat(sqsClient
+                        .receiveMessage(request -> request.queueUrl(queueUrl))
+                        .messages())
+                .isEmpty();
     }
 
     @Test
@@ -104,11 +113,14 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
 
         consumer().poll();
 
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("PENDING");
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
                 .isNull();
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(7);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(7);
     }
 
     @Test
@@ -120,9 +132,11 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
 
         consumer().poll();
 
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("EXPIRED");
-        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(10);
     }
 
     @Test
@@ -144,9 +158,11 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
                 }
             }
             assertThat(expired).isEqualTo(1);
-            assertThat(jdbcTemplate.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
+            assertThat(jdbcTemplate.queryForObject(
+                            "SELECT status FROM reservation WHERE id = ?", String.class, reservationId))
                     .isEqualTo("EXPIRED");
-            assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId)).isEqualTo(10);
+            assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                    .isEqualTo(10);
         } finally {
             executor.shutdownNow();
         }
@@ -178,7 +194,9 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
     }
 
     private Instant databaseNow() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class)
+                .toInstant();
     }
 
     private UUID insertPendingReservation(UUID eventId, int quantity, Instant expiresAt) {
@@ -192,7 +210,8 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
                 customerId + "@example.com",
                 java.sql.Timestamp.from(createdAt),
                 java.sql.Timestamp.from(createdAt));
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?)
                 """,

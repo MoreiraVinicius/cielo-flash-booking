@@ -17,9 +17,7 @@ record ReservationDetailsResponse(
     static ReservationDetailsResponse from(ReservationDetails reservation) {
         return new ReservationDetailsResponse(
                 reservation.id(),
-                new EventResponse(
-                        reservation.event().id(),
-                        reservation.event().name()),
+                new EventResponse(reservation.event().id(), reservation.event().name()),
                 new CustomerResponse(
                         reservation.customer().id(),
                         reservation.customer().name(),
@@ -30,15 +28,13 @@ record ReservationDetailsResponse(
                 reservation.closureReason() == null
                         ? null
                         : new ClosureReasonResponse(
-                                reservation.closureReason().code(), reservation.closureReason().description()));
+                                reservation.closureReason().code(),
+                                reservation.closureReason().description()));
     }
 
-    record EventResponse(UUID id, String name) {
-    }
+    record EventResponse(UUID id, String name) {}
 
-    record CustomerResponse(UUID id, String name, String email) {
-    }
+    record CustomerResponse(UUID id, String name, String email) {}
 
-    record ClosureReasonResponse(String code, String description) {
-    }
+    record ClosureReasonResponse(String code, String description) {}
 }

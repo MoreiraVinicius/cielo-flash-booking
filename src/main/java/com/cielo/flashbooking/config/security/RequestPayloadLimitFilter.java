@@ -1,11 +1,5 @@
 package com.cielo.flashbooking.config.security;
 
-import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -13,6 +7,12 @@ import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -32,10 +32,8 @@ public final class RequestPayloadLimitFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         if (request.getContentLengthLong() > maximumRequestBodySize) {
             response.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
             return;

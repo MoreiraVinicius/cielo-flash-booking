@@ -9,9 +9,7 @@ class SqsReservationCreatedConsumerConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(SqsReservationCreatedConsumerConfiguration.class)
-            .withPropertyValues(
-                    "spring.profiles.active=worker",
-                    "notification.consumer.enabled=false");
+            .withPropertyValues("spring.profiles.active=worker", "notification.consumer.enabled=false");
 
     @Test
     void notificationConsumerDisabled_doesNotCreateSqsConsumer() {

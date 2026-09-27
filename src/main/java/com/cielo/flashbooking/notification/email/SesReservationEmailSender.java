@@ -20,13 +20,22 @@ public class SesReservationEmailSender implements ReservationEmailSender {
 
     @Override
     public String send(ReservationEmail email) {
-        return sesClient.sendEmail(SendEmailRequest.builder()
+        return sesClient
+                .sendEmail(SendEmailRequest.builder()
                         .fromEmailAddress(fromAddress)
-                        .destination(Destination.builder().toAddresses(email.recipient()).build())
+                        .destination(Destination.builder()
+                                .toAddresses(email.recipient())
+                                .build())
                         .content(EmailContent.builder()
                                 .simple(Message.builder()
-                                        .subject(Content.builder().data(email.subject()).build())
-                                        .body(Body.builder().text(Content.builder().data(email.body()).build()).build())
+                                        .subject(Content.builder()
+                                                .data(email.subject())
+                                                .build())
+                                        .body(Body.builder()
+                                                .text(Content.builder()
+                                                        .data(email.body())
+                                                        .build())
+                                                .build())
                                         .build())
                                 .build())
                         .build())

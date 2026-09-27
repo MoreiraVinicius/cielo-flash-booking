@@ -47,6 +47,5 @@ class SchedulingConfigurationTest {
 
     @Configuration(proxyBeanMethods = false)
     @EnableScheduling
-    static class SchedulingConfiguration {
-    }
+    static class SchedulingConfiguration {}
 }

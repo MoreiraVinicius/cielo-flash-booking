@@ -33,7 +33,8 @@ class CancelReservationServiceTest {
         when(inventory.increment(eventId, 3)).thenReturn(true);
         when(reader.findById(reservationId)).thenReturn(Optional.of(cancelled));
 
-        assertThat(service(writer, reader, inventory, publisher).cancel(reservationId)).isEqualTo(cancelled);
+        assertThat(service(writer, reader, inventory, publisher).cancel(reservationId))
+                .isEqualTo(cancelled);
 
         verify(inventory).increment(eventId, 3);
         verify(publisher).publishEvent(new EventAvailabilityChanged(eventId));
@@ -50,7 +51,8 @@ class CancelReservationServiceTest {
         when(writer.closePendingOnCancellation(reservationId)).thenReturn(Optional.empty());
         when(reader.findById(reservationId)).thenReturn(Optional.of(terminal));
 
-        assertThat(service(writer, reader, inventory, publisher).cancel(reservationId)).isEqualTo(terminal);
+        assertThat(service(writer, reader, inventory, publisher).cancel(reservationId))
+                .isEqualTo(terminal);
 
         verify(inventory, never()).increment(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
         verify(publisher, never()).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));
@@ -64,8 +66,10 @@ class CancelReservationServiceTest {
         when(writer.closePendingOnCancellation(reservationId)).thenReturn(Optional.empty());
         when(reader.findById(reservationId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service(writer, reader, mock(InventoryOperations.class), mock(ApplicationEventPublisher.class))
-                .cancel(reservationId)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service(
+                                writer, reader, mock(InventoryOperations.class), mock(ApplicationEventPublisher.class))
+                        .cancel(reservationId))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     private CancelReservationService service(

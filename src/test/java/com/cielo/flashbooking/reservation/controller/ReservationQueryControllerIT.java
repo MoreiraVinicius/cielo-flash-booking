@@ -1,8 +1,8 @@
 package com.cielo.flashbooking.reservation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -56,8 +56,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     @Test
     void get_whenReservationExists_returnsDetailsAndStableEventReference() throws Exception {
         UUID reservationId = insertReservation("PENDING");
-        UUID eventId = jdbcTemplate.queryForObject(
-                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
 
         mockMvc.perform(get("/reservations/{id}", reservationId))
                 .andExpect(status().isOk())
@@ -113,8 +113,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     @Test
     void cancel_whenReservationIsPending_returnsAuditableTerminalStateAndInvalidatesEventCache() throws Exception {
         UUID reservationId = insertReservation("PENDING");
-        UUID eventId = jdbcTemplate.queryForObject(
-                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
         redisTemplate.opsForValue().set("event-availability:" + eventId, "stale");
 
         mockMvc.perform(delete("/reservations/{id}", reservationId)
@@ -126,7 +126,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
 
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(10);
-        assertThat(jdbcTemplate.queryForObject("SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("CANCELLED_BY_REQUEST");
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
     }
@@ -134,15 +135,13 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     @Test
     void cancel_whenRepeated_preservesTerminalStateAndReturnsCapacityOnlyOnce() throws Exception {
         UUID reservationId = insertReservation("PENDING");
-        UUID eventId = jdbcTemplate.queryForObject(
-                "SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
 
         String idempotencyKey = UUID.randomUUID().toString();
-        mockMvc.perform(delete("/reservations/{id}", reservationId)
-                        .header("Idempotency-Key", idempotencyKey))
+        mockMvc.perform(delete("/reservations/{id}", reservationId).header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk());
-        mockMvc.perform(delete("/reservations/{id}", reservationId)
-                        .header("Idempotency-Key", idempotencyKey))
+        mockMvc.perform(delete("/reservations/{id}", reservationId).header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
@@ -154,7 +153,9 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         UUID eventId = UUID.randomUUID();
         UUID customerId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
-        Instant createdAt = jdbcTemplate.queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class).toInstant();
+        Instant createdAt = jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", java.sql.Timestamp.class)
+                .toInstant();
         jdbcTemplate.update(
                 "INSERT INTO event (id, name, capacity, available, created_at) VALUES (?, ?, ?, ?, ?)",
                 eventId,
@@ -170,7 +171,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
                 java.sql.Timestamp.from(createdAt),
                 java.sql.Timestamp.from(createdAt));
         if ("CANCELLED".equals(status)) {
-            jdbcTemplate.update("""
+            jdbcTemplate.update(
+                    """
                     INSERT INTO reservation (
                         id, event_id, customer_id, quantity, status, expires_at,
                         closure_reason_code, closure_reason_description, created_at, updated_at)
@@ -187,7 +189,8 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
                     java.sql.Timestamp.from(createdAt),
                     java.sql.Timestamp.from(createdAt));
         } else {
-            jdbcTemplate.update("""
+            jdbcTemplate.update(
+                    """
                     INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,

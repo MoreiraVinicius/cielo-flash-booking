@@ -39,15 +39,8 @@ class SqsPublisherConfiguration {
 
     @Bean
     OutboxSqsPublisher outboxSqsPublisher(
-            OutboxEventStore outboxEventStore,
-            SqsClient sqsClient,
-            OutboxPublisherProperties properties,
-            Clock clock) {
+            OutboxEventStore outboxEventStore, SqsClient sqsClient, OutboxPublisherProperties properties, Clock clock) {
         return new OutboxSqsPublisher(
-                outboxEventStore,
-                sqsClient,
-                properties.expirationQueueUrl(),
-                properties.notificationQueueUrl(),
-                clock);
+                outboxEventStore, sqsClient, properties.expirationQueueUrl(), properties.notificationQueueUrl(), clock);
     }
 }

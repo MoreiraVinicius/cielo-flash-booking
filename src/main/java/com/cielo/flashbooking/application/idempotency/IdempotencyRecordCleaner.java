@@ -15,9 +15,7 @@ public class IdempotencyRecordCleaner {
     private final IdempotencyStore idempotencyStore;
     private final IdempotencyCleanupProperties properties;
 
-    public IdempotencyRecordCleaner(
-            IdempotencyStore idempotencyStore,
-            IdempotencyCleanupProperties properties) {
+    public IdempotencyRecordCleaner(IdempotencyStore idempotencyStore, IdempotencyCleanupProperties properties) {
         this.idempotencyStore = idempotencyStore;
         this.properties = properties;
     }

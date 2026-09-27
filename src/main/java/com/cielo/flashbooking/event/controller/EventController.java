@@ -2,11 +2,11 @@ package com.cielo.flashbooking.event.controller;
 
 import com.cielo.flashbooking.event.application.GetEventService;
 import java.util.UUID;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.context.annotation.Profile;
 
 @RestController
 @Profile({"query-api", "all"})
@@ -23,5 +23,4 @@ public class EventController {
     EventResponse get(@PathVariable UUID id) {
         return EventResponse.from(getEventService.get(id));
     }
-
 }

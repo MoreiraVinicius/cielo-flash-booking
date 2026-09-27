@@ -26,7 +26,8 @@ public class ExpireReservationService {
 
     @Transactional
     public boolean expire(UUID reservationId) {
-        return reservationWriter.expirePending(reservationId)
+        return reservationWriter
+                .expirePending(reservationId)
                 .map(this::expireAndReturn)
                 .orElse(false);
     }
