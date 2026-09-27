@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.application.reconciliation;
+package com.cielo.flashbooking.reservation.reconciliation;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

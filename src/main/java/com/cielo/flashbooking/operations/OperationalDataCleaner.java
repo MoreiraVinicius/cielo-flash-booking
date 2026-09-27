@@ -1,5 +1,6 @@
-package com.cielo.flashbooking.application.outbox;
+package com.cielo.flashbooking.operations;
 
+import com.cielo.flashbooking.application.outbox.OutboxEventStore;
 import com.cielo.flashbooking.notification.email.NotificationDeliveryStore;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;

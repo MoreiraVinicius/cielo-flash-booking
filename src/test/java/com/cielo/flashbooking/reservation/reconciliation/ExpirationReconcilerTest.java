@@ -1,10 +1,10 @@
-package com.cielo.flashbooking.application.reconciliation;
+package com.cielo.flashbooking.reservation.reconciliation;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.cielo.flashbooking.feature.reservation.expire.ExpireReservationService;
+import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
 import java.util.List;
 import java.util.UUID;

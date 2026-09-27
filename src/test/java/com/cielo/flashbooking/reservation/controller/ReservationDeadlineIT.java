@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityCache;
-import com.cielo.flashbooking.feature.reservation.expire.ExpireReservationService;
+import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
 import java.sql.Connection;
 import java.sql.DriverManager;

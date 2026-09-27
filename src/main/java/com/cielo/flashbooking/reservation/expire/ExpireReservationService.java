@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;

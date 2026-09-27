@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
