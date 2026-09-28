@@ -1,0 +1,16 @@
+services:
+  command-api:
+    build: !reset null
+    image: eclipse-temurin:21-jre-jammy
+    entrypoint: ["java", "-jar", "/app/app.jar"]
+    volumes:
+      - ./target/flash-booking-0.0.1-SNAPSHOT.jar:/app/app.jar:ro
+    environment:
+      SPRING_PROFILES_ACTIVE: command-api,observability
+      OTEL_SERVICE_NAME: flash-booking-command-api
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+    depends_on:
+      otel-collector:
+        condition: service_started
+

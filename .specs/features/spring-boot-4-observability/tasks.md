@@ -112,6 +112,7 @@ T6 → T7
 **Tests:** smoke
 **Gate:** Build
 **Commit:** `test(observability): prove local otlp export`
+**Status:** Complete — `docker compose config --quiet` e `scripts/observability-smoke.ps1` passaram; collector recebeu uma trace HTTP e métricas HTTP após uma reserva; containers/rede temporários foram removidos.
 
 ### T6: Registrar o plano AWS não aplicado
 
