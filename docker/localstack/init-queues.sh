@@ -1,4 +1,5 @@
 #!/bin/sh
+# Must be LF: LocalStack executes this bind-mounted file inside a Linux shell.
 set -eu
 
 create_queue() {

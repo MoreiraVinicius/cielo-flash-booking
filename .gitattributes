@@ -6,3 +6,4 @@
 *.xml text
 *.java text
 *.tf text
+docker/localstack/init-queues.sh text eol=lf

@@ -231,12 +231,25 @@ T6 → T7
 **Commit:** `test(smoke): compare sale window by instant`
 **Status:** Complete — criação no command-api e leitura no query-api preservam o mesmo instante quando a entrada respeita microssegundos PostgreSQL.
 
+### T15: Preservar LF no bootstrap do LocalStack
+
+**What:** Garantir que o script shell bind-mounted pelo Compose chegue com LF ao Linux, para que o setup crie as filas SQS.
+**Where:** `.gitattributes` e `docker/localstack/init-queues.sh`
+**Depends on:** T14
+**Reuses:** Setup de filas SQS já declarado no Compose.
+**Requirement:** BOOT4-01
+**Done when:** O script executa no container, cria as quatro filas previstas e o smoke conclui entrega de e-mail.
+**Tests:** smoke
+**Gate:** Build
+**Commit:** `fix(smoke): preserve localstack shell line endings`
+**Status:** Complete — checkout fixa LF; quatro filas foram criadas no LocalStack e o smoke confirmou os três processos e e-mail.
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T1 → T2 → T3
 Phase 2: T4 → T5
-Phase 3: T6 → T7 → T8 → T9 → T10 → T11 → T12 → T13 → T14
+Phase 3: T6 → T7 → T8 → T9 → T10 → T11 → T12 → T13 → T14 → T15
 Handoff 1: T3 → T4
 Handoff 2: T5 → T6
 ```
@@ -259,6 +272,7 @@ Handoff 2: T5 → T6
 | T12 | Validador documental | OK |
 | T13 | SVG high-load | OK |
 | T14 | Smoke Compose de janela de venda | OK |
+| T15 | Bootstrap SQS no checkout Windows | OK |
 
 ## Diagram-Definition Cross-Check
 
@@ -278,6 +292,7 @@ Handoff 2: T5 → T6
 | T12 | T11 | T11 → T12 | OK |
 | T13 | T12 | T12 → T13 | OK |
 | T14 | T13 | T13 → T14 | OK |
+| T15 | T14 | T14 → T15 | OK |
 
 ## Test Co-location Validation
 
@@ -292,3 +307,4 @@ Handoff 2: T5 → T6
 | T7–T12 | Documentação e validação | structural | structural | OK |
 | T13 | SVG | structural + visual | structural + visual | OK |
 | T14 | Smoke Compose | smoke | smoke | OK |
+| T15 | LocalStack/Compose | smoke | smoke | OK |
