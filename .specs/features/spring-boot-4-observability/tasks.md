@@ -151,7 +151,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Structural
 **Commit:** `docs(spec): record boot 4 implementation status`
-**Status:** Pending
+**Status:** Complete — requisitos, critérios de aceitação e rastreabilidade refletem implementação local e plano AWS não aplicado.
 
 ### T9: Atualizar desenho implementado
 

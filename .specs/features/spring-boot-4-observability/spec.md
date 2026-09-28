@@ -2,14 +2,14 @@
 
 ## Problem Statement
 
-A aplicação usa Spring Boot 3.5.0 e Java 21. O projeto precisa migrar para Spring Boot 4 sem alterar o contrato de reservas temporárias, idempotência, expiração, outbox ou autenticação IAM/SigV4 da borda. A nova observabilidade deve ser demonstrável localmente e ter um caminho planejado, mas não aplicado, para AWS.
+A aplicação usa Spring Boot 4.0.8, Java 21 e Jackson 3. A migração preserva o contrato de reservas temporárias, idempotência, expiração, outbox e autenticação IAM/SigV4 da borda. Métricas e traces HTTP OTLP são opt-in localmente; a integração AWS permanece um plano não aplicado.
 
 ## Goals
 
-- [ ] Executar a migração para a linha estável 4.0.x com testes de regressão do domínio e dos três modos de processo.
-- [ ] Oferecer métricas e traces HTTP via OpenTelemetry, com exportação desabilitada por padrão e habilitação explícita no ambiente local.
-- [ ] Atualizar especificações, documentos e diagramas afetados, distinguindo comportamento implementado, plano AWS e evidência histórica.
-- [ ] Definir um plano AWS com destino, permissões, custo, segurança e critérios de rollout, sem provisionamento nesta mudança.
+- [x] Executar a migração para a linha estável 4.0.x com testes de regressão do domínio e dos três modos de processo.
+- [x] Oferecer métricas e traces HTTP via OpenTelemetry, com exportação desabilitada por padrão e habilitação explícita no ambiente local.
+- [x] Atualizar especificações, documentos e diagramas afetados, distinguindo comportamento implementado, plano AWS e evidência histórica.
+- [x] Definir um plano AWS com destino, permissões, custo, segurança e critérios de rollout, sem provisionamento nesta mudança.
 
 ## Out of Scope
 
@@ -26,12 +26,12 @@ A aplicação usa Spring Boot 3.5.0 e Java 21. O projeto precisa migrar para Spr
 
 | Tema | Padrão escolhido | Justificativa | Confirmada? |
 | --- | --- | --- | --- |
-| Versão-alvo | Atualizar primeiro para 3.5.16 e depois para 4.0.8, preservando Java 21 | O guia oficial pede a última 3.5.x antes de 4.0; 4.0.8 é a manutenção atual da linha 4.0. | no |
-| Jackson | Preservar o contrato JSON atual; escolher Jackson 2 temporariamente ou migrar para Jackson 3 segundo a menor mudança comprovada nos testes | Código de produção e testes dependem explicitamente de `com.fasterxml.jackson`. | no |
-| Telemetria padrão | Exportação OTLP desabilitada até ativação explícita | Evita custo, tráfego não intencional e mudança na demo AWS existente. | no |
+| Versão | Runtime usa Boot 4.0.8 e Java 21, após passagem por Boot 3.5.16 | A sequência do guia oficial foi aplicada e a suíte existente validou o runtime atual. | yes — implementada |
+| Jackson | Usar Jackson 3 nativo | Imports e API foram migrados e a suíte rápida e de integração manteve os contratos JSON. | yes — implementada |
+| Telemetria padrão | Exportação OTLP desabilitada até ativação explícita | Evita custo, tráfego não intencional e mudança na demo AWS existente. | yes — testes de configuração |
 | Traces assíncronos | Nesta entrega, provar HTTP; SQS/outbox fica para uma etapa separada | Um starter não transporta automaticamente contexto persistido entre transação e fila. | no — resposta solicitada ao usuário |
 | Integração AWS | Planejar CloudWatch/X-Ray via coletor/agent ECS, com escolha final antes da implantação | Mantém a aplicação emitindo OTLP e explicita IAM, custo e rollout. | yes — planejamento solicitado, implantação não |
-| Interrupção de Maven/Docker | Não declarar migração concluída enquanto dependências e testes necessários não puderem ser executados | O cache local só tem o parent 3.5.0 e o sandbox bloqueou o acesso ao Docker; a aprovação externa foi recusada por limite de uso. | yes — estado observado |
+| Build Docker da smoke | Usar o JAR já compilado no host no overlay descartável | O Maven dentro do build Docker ficou sem progresso resolvendo dependências; o JAR host foi validado e a smoke Compose comprovou emissão OTLP. O Dockerfile normaliza CRLF do wrapper quando a imagem de produção for construída. | yes — smoke executada |
 
 **Open questions:** none. A rastreabilidade contínua outbox → SQS → worker está fora desta entrega por padrão, como registrado acima, salvo decisão explícita do usuário antes da implementação.
 
@@ -101,17 +101,17 @@ A aplicação usa Spring Boot 3.5.0 e Java 21. O projeto precisa migrar para Spr
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Implementing — Boot 4 validado; Jackson 3 pendente |
-| BOOT4-02 | P1: Observar HTTP localmente sem mudar o domínio | Specify | Pending |
-| BOOT4-03 | P1: Alinhar fontes de verdade e representações visuais | Specify | Pending |
-| BOOT4-04 | P2: Preparar a integração AWS sem aplicá-la | Specify | Pending |
+| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Implementado; aguarda validação independente |
+| BOOT4-02 | P1: Observar HTTP localmente sem mudar o domínio | Execute | Implementado; aguarda validação independente |
+| BOOT4-03 | P1: Alinhar fontes de verdade e representações visuais | Execute | Implementado; aguarda validação independente |
+| BOOT4-04 | P2: Preparar a integração AWS sem aplicá-la | Execute | Implementado; aguarda validação independente |
 
-**Coverage:** 4 requisitos, 17 critérios de aceitação, 4 requisitos ainda sem tarefas até a fase Tasks.
+**Coverage:** 4 requisitos, 17 critérios de aceitação; BOOT4-01–04 rastreados às tarefas T1–T13. Evidência final e lacunas remanescentes serão registradas pelo Verifier.
 
 ## Success Criteria
 
-- [ ] Boot 4.0.8 compila, testes rápidos e integração passam, e os três processos iniciam.
-- [ ] O receptor local demonstra métricas e traces HTTP, e sua falha não muda o resultado de reserva.
-- [ ] Documentação, specs e diagramas indicam corretamente versão atual, estado de implantação e limites da telemetria.
-- [ ] Plano AWS completo está registrado, sem alteração remota.
+- [x] Boot 4.0.8 compila, testes rápidos e integração passam, e os três processos iniciam.
+- [x] O receptor local demonstra métricas e traces HTTP, e sua falha não muda o resultado de reserva.
+- [x] Documentação, specs e diagramas indicam corretamente versão atual, estado de implantação e limites da telemetria.
+- [x] Plano AWS completo está registrado, sem alteração remota.
 
