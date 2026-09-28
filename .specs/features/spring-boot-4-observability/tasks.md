@@ -203,7 +203,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Structural
 **Commit:** `test(docs): validate concise readme contract`
-**Status:** Pending
+**Status:** Complete — `scripts/validate-readme.ps1` passou com links/specs/visuais atuais e três cenários de performance.
 
 ### T13: Corrigir a versão no diagrama high-load
 

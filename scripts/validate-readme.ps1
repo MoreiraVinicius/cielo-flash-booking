@@ -65,22 +65,16 @@ $awsVisualRoot = if ([string]::IsNullOrWhiteSpace($AwsVisualDirectory)) {
 }
 Assert-Condition -Condition (Test-Path -LiteralPath $awsVisualRoot -PathType Container) -Message "AWS visual directory does not exist: $awsVisualRoot"
 
-# Product scope and evidence must stay explicit.
+# The README is a concise navigation page; current system truth lives in .specs.
 foreach ($requiredTruth in @(
     'case técnico independente',
     'reserva temporária de ingressos',
-    'Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega',
-    '43/43 critérios',
-    '38 testes unitários + 56 de integração = 94 aprovados',
-    '53 testes unitários + 68 de integração = 121',
-    'execução PostgreSQL completa',
-    'arquitetura-alvo planejada',
-    'não foi provisionada, benchmarkada nem validada remotamente',
-    'não comprova distribuição multiprocesso',
-    'Nenhum número novo foi inventado',
-    '80 GETs assinados iniciados em 834 ms retornaram `80 × 503`',
-    '20 POSTs assinados retornou `20 × 400`',
-    'não um teste DDoS, admissão determinística ou capacidade sustentável'
+    'Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega.',
+    'Spring Boot 4.0.8',
+    'Jackson 3',
+    'ficam desligados por padrão',
+    'aws-plan.md',
+    '125 testes'
 )) {
     Assert-Contains -Text $readme -Expected $requiredTruth -Context 'README truth contract'
 }
@@ -97,11 +91,11 @@ foreach ($match in $referenceMatches) {
     $resolved = Resolve-RepositoryTarget -RepositoryRoot $repositoryRoot -Target $target
     Assert-Condition -Condition (Test-Path -LiteralPath $resolved) -Message "missing local reference: $target"
 }
-Assert-Condition -Condition ($localReferences.Count -ge 30) -Message 'expected the complete documentation map and visual gallery'
+Assert-Condition -Condition ($localReferences.Count -ge 10) -Message 'expected concise navigation to maintained specs and runbooks'
 
 # Images require useful alt text; SVGs must be valid standalone XML.
 $imageMatches = [regex]::Matches($readme, '!\[([^\]]*)\]\(([^)]+)\)')
-Assert-Condition -Condition ($imageMatches.Count -ge 13) -Message 'expected at least thirteen explanatory images'
+Assert-Condition -Condition ($imageMatches.Count -ge 3) -Message 'expected the hero, data model, and transactional-outbox visuals'
 foreach ($match in $imageMatches) {
     $alt = $match.Groups[1].Value
     $target = $match.Groups[2].Value
@@ -119,19 +113,8 @@ foreach ($match in $imageMatches) {
 
 foreach ($requiredAsset in @(
     'flash-booking-hero.svg',
-    'flash-booking-last-ticket.svg',
-    'flash-booking-idempotency.png',
-    'flash-booking-spec-driven.svg',
-    'flash-booking-architecture-evolution.svg',
-    'flash-booking-performance.svg',
-    'flash-booking-edge-burst.svg',
-    'flash-booking-aws-eventual-consistency.svg',
-    'flash-booking-aws-demo.svg',
-    'flash-booking-aws-high-load.svg',
-    'flash-booking-c4-demo.svg',
-    'flash-booking-c4-high-load.svg',
-    'flash-booking-c4-components.svg',
-    'flash-booking-sequence-reservation.svg'
+    'flash-booking-data-model.png',
+    'flash-booking-transactional-outbox.png'
 )) {
     Assert-Contains -Text $readme -Expected $requiredAsset -Context 'README image set'
 }
@@ -146,37 +129,12 @@ foreach ($obsoleteAsset in @(
     Assert-Condition -Condition (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot "docs\images\$obsoleteAsset"))) -Message "obsolete architecture asset still exists: $obsoleteAsset"
 }
 
-# A filename mentioned in a cleanup list is not usage: only Markdown links count.
-$imageRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'docs\images'))
-$documentFiles = @(Get-ChildItem -LiteralPath $repositoryRoot -Recurse -File -Filter '*.md' | Where-Object {
-    $_.FullName -notmatch '[\\/](\.git|target|\.tmp|\.codex|\.agents)[\\/]'
-})
-$referencedImages = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-foreach ($document in $documentFiles) {
-    $documentText = Get-Content -LiteralPath $document.FullName -Raw
-    foreach ($reference in [regex]::Matches($documentText, '\]\(([^)]+)\)')) {
-        $target = $reference.Groups[1].Value.Trim('<', '>')
-        if ($target -match '^(https?://|mailto:|#|data:|[a-z]+://)') {
-            continue
-        }
-        $decoded = [uri]::UnescapeDataString(($target -split '#', 2)[0])
-        if ([string]::IsNullOrWhiteSpace($decoded)) {
-            continue
-        }
-        $resolved = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName $decoded))
-        if ($resolved.StartsWith(($imageRoot + [IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase)) {
-            $referencedImages.Add($resolved) | Out-Null
-        }
-    }
-}
-$imageInventory = @(Get-ChildItem -LiteralPath $imageRoot -File)
-foreach ($asset in $imageInventory) {
-    Assert-Condition -Condition ($referencedImages.Contains($asset.FullName)) -Message "image has no documentation link: $($asset.Name)"
-}
+# The consolidated README links only its three overview visuals; deeper assets remain in docs/images
+# for specifications and future navigation, so an orphan-image inventory would contradict that policy.
 
 $detailsOpen = [regex]::Matches($readme, '<details>').Count
 $detailsClose = [regex]::Matches($readme, '</details>').Count
-Assert-Condition -Condition ($detailsOpen -eq 6 -and $detailsClose -eq 6) -Message "expected six balanced deep dives, found $detailsOpen/$detailsClose"
+Assert-Condition -Condition ($detailsOpen -eq $detailsClose) -Message "unbalanced deep-dive markup, found $detailsOpen/$detailsClose"
 
 # The AWS views have an explicit truth contract and must remain native, accessible SVGs.
 $awsVisualContracts = @(
@@ -342,9 +300,9 @@ foreach ($contract in $awsVisualContracts) {
     }
 }
 
-# The public contract is exactly the five routes from the case.
-$endpointMatches = [regex]::Matches($readme, '(?m)^\| `(POST|GET|DELETE)` \| `([^`]+)` \|')
-$actualEndpoints = @($endpointMatches | ForEach-Object { "$($_.Groups[1].Value) $($_.Groups[2].Value)" })
+# The README points readers to the authoritative contract instead of copying it.
+$demoSpecPath = Join-Path $repositoryRoot '.specs\features\flash-booking-demo\spec.md'
+$demoSpec = Get-Content -LiteralPath $demoSpecPath -Raw
 $expectedEndpoints = @(
     'POST /events',
     'GET /events/{id}',
@@ -352,9 +310,9 @@ $expectedEndpoints = @(
     'GET /reservations/{id}',
     'DELETE /reservations/{id}'
 )
-Assert-Condition -Condition ($actualEndpoints.Count -eq 5) -Message "expected exactly five endpoint rows, found $($actualEndpoints.Count)"
+Assert-Contains -Text $readme -Expected '.specs/features/flash-booking-demo/spec.md' -Context 'authoritative API spec navigation'
 foreach ($endpoint in $expectedEndpoints) {
-    Assert-Condition -Condition ($actualEndpoints -contains $endpoint) -Message "missing endpoint row: $endpoint"
+    Assert-Contains -Text $demoSpec -Expected $endpoint -Context 'authoritative API contract'
 }
 
 # The historical baseline is structured, honest about provenance, and matches the SVG.
@@ -454,4 +412,4 @@ foreach ($fact in 'RDS PostgreSQL Single-AZ', 'Aurora + RDS Proxy', 'Valkey Mult
     Assert-Contains -Text $architectureSvg -Expected $fact -Context 'architecture comparison'
 }
 
-Write-Output "validate-readme: PASS - 5 endpoints, $($imageMatches.Count) images, $($localReferences.Count) local references, 3 performance scenarios"
+Write-Output "validate-readme: PASS - current specs linked, $($imageMatches.Count) README images, $($localReferences.Count) local references, 3 performance scenarios"
