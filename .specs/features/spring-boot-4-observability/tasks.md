@@ -99,6 +99,7 @@ T6 → T7
 **Tests:** unit + integration co-localizados
 **Gate:** Full
 **Commit:** `feat(observability): add opt-in http telemetry`
+**Status:** Complete — 56 testes unitários passaram; `ObservabilityExportResilienceIT` passou com métricas/traces habilitados e collector indisponível, mantendo criação HTTP da reserva.
 
 ### T5: Demonstrar recepção OTLP local
 
