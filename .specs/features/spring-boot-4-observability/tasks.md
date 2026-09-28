@@ -218,13 +218,25 @@ T6 → T7
 **Commit:** `docs(diagram): update high-load spring version`
 **Status:** Complete — SVG XML válido; Boot 4.0.8 aparece somente como alvo high-load não aplicado.
 
+### T14: Comparar janela de venda como instante
+
+**What:** Fazer o smoke validar `endsAt` pelo instante UTC, sem depender da forma textual retornada nem da cultura local do PowerShell.
+**Where:** `scripts/compose-smoke.ps1`
+**Depends on:** T13
+**Reuses:** Teste funcional dos três modos Compose.
+**Requirement:** BOOT4-01
+**Done when:** O smoke compara instantes UTC sem depender do parsing cultural, gera janela na precisão de microssegundos suportada pelo PostgreSQL e passa pelas verificações command/query.
+**Tests:** smoke
+**Gate:** Build
+**Commit:** `test(smoke): compare sale window by instant`
+**Status:** Complete — criação no command-api e leitura no query-api preservam o mesmo instante quando a entrada respeita microssegundos PostgreSQL.
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T1 → T2 → T3
 Phase 2: T4 → T5
-Phase 3: T6 → T7
-T7 → T8 → T9 → T10 → T11 → T12 → T13
+Phase 3: T6 → T7 → T8 → T9 → T10 → T11 → T12 → T13 → T14
 Handoff 1: T3 → T4
 Handoff 2: T5 → T6
 ```
@@ -246,6 +258,7 @@ Handoff 2: T5 → T6
 | T11 | README | OK |
 | T12 | Validador documental | OK |
 | T13 | SVG high-load | OK |
+| T14 | Smoke Compose de janela de venda | OK |
 
 ## Diagram-Definition Cross-Check
 
@@ -264,6 +277,7 @@ Handoff 2: T5 → T6
 | T11 | T10 | T10 → T11 | OK |
 | T12 | T11 | T11 → T12 | OK |
 | T13 | T12 | T12 → T13 | OK |
+| T14 | T13 | T13 → T14 | OK |
 
 ## Test Co-location Validation
 
@@ -277,3 +291,4 @@ Handoff 2: T5 → T6
 | T6 | Plano AWS | structural | structural | OK |
 | T7–T12 | Documentação e validação | structural | structural | OK |
 | T13 | SVG | structural + visual | structural + visual | OK |
+| T14 | Smoke Compose | smoke | smoke | OK |
