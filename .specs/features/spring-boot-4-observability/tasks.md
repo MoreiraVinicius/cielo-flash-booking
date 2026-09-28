@@ -177,7 +177,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Structural
 **Commit:** `docs(spec): align observability context`
-**Status:** Pending
+**Status:** Complete — contexto registra Boot 4/Jackson 3, diagrama não aplicado e ausência de trace assíncrono.
 
 ### T11: Atualizar navegação e resumo do README
 
