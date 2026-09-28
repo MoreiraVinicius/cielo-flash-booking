@@ -5,7 +5,7 @@
 Executar com `tlc-spec-driven`: gate verde e um commit atômico por tarefa; depois, Verifier independente. Nenhuma ação remota.
 
 **Design:** `.specs/features/spring-boot-4-observability/design.md`
-**Status:** In Progress
+**Status:** Complete — Verifier independente aprovou 17/17 critérios; consulte `validation.md`.
 
 ## Test Coverage Matrix
 

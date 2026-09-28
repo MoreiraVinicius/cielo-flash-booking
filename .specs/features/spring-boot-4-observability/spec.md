@@ -101,12 +101,12 @@ A aplicação usa Spring Boot 4.0.8, Java 21 e Jackson 3. A migração preserva 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Implementado; aguarda validação independente |
-| BOOT4-02 | P1: Observar HTTP localmente sem mudar o domínio | Execute | Implementado; aguarda validação independente |
-| BOOT4-03 | P1: Alinhar fontes de verdade e representações visuais | Execute | Implementado; aguarda validação independente |
-| BOOT4-04 | P2: Preparar a integração AWS sem aplicá-la | Execute | Implementado; aguarda validação independente |
+| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Concluído; verificação independente PASS |
+| BOOT4-02 | P1: Observar HTTP localmente sem mudar o domínio | Execute | Concluído; verificação independente PASS |
+| BOOT4-03 | P1: Alinhar fontes de verdade e representações visuais | Execute | Concluído; verificação independente PASS |
+| BOOT4-04 | P2: Preparar a integração AWS sem aplicá-la | Execute | Concluído como plano; verificação independente PASS; AWS não aplicada |
 
-**Coverage:** 4 requisitos, 17 critérios de aceitação; BOOT4-01–04 rastreados às tarefas T1–T13. Evidência final e lacunas remanescentes serão registradas pelo Verifier.
+**Coverage:** 4 requisitos, 17 critérios de aceitação; BOOT4-01–04 rastreados às tarefas T1–T15. Validação independente em `validation.md`: 17 PASS, 0 FAIL, 0 UNKNOWN.
 
 ## Success Criteria
 
@@ -114,4 +114,6 @@ A aplicação usa Spring Boot 4.0.8, Java 21 e Jackson 3. A migração preserva 
 - [x] O receptor local demonstra métricas e traces HTTP, e sua falha não muda o resultado de reserva.
 - [x] Documentação, specs e diagramas indicam corretamente versão atual, estado de implantação e limites da telemetria.
 - [x] Plano AWS completo está registrado, sem alteração remota.
+
+**Feature status:** Complete — verificação independente PASS em 2026-09-28. Plano AWS permanece não aplicado.
 

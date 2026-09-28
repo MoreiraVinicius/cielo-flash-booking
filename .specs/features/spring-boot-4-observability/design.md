@@ -1,7 +1,7 @@
 # Spring Boot 4 e observabilidade — desenho
 
 **Spec:** `.specs/features/spring-boot-4-observability/spec.md`
-**Status:** Implementado localmente; plano AWS não aplicado; aguarda validação independente.
+**Status:** Concluído e verificado independentemente (17/17 PASS); plano AWS não aplicado.
 
 ## Abordagem
 
