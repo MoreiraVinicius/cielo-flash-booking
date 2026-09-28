@@ -190,7 +190,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Structural
 **Commit:** `docs(readme): document boot 4 observability`
-**Status:** Pending
+**Status:** Complete — README resume runtime Boot 4/Jackson 3, modos de execução e estado AWS não aplicado.
 
 ### T12: Ajustar o contrato do validador documental
 
