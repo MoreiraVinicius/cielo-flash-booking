@@ -216,7 +216,7 @@ T6 → T7
 **Tests:** structural + visual
 **Gate:** Build
 **Commit:** `docs(diagram): update high-load spring version`
-**Status:** Pending
+**Status:** Complete — SVG XML válido; Boot 4.0.8 aparece somente como alvo high-load não aplicado.
 
 ## Phase Execution Map
 
