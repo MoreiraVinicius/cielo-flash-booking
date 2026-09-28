@@ -1,11 +1,11 @@
 # Spring Boot 4 e observabilidade — desenho
 
 **Spec:** `.specs/features/spring-boot-4-observability/spec.md`
-**Status:** Aprovado para execução local pelo pedido “pode implementar”.
+**Status:** Implementado localmente; plano AWS não aplicado; aguarda validação independente.
 
 ## Abordagem
 
-O mesmo monólito modular e os três modos de processo continuam. A migração é sequencial: Boot 3.5.0 → última 3.5.x → Boot 4.0.8. Não se alteram schema, contrato HTTP, regras de negócio nem Terraform aplicado. O código passa a usar Jackson 3, evitando a ponte Jackson 2 depreciada. Os starters Boot 4 são explícitos por tecnologia, inclusive Flyway e testes MVC/JDBC/Redis. A instrumentação usa o starter oficial OpenTelemetry do Spring Boot 4 e configura exportadores OTLP desligados por padrão.
+O mesmo monólito modular e os três modos de processo continuam. O runtime atual é Boot 4.0.8 e Java 21, migrado em sequência por Boot 3.5.16; não se alteram schema, contrato HTTP, regras de negócio nem Terraform aplicado. O código usa Jackson 3 nativo. Os starters Boot 4 são explícitos por tecnologia, inclusive Flyway e testes MVC/JDBC/Redis. Métricas e traces HTTP OTLP são desligados por padrão e habilitados somente pelo perfil local `observability` ou por configuração de ambiente explicitamente aprovada.
 
 ### Alternativas avaliadas
 

@@ -164,7 +164,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Structural
 **Commit:** `docs(architecture): align observability design status`
-**Status:** Pending
+**Status:** Complete — desenho diferencia o runtime local Boot 4 da integração AWS ainda não aplicada.
 
 ### T10: Atualizar contexto da feature
 
