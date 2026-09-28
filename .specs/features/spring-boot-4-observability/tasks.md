@@ -73,6 +73,7 @@ T6 → T7
 **Tests:** integration existentes, corrigidos sem enfraquecer
 **Gate:** Full
 **Commit:** `build(spring): migrate runtime to boot 4`
+**Status:** Complete — compilação passou; suíte rápida 54/54; suíte de integração completa 68/68 sem falhas; ReservationControllerIT isolado 8/8 em 59,5 s.
 
 ### T3: Remover a ponte Jackson 2
 

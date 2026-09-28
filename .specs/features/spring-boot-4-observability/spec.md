@@ -101,7 +101,7 @@ A aplicação usa Spring Boot 3.5.0 e Java 21. O projeto precisa migrar para Spr
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Implementing |
+| BOOT4-01 | P1: Migrar o runtime sem regressão | Execute | Implementing — Boot 4 validado; Jackson 3 pendente |
 | BOOT4-02 | P1: Observar HTTP localmente sem mudar o domínio | Specify | Pending |
 | BOOT4-03 | P1: Alinhar fontes de verdade e representações visuais | Specify | Pending |
 | BOOT4-04 | P2: Preparar a integração AWS sem aplicá-la | Specify | Pending |
