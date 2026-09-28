@@ -129,15 +129,94 @@ T6 → T7
 
 ### T7: Alinhar fontes de verdade e diagramas
 
-**What:** Atualizar decisão, README, referências runtime e SVG sem alterar a evidência histórica da demo.
-**Where:** `.specs/STATE.md` e documentação do runtime atual
+**What:** Registrar a decisão ativa do runtime e superseder a decisão global anterior de Spring Boot 3.
+**Where:** `.specs/STATE.md`
 **Depends on:** T6
 **Reuses:** AD-023/024 e diagramas existentes.
 **Requirement:** BOOT4-03
-**Done when:** Boot 3 aparece só em contexto histórico; SVG válido; validação documental e Build verdes.
+**Done when:** AD-002 aponta para AD-029 e AD-029 descreve runtime e limites atuais; as referências da decisão são coerentes.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `docs(architecture): record boot 4 decision`
+**Status:** Complete — AD-002 está supersedida por AD-029, decisão ativa do runtime Spring Boot 4 e seus limites.
+
+### T8: Atualizar estado da especificação
+
+**What:** Registrar a implementação concluída e os limites de observabilidade na especificação de requisitos.
+**Where:** `.specs/features/spring-boot-4-observability/spec.md`
+**Depends on:** T7
+**Reuses:** BOOT4-01 a BOOT4-04 e evidências T1–T6.
+**Requirement:** BOOT4-03
+**Done when:** estado atual, critérios e rastreabilidade distinguem código local validado de plano AWS não aplicado.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `docs(spec): record boot 4 implementation status`
+**Status:** Pending
+
+### T9: Atualizar desenho implementado
+
+**What:** Alinhar o desenho à arquitetura implementada e ao plano AWS ainda não aplicado.
+**Where:** `.specs/features/spring-boot-4-observability/design.md`
+**Depends on:** T8
+**Reuses:** desenho aprovado e plano AWS.
+**Requirement:** BOOT4-03
+**Done when:** abordagem e estado não confundem telemetria local com provisionamento AWS.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `docs(architecture): align observability design status`
+**Status:** Pending
+
+### T10: Atualizar contexto da feature
+
+**What:** Registrar versão, estado do diagrama e limites do trace assíncrono no contexto da feature.
+**Where:** `.specs/features/spring-boot-4-observability/context.md`
+**Depends on:** T9
+**Reuses:** AD-029 e plano AWS.
+**Requirement:** BOOT4-03
+**Done when:** contexto curto identifica runtime atual e não afirma deploy/continuidade de trace inexistentes.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `docs(spec): align observability context`
+**Status:** Pending
+
+### T11: Atualizar navegação e resumo do README
+
+**What:** Apresentar runtime, status AWS e referência para as fontes de verdade mantidas.
+**Where:** `README.md`
+**Depends on:** T10
+**Reuses:** README e specs existentes.
+**Requirement:** BOOT4-03
+**Done when:** resumo de versão, modos e observabilidade bate com a configuração implementada e com o estado AWS.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `docs(readme): document boot 4 observability`
+**Status:** Pending
+
+### T12: Ajustar o contrato do validador documental
+
+**What:** Validar o README conciso atual sem exigir a galeria histórica que deixou de ser embutida nele.
+**Where:** `scripts/validate-readme.ps1`
+**Depends on:** T11
+**Reuses:** checagens de links, imagens, APIs, AWS e performance existentes.
+**Requirement:** BOOT4-03
+**Done when:** validação cobre links/specs/visuais atuais e passa sem exigir conteúdo removido do README.
+**Tests:** structural
+**Gate:** Structural
+**Commit:** `test(docs): validate concise readme contract`
+**Status:** Pending
+
+### T13: Corrigir a versão no diagrama high-load
+
+**What:** Atualizar a versão desenhada e manter explícito que o alvo high-load não foi aplicado.
+**Where:** `docs/images/flash-booking-c4-high-load.svg`
+**Depends on:** T12
+**Reuses:** diagrama C4 high-load existente.
+**Requirement:** BOOT4-03
+**Done when:** SVG válido, Boot 4.0.8 indicado como alvo não aplicado e checagem documental verde.
 **Tests:** structural + visual
 **Gate:** Build
-**Commit:** `docs(architecture): align boot 4 references`
+**Commit:** `docs(diagram): update high-load spring version`
+**Status:** Pending
 
 ## Phase Execution Map
 
@@ -145,6 +224,7 @@ T6 → T7
 Phase 1: T1 → T2 → T3
 Phase 2: T4 → T5
 Phase 3: T6 → T7
+T7 → T8 → T9 → T10 → T11 → T12 → T13
 Handoff 1: T3 → T4
 Handoff 2: T5 → T6
 ```
@@ -159,7 +239,13 @@ Handoff 2: T5 → T6
 | T4 | Exportação configurável | OK, config e testes co-localizados |
 | T5 | Receptor local e smoke | OK, caminho demonstrável |
 | T6 | Plano AWS | OK |
-| T7 | Fonte de verdade e visual | OK, documentação coesa |
+| T7 | Decisão global em `.specs/STATE.md` | OK |
+| T8 | Estado da especificação da feature | OK |
+| T9 | Desenho da feature | OK |
+| T10 | Contexto da feature | OK |
+| T11 | README | OK |
+| T12 | Validador documental | OK |
+| T13 | SVG high-load | OK |
 
 ## Diagram-Definition Cross-Check
 
@@ -172,6 +258,12 @@ Handoff 2: T5 → T6
 | T5 | T4 | T4 → T5 | OK |
 | T6 | T5 | T5 → T6 | OK |
 | T7 | T6 | T6 → T7 | OK |
+| T8 | T7 | T7 → T8 | OK |
+| T9 | T8 | T8 → T9 | OK |
+| T10 | T9 | T9 → T10 | OK |
+| T11 | T10 | T10 → T11 | OK |
+| T12 | T11 | T11 → T12 | OK |
+| T13 | T12 | T12 → T13 | OK |
 
 ## Test Co-location Validation
 
@@ -183,4 +275,5 @@ Handoff 2: T5 → T6
 | T4 | Config/HTTP | unit + integration | unit + integration | OK |
 | T5 | Compose | smoke | smoke | OK |
 | T6 | Plano AWS | structural | structural | OK |
-| T7 | Docs/SVG | structural + visual | structural + visual | OK |
+| T7–T12 | Documentação e validação | structural | structural | OK |
+| T13 | SVG | structural + visual | structural + visual | OK |
