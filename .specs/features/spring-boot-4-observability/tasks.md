@@ -125,6 +125,7 @@ T6 → T7
 **Tests:** structural
 **Gate:** Build
 **Commit:** `docs(observability): plan aws telemetry integration`
+**Status:** Complete — plano revisado contra tasks Fargate/roles atuais e documentação AWS atual; nenhuma alteração ou chamada remota foi realizada.
 
 ### T7: Alinhar fontes de verdade e diagramas
 
