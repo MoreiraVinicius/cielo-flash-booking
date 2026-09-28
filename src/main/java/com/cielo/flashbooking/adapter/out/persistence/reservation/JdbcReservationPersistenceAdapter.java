@@ -2,20 +2,20 @@ package com.cielo.flashbooking.adapter.out.persistence.reservation;
 
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
-import com.cielo.flashbooking.reservation.application.ReservationWriter;
-import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.cielo.flashbooking.reservation.application.ReservationDetails;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
-import java.sql.Timestamp;
+import com.cielo.flashbooking.reservation.application.ReservationReader;
+import com.cielo.flashbooking.reservation.application.ReservationWriter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 class JdbcReservationPersistenceAdapter implements ReservationWriter, ReservationReader {
@@ -30,7 +30,9 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public Instant currentTime() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", Timestamp.class)
+                .toInstant();
     }
 
     @Override
@@ -41,7 +43,8 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public Optional<ReservationDetails> findById(UUID id) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 SELECT r.id AS reservation_id, r.quantity, r.status, r.expires_at,
                        r.closure_reason_code, r.closure_reason_description,
                        e.id AS event_id, e.name AS event_name,
@@ -67,13 +70,15 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public Customer upsertCustomer(Customer customer) {
-        return jdbcTemplate.queryForObject("""
+        return jdbcTemplate.queryForObject(
+                """
                 INSERT INTO customer (id, name, email, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT (email) DO UPDATE
                 SET email = EXCLUDED.email
                 RETURNING id, name, email, created_at
-                """, (resultSet, rowNum) -> Customer.create(
+                """,
+                (resultSet, rowNum) -> Customer.create(
                         resultSet.getObject("id", UUID.class),
                         resultSet.getString("name"),
                         resultSet.getString("email"),
@@ -87,7 +92,8 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public void save(Reservation reservation) {
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO reservation (
                     id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -113,7 +119,8 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     }
 
     private void addOutboxEvent(Reservation reservation, String eventType) {
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO outbox_event (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
                 VALUES (?, ?, ?, ?, ?::jsonb, ?)
                 """,
@@ -127,7 +134,8 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     @Override
     public Optional<CapacityRelease> closePendingOnCancellation(UUID reservationId) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 WITH locked_reservation AS MATERIALIZED (
                     SELECT id, event_id, quantity, expires_at
                     FROM reservation
@@ -156,15 +164,18 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 FROM observed_reservation
                 WHERE current_reservation.id = observed_reservation.id
                 RETURNING observed_reservation.event_id, observed_reservation.quantity
-                """, resultSet -> resultSet.next()
-                ? Optional.of(new CapacityRelease(
-                        resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
-                : Optional.empty(), reservationId);
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new CapacityRelease(
+                                resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                        : Optional.empty(),
+                reservationId);
     }
 
     @Override
     public Optional<CapacityRelease> expirePending(UUID reservationId) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 UPDATE reservation
                 SET status = 'EXPIRED',
                     closure_reason_code = 'RESERVATION_DEADLINE_REACHED',
@@ -174,10 +185,12 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                   AND status = 'PENDING'
                   AND expires_at <= clock_timestamp()
                 RETURNING event_id, quantity
-                """, resultSet -> resultSet.next()
-                ? Optional.of(new CapacityRelease(
-                        resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
-                : Optional.empty(), reservationId);
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new CapacityRelease(
+                                resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                        : Optional.empty(),
+                reservationId);
     }
 
     private String reservationPayload(Reservation reservation) {
@@ -198,13 +211,11 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
         ReservationDetails.ClosureReason closureReason = closureReasonCode == null
                 ? null
                 : new ReservationDetails.ClosureReason(
-                        closureReasonCode,
-                        resultSet.getString("closure_reason_description"));
+                        closureReasonCode, resultSet.getString("closure_reason_description"));
         return new ReservationDetails(
                 resultSet.getObject("reservation_id", UUID.class),
                 new ReservationDetails.Event(
-                        resultSet.getObject("event_id", UUID.class),
-                        resultSet.getString("event_name")),
+                        resultSet.getObject("event_id", UUID.class), resultSet.getString("event_name")),
                 new ReservationDetails.Customer(
                         resultSet.getObject("customer_id", UUID.class),
                         resultSet.getString("customer_name"),

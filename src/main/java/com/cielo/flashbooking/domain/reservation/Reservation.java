@@ -13,13 +13,7 @@ public final class Reservation {
     private final Instant expiresAt;
     private final Instant createdAt;
 
-    private Reservation(
-            UUID id,
-            UUID eventId,
-            UUID customerId,
-            int quantity,
-            Instant expiresAt,
-            Instant createdAt) {
+    private Reservation(UUID id, UUID eventId, UUID customerId, int quantity, Instant expiresAt, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.eventId = Objects.requireNonNull(eventId, "eventId must not be null");
         this.customerId = Objects.requireNonNull(customerId, "customerId must not be null");
@@ -36,7 +30,13 @@ public final class Reservation {
 
     public static Reservation pending(
             UUID id, UUID eventId, Customer customer, int quantity, Instant expiresAt, Instant createdAt) {
-        return new Reservation(id, eventId, Objects.requireNonNull(customer, "customer must not be null").id(), quantity, expiresAt, createdAt);
+        return new Reservation(
+                id,
+                eventId,
+                Objects.requireNonNull(customer, "customer must not be null").id(),
+                quantity,
+                expiresAt,
+                createdAt);
     }
 
     public UUID id() {

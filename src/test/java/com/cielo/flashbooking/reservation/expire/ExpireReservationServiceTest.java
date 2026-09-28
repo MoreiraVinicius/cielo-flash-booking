@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,7 +24,8 @@ class ExpireReservationServiceTest {
         ReservationWriter writer = mock(ReservationWriter.class);
         InventoryOperations inventory = mock(InventoryOperations.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
-        when(writer.expirePending(reservationId)).thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
+        when(writer.expirePending(reservationId))
+                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
         when(inventory.increment(eventId, 3)).thenReturn(true);
 
         assertThat(service(writer, inventory, publisher).expire(reservationId)).isTrue();
@@ -53,18 +54,18 @@ class ExpireReservationServiceTest {
         UUID eventId = UUID.randomUUID();
         ReservationWriter writer = mock(ReservationWriter.class);
         InventoryOperations inventory = mock(InventoryOperations.class);
-        when(writer.expirePending(reservationId)).thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
+        when(writer.expirePending(reservationId))
+                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
         when(inventory.increment(eventId, 3)).thenReturn(false);
 
-        assertThatThrownBy(() -> service(writer, inventory, mock(ApplicationEventPublisher.class)).expire(reservationId))
+        assertThatThrownBy(() -> service(writer, inventory, mock(ApplicationEventPublisher.class))
+                        .expire(reservationId))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("could not return expired reservation capacity");
     }
 
     private ExpireReservationService service(
-            ReservationWriter writer,
-            InventoryOperations inventory,
-            ApplicationEventPublisher publisher) {
+            ReservationWriter writer, InventoryOperations inventory, ApplicationEventPublisher publisher) {
         return new ExpireReservationService(writer, inventory, publisher);
     }
 }

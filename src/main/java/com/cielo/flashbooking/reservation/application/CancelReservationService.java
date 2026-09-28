@@ -29,9 +29,11 @@ public class CancelReservationService {
 
     @Transactional(noRollbackFor = ResourceNotFoundException.class)
     public ReservationDetails cancel(UUID reservationId) {
-        return reservationWriter.closePendingOnCancellation(reservationId)
+        return reservationWriter
+                .closePendingOnCancellation(reservationId)
                 .map(release -> closeAndReturn(reservationId, release))
-                .orElseGet(() -> reservationReader.findById(reservationId)
+                .orElseGet(() -> reservationReader
+                        .findById(reservationId)
                         .orElseThrow(() -> new ResourceNotFoundException("reservation not found: " + reservationId)));
     }
 
@@ -39,7 +41,8 @@ public class CancelReservationService {
         if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
             throw new IllegalStateException("could not return reservation capacity");
         }
-        ReservationDetails reservation = reservationReader.findById(reservationId)
+        ReservationDetails reservation = reservationReader
+                .findById(reservationId)
                 .orElseThrow(() -> new IllegalStateException("closed reservation disappeared"));
         eventPublisher.publishEvent(new EventAvailabilityChanged(release.eventId()));
         return reservation;

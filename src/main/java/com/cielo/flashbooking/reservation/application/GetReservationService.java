@@ -14,7 +14,8 @@ public class GetReservationService {
     }
 
     public ReservationDetails get(UUID id) {
-        return reservationReader.findById(id)
+        return reservationReader
+                .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("reservation not found: " + id));
     }
 }

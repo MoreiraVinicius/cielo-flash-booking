@@ -3,9 +3,9 @@ package com.cielo.flashbooking.adapter.out.persistence.notification;
 import com.cielo.flashbooking.notification.email.NotificationDelivery;
 import com.cielo.flashbooking.notification.email.NotificationDeliveryStatus;
 import com.cielo.flashbooking.notification.email.NotificationDeliveryStore;
-import java.util.UUID;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -19,9 +19,9 @@ public class JdbcNotificationDeliveryStore implements NotificationDeliveryStore 
     }
 
     @Override
-    public Optional<NotificationDelivery> claim(
-            UUID outboxEventId, int maximumAttempts, Duration leaseDuration) {
-        return jdbcTemplate.query("""
+    public Optional<NotificationDelivery> claim(UUID outboxEventId, int maximumAttempts, Duration leaseDuration) {
+        return jdbcTemplate.query(
+                """
                 INSERT INTO notification_delivery (
                     id, outbox_event_id, channel, status, attempts, lease_until, updated_at)
                 VALUES (?, ?, 'EMAIL', 'SENDING', 1,
@@ -36,10 +36,13 @@ public class JdbcNotificationDeliveryStore implements NotificationDeliveryStore 
                        OR (notification_delivery.status = 'SENDING'
                            AND notification_delivery.lease_until <= clock_timestamp()))
                 RETURNING outbox_event_id, status, attempts
-                """, resultSet -> resultSet.next() ? Optional.of(new NotificationDelivery(
-                    resultSet.getObject("outbox_event_id", UUID.class),
-                    NotificationDeliveryStatus.valueOf(resultSet.getString("status")),
-                    resultSet.getInt("attempts"))) : Optional.empty(),
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new NotificationDelivery(
+                                resultSet.getObject("outbox_event_id", UUID.class),
+                                NotificationDeliveryStatus.valueOf(resultSet.getString("status")),
+                                resultSet.getInt("attempts")))
+                        : Optional.empty(),
                 UUID.randomUUID(),
                 outboxEventId,
                 Math.toIntExact(leaseDuration.toSeconds()),

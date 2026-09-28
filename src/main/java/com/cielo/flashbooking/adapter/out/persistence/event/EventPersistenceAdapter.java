@@ -3,10 +3,10 @@ package com.cielo.flashbooking.adapter.out.persistence.event;
 import com.cielo.flashbooking.domain.event.Event;
 import com.cielo.flashbooking.event.application.EventReader;
 import com.cielo.flashbooking.event.application.EventWriter;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-import java.sql.Timestamp;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -21,7 +21,8 @@ class EventPersistenceAdapter implements EventWriter, EventReader {
 
     @Override
     public Event save(Event event) {
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -37,25 +38,30 @@ class EventPersistenceAdapter implements EventWriter, EventReader {
 
     @Override
     public Instant currentTime() {
-        return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
+        return jdbcTemplate
+                .queryForObject("SELECT clock_timestamp()", Timestamp.class)
+                .toInstant();
     }
 
     @Override
     public Optional<Event> findById(UUID id) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate.query(
+                """
                 SELECT id, name, capacity, available, created_at, starts_at, ends_at
                 FROM event
                 WHERE id = ?
-                """, resultSet -> resultSet.next()
-                ? Optional.of(Event.restore(
-                        resultSet.getObject("id", UUID.class),
-                        resultSet.getString("name"),
-                        resultSet.getInt("capacity"),
-                        resultSet.getInt("available"),
-                        resultSet.getTimestamp("created_at").toInstant(),
-                        timestampOrNull(resultSet.getTimestamp("starts_at")),
-                        timestampOrNull(resultSet.getTimestamp("ends_at"))))
-                : Optional.empty(), id);
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(Event.restore(
+                                resultSet.getObject("id", UUID.class),
+                                resultSet.getString("name"),
+                                resultSet.getInt("capacity"),
+                                resultSet.getInt("available"),
+                                resultSet.getTimestamp("created_at").toInstant(),
+                                timestampOrNull(resultSet.getTimestamp("starts_at")),
+                                timestampOrNull(resultSet.getTimestamp("ends_at"))))
+                        : Optional.empty(),
+                id);
     }
 
     private Instant timestampOrNull(Timestamp timestamp) {

@@ -6,20 +6,20 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.reservation.application.CreateReservationService;
-import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @Profile({"command-api", "all"})
@@ -50,22 +50,21 @@ public class ReservationController {
             HttpServletRequest servletRequest) {
         IdempotencyResult result = idempotencyService.execute(
                 IdempotencyCommand.from(
-                        idempotencyKey,
-                        "POST",
-                        "/events/" + eventId + "/reservations",
-                        request,
-                        objectMapper),
-                () -> new IdempotencyResponse(201, ReservationResponse.from(createReservationService.create(
-                        eventId,
-                        request.quantity(),
-                        request.customer().name(),
-                        request.customer().email()))),
+                        idempotencyKey, "POST", "/events/" + eventId + "/reservations", request, objectMapper),
+                () -> new IdempotencyResponse(
+                        201,
+                        ReservationResponse.from(createReservationService.create(
+                                eventId,
+                                request.quantity(),
+                                request.customer().name(),
+                                request.customer().email()))),
                 exception -> {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
                     return new IdempotencyResponse(problem.getStatus(), problem);
                 });
         try {
-            String reservationId = objectMapper.readTree(result.responseBody()).get("id").asString();
+            String reservationId =
+                    objectMapper.readTree(result.responseBody()).get("id").asString();
             return ResponseEntity.status(result.status())
                     .location(URI.create("/reservations/" + reservationId))
                     .contentType(MediaType.APPLICATION_JSON)

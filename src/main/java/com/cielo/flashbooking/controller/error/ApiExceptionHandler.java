@@ -27,15 +27,15 @@ public final class ApiExceptionHandler {
         this.problemResponseFactory = problemResponseFactory;
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
+    @ExceptionHandler({
+        MethodArgumentNotValidException.class,
+        HttpMessageNotReadableException.class,
+        MethodArgumentTypeMismatchException.class,
+        IllegalArgumentException.class
+    })
     ResponseEntity<ProblemDetail> handleBadRequest(Exception exception, HttpServletRequest request) {
         return response(
-                HttpStatus.BAD_REQUEST,
-                "Invalid request",
-                "The request is invalid.",
-                "invalid-request",
-                request);
+                HttpStatus.BAD_REQUEST, "Invalid request", "The request is invalid.", "invalid-request", request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -60,8 +60,7 @@ public final class ApiExceptionHandler {
 
     @ExceptionHandler(ServiceUnavailableException.class)
     ResponseEntity<ProblemDetail> handleServiceUnavailable(
-            ServiceUnavailableException exception,
-            HttpServletRequest request) {
+            ServiceUnavailableException exception, HttpServletRequest request) {
         return response(
                 HttpStatus.SERVICE_UNAVAILABLE,
                 "Service unavailable",
@@ -86,15 +85,10 @@ public final class ApiExceptionHandler {
     }
 
     private ResponseEntity<ProblemDetail> response(
-            HttpStatus status,
-            String title,
-            String detail,
-            String code,
-            HttpServletRequest request) {
+            HttpStatus status, String title, String detail, String code, HttpServletRequest request) {
         ProblemDetail problem = problemResponseFactory.problem(status, title, detail, code, request);
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(problem);
     }
-
 }

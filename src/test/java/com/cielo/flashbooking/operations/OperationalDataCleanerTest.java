@@ -1,8 +1,9 @@
-package com.cielo.flashbooking.application.outbox;
+package com.cielo.flashbooking.operations;
 
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
+import com.cielo.flashbooking.application.outbox.OutboxEventStore;
 import com.cielo.flashbooking.notification.email.NotificationDeliveryStore;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -14,8 +15,8 @@ class OperationalDataCleanerTest {
         NotificationDeliveryStore deliveries = mock(NotificationDeliveryStore.class);
         OutboxEventStore outbox = mock(OutboxEventStore.class);
         Duration retention = Duration.ofDays(7);
-        OperationalDataCleaner cleaner = new OperationalDataCleaner(
-                deliveries, outbox, new OperationalDataCleanupProperties(500, retention));
+        OperationalDataCleaner cleaner =
+                new OperationalDataCleaner(deliveries, outbox, new OperationalDataCleanupProperties(500, retention));
 
         cleaner.clean();
 

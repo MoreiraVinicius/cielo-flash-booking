@@ -29,14 +29,22 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
     @Test
     void createsEveryRequiredTableFromAnEmptyDatabase() throws SQLException {
         try (var connection = connection();
-                var statement = connection.prepareStatement("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")) {
+                var statement = connection.prepareStatement(
+                        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")) {
             var resultSet = statement.executeQuery();
             var tableNames = new java.util.HashSet<String>();
             while (resultSet.next()) {
                 tableNames.add(resultSet.getString("table_name"));
             }
 
-            assertThat(tableNames).contains("customer", "event", "reservation", "idempotency_record", "outbox_event", "notification_delivery");
+            assertThat(tableNames)
+                    .contains(
+                            "customer",
+                            "event",
+                            "reservation",
+                            "idempotency_record",
+                            "outbox_event",
+                            "notification_delivery");
         }
     }
 
@@ -59,8 +67,7 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
         assertThatThrownBy(() -> execute("""
                 INSERT INTO event (id, name, capacity, available)
                 VALUES ('%s', 'Invalid event', 0, 0)
-                """.formatted(UUID.randomUUID())))
-                .isInstanceOf(SQLException.class);
+                """.formatted(UUID.randomUUID()))).isInstanceOf(SQLException.class);
 
         var eventId = insertEvent();
         var customerId = UUID.randomUUID();
@@ -94,8 +101,7 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
                 UPDATE reservation
                 SET closure_reason_description = 'changed'
                 WHERE id = '%s'
-                """.formatted(reservationId)))
-                .isInstanceOf(SQLException.class);
+                """.formatted(reservationId))).isInstanceOf(SQLException.class);
 
         var key = "command-key";
         insertIdempotencyRecord(key);
@@ -125,7 +131,8 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
     }
 
     private Connection connection() throws SQLException {
-        return java.sql.DriverManager.getConnection(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
+        return java.sql.DriverManager.getConnection(
+                POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
     }
 
     private UUID insertEvent() throws SQLException {
@@ -152,7 +159,8 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
     }
 
     private void execute(String sql) throws SQLException {
-        try (var connection = connection(); var statement = connection.createStatement()) {
+        try (var connection = connection();
+                var statement = connection.createStatement()) {
             statement.execute(sql);
         }
     }

@@ -28,6 +28,5 @@ public interface ReservationWriter {
 
     Optional<CapacityRelease> expirePending(UUID reservationId);
 
-    record CapacityRelease(UUID eventId, int quantity) {
-    }
+    record CapacityRelease(UUID eventId, int quantity) {}
 }

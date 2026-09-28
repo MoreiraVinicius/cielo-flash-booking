@@ -19,8 +19,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -67,8 +67,7 @@ class GetEventServiceTest {
         EventReader reader = ignored -> Optional.of(stored);
         EventAvailabilityCache cache = mock(EventAvailabilityCache.class);
         when(cache.findById(id)).thenReturn(Optional.empty());
-        GetEventService service = new GetEventService(
-                reader, cache, new CacheFailureCircuit(CLOCK), new Semaphore(0));
+        GetEventService service = new GetEventService(reader, cache, new CacheFailureCircuit(CLOCK), new Semaphore(0));
 
         assertThat(service.get(id)).isSameAs(stored);
         verify(cache).put(stored);
@@ -109,7 +108,8 @@ class GetEventServiceTest {
     @Test
     void limitsConcurrentPostgresqlFallbacksToFive() throws Exception {
         EventAvailabilityCache cache = mock(EventAvailabilityCache.class);
-        when(cache.findById(org.mockito.ArgumentMatchers.any())).thenThrow(new IllegalStateException("cache unavailable"));
+        when(cache.findById(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new IllegalStateException("cache unavailable"));
         CountDownLatch fiveReadersEntered = new CountDownLatch(5);
         CountDownLatch releaseReaders = new CountDownLatch(1);
         AtomicInteger activeReaders = new AtomicInteger();
@@ -140,8 +140,7 @@ class GetEventServiceTest {
             }
             assertThat(fiveReadersEntered.await(5, TimeUnit.SECONDS)).isTrue();
 
-            assertThatThrownBy(() -> service.get(UUID.randomUUID()))
-                    .isInstanceOf(ServiceUnavailableException.class);
+            assertThatThrownBy(() -> service.get(UUID.randomUUID())).isInstanceOf(ServiceUnavailableException.class);
             assertThat(maximumReaders).hasValue(5);
         } finally {
             releaseReaders.countDown();

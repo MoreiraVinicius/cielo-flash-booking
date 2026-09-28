@@ -33,7 +33,8 @@ class ReservationTest {
         assertThatNullPointerException()
                 .isThrownBy(() -> Reservation.pending(UUID.randomUUID(), null, customer, 1, EXPIRES_AT, CREATED_AT));
         assertThatNullPointerException()
-                .isThrownBy(() -> Reservation.pending(UUID.randomUUID(), UUID.randomUUID(), null, 1, EXPIRES_AT, CREATED_AT));
+                .isThrownBy(() ->
+                        Reservation.pending(UUID.randomUUID(), UUID.randomUUID(), null, 1, EXPIRES_AT, CREATED_AT));
     }
 
     @Test
@@ -48,7 +49,8 @@ class ReservationTest {
     @Test
     void rejectsNonPositiveReservationQuantity() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Reservation.pending(UUID.randomUUID(), UUID.randomUUID(), customer(), 0, EXPIRES_AT, CREATED_AT));
+                .isThrownBy(() -> Reservation.pending(
+                        UUID.randomUUID(), UUID.randomUUID(), customer(), 0, EXPIRES_AT, CREATED_AT));
     }
 
     private Customer customer() {

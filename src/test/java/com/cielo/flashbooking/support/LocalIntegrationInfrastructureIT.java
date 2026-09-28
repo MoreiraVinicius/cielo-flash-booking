@@ -21,7 +21,8 @@ class LocalIntegrationInfrastructureIT extends LocalIntegrationInfrastructure {
 
     @Test
     void startsAndExposesEveryRequiredLocalIntegrationService() throws Exception {
-        try (var connection = DriverManager.getConnection(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
+        try (var connection = DriverManager.getConnection(
+                        POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
                 var statement = connection.createStatement();
                 var resultSet = statement.executeQuery("SELECT 1")) {
             assertThat(resultSet.next()).isTrue();
@@ -30,14 +31,16 @@ class LocalIntegrationInfrastructureIT extends LocalIntegrationInfrastructure {
 
         try (var socket = new Socket(VALKEY.getHost(), VALKEY.getMappedPort(6379));
                 var writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
-                var reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
+                var reader =
+                        new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
             writer.write("PING\r\n");
             writer.flush();
             assertThat(reader.readLine()).isEqualTo("+PONG");
         }
 
         try (var sqs = sqsClient()) {
-            var queueUrl = sqs.createQueue(request -> request.queueName("integration-" + UUID.randomUUID())).queueUrl();
+            var queueUrl = sqs.createQueue(request -> request.queueName("integration-" + UUID.randomUUID()))
+                    .queueUrl();
             assertThat(sqs.listQueues().queueUrls()).contains(queueUrl);
         }
 

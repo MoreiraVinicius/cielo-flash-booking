@@ -1,10 +1,10 @@
 package com.cielo.flashbooking.application.idempotency;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 public record IdempotencyCommand(String key, String operation, String normalizedTarget, String payloadHash) {
 
@@ -21,10 +21,7 @@ public record IdempotencyCommand(String key, String operation, String normalized
         }
         try {
             return new IdempotencyCommand(
-                    normalizedKey,
-                    operation,
-                    normalizedTarget,
-                    sha256(objectMapper.writeValueAsString(payload)));
+                    normalizedKey, operation, normalizedTarget, sha256(objectMapper.writeValueAsString(payload)));
         } catch (JacksonException exception) {
             throw new IllegalStateException("could not serialize idempotency payload", exception);
         }

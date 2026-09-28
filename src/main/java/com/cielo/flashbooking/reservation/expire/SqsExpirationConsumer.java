@@ -1,12 +1,12 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
-import tools.jackson.databind.json.JsonMapper;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.Message;
+import tools.jackson.databind.json.JsonMapper;
 
 public class SqsExpirationConsumer {
 
@@ -30,17 +30,17 @@ public class SqsExpirationConsumer {
 
     @Scheduled(fixedDelayString = "${expiration.consumer.fixed-delay:1s}")
     public void poll() {
-        sqsClient.receiveMessage(request -> request
-                        .queueUrl(queueUrl)
-                        .maxNumberOfMessages(10)
-                        .waitTimeSeconds(1))
+        sqsClient
+                .receiveMessage(request ->
+                        request.queueUrl(queueUrl).maxNumberOfMessages(10).waitTimeSeconds(1))
                 .messages()
                 .forEach(this::process);
     }
 
     private void process(Message message) {
         try {
-            UUID reservationId = UUID.fromString(objectMapper.readTree(message.body())
+            UUID reservationId = UUID.fromString(objectMapper
+                    .readTree(message.body())
                     .required("reservationId")
                     .asString());
             expireReservationService.expire(reservationId);

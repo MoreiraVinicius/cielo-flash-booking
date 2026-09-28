@@ -56,7 +56,8 @@ public final class Customer {
     }
 
     private static String normalizeEmail(String email) {
-        var normalized = Objects.requireNonNull(email, "email must not be null").trim().toLowerCase(Locale.ROOT);
+        var normalized =
+                Objects.requireNonNull(email, "email must not be null").trim().toLowerCase(Locale.ROOT);
         if (!normalized.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) {
             throw new IllegalArgumentException("email must be valid");
         }

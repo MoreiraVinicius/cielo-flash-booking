@@ -28,8 +28,7 @@ public record ReservationResponse(
                 ClosureReasonResponse.from(reservation.closureReason()));
     }
 
-    record CustomerResponse(UUID id, String name, String email) {
-    }
+    record CustomerResponse(UUID id, String name, String email) {}
 
     record ClosureReasonResponse(String code, String description) {
 

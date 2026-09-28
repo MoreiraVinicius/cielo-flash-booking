@@ -28,14 +28,16 @@ class ReservationEmailServiceTest {
         UUID outboxEventId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
         when(notificationDeliveryStore.claim(outboxEventId, 3, java.time.Duration.ofMinutes(2)))
-                .thenReturn(Optional.of(new NotificationDelivery(
-                        outboxEventId, NotificationDeliveryStatus.SENDING, 1)));
+                .thenReturn(
+                        Optional.of(new NotificationDelivery(outboxEventId, NotificationDeliveryStatus.SENDING, 1)));
         when(reservationReader.findById(reservationId)).thenReturn(Optional.of(reservation(reservationId)));
-        when(reservationEmailSender.send(any())).thenAnswer(invocation -> {
-            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager
-                    .isActualTransactionActive()).isFalse();
-            return "provider-message-id";
-        });
+        when(reservationEmailSender.send(any()))
+                .thenAnswer(invocation -> {
+                    assertThat(org.springframework.transaction.support.TransactionSynchronizationManager
+                                    .isActualTransactionActive())
+                            .isFalse();
+                    return "provider-message-id";
+                });
 
         ReservationEmailService.ProcessingResult result = service(3).process(outboxEventId, reservationId);
 
@@ -54,8 +56,8 @@ class ReservationEmailServiceTest {
         UUID outboxEventId = UUID.randomUUID();
         UUID reservationId = UUID.randomUUID();
         when(notificationDeliveryStore.claim(outboxEventId, 2, java.time.Duration.ofMinutes(2)))
-                .thenReturn(Optional.of(new NotificationDelivery(
-                        outboxEventId, NotificationDeliveryStatus.SENDING, 2)));
+                .thenReturn(
+                        Optional.of(new NotificationDelivery(outboxEventId, NotificationDeliveryStatus.SENDING, 2)));
         when(reservationReader.findById(reservationId)).thenReturn(Optional.of(reservation(reservationId)));
         when(reservationEmailSender.send(any())).thenThrow(new IllegalStateException("provider unavailable"));
 
@@ -86,8 +88,7 @@ class ReservationEmailServiceTest {
                 notificationDeliveryStore,
                 reservationReader,
                 reservationEmailSender,
-                new NotificationConsumerProperties(
-                        false, null, maximumAttempts, java.time.Duration.ofMinutes(2)));
+                new NotificationConsumerProperties(false, null, maximumAttempts, java.time.Duration.ofMinutes(2)));
     }
 
     private ReservationDetails reservation(UUID reservationId) {

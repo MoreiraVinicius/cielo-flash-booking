@@ -1,6 +1,5 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
-import tools.jackson.databind.json.JsonMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +8,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling

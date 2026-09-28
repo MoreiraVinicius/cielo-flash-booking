@@ -2,7 +2,6 @@ package com.cielo.flashbooking.adapter.out.messaging.publisher;
 
 import com.cielo.flashbooking.application.outbox.OutboxEvent;
 import com.cielo.flashbooking.application.outbox.OutboxEventStore;
-import tools.jackson.databind.json.JsonMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 public class OutboxSqsPublisher {
 
@@ -54,14 +54,16 @@ public class OutboxSqsPublisher {
                     .queueUrl(queueUrlFor(event))
                     .messageBody(event.payload())
                     .messageAttributes(Map.of(
-                            "eventType", MessageAttributeValue.builder()
-                                    .dataType("String")
-                                    .stringValue(event.eventType())
-                                    .build(),
-                            "outboxEventId", MessageAttributeValue.builder()
-                                    .dataType("String")
-                                    .stringValue(event.id().toString())
-                                    .build()))
+                            "eventType",
+                                    MessageAttributeValue.builder()
+                                            .dataType("String")
+                                            .stringValue(event.eventType())
+                                            .build(),
+                            "outboxEventId",
+                                    MessageAttributeValue.builder()
+                                            .dataType("String")
+                                            .stringValue(event.id().toString())
+                                            .build()))
                     .delaySeconds(delaySecondsFor(event))
                     .build());
             outboxEventStore.markPublished(event.id(), clock.instant());
@@ -83,7 +85,8 @@ public class OutboxSqsPublisher {
             return 0;
         }
         try {
-            Instant expiresAt = Instant.parse(objectMapper.readTree(event.payload()).required("expiresAt").asString());
+            Instant expiresAt = Instant.parse(
+                    objectMapper.readTree(event.payload()).required("expiresAt").asString());
             Duration remaining = Duration.between(clock.instant(), expiresAt);
             if (remaining.isNegative() || remaining.isZero()) {
                 return 0;

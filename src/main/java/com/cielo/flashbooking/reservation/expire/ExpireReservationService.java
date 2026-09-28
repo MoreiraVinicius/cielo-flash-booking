@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.feature.reservation.expire;
+package com.cielo.flashbooking.reservation.expire;
 
 import com.cielo.flashbooking.event.application.EventAvailabilityChanged;
 import com.cielo.flashbooking.inventory.application.InventoryOperations;
@@ -26,7 +26,8 @@ public class ExpireReservationService {
 
     @Transactional
     public boolean expire(UUID reservationId) {
-        return reservationWriter.expirePending(reservationId)
+        return reservationWriter
+                .expirePending(reservationId)
                 .map(this::expireAndReturn)
                 .orElse(false);
     }

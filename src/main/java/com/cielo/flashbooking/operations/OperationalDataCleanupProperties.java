@@ -1,4 +1,4 @@
-package com.cielo.flashbooking.application.outbox;
+package com.cielo.flashbooking.operations;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;

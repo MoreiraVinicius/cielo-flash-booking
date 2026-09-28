@@ -1,7 +1,7 @@
 package com.cielo.flashbooking.reservation.application;
 
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ReservationReader {

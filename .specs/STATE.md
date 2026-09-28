@@ -212,7 +212,15 @@
 - **Trade-off:** Mensagens de notificação acumulam na SQS e podem ser processadas quando a flag voltar a `true`; a pausa não descarta dados nem torna a entrega exatamente uma vez.
 - **Scope:** Configuração Terraform do ambiente demo e criação condicional do consumidor Spring.
 
-### AD-029 - Spring Boot 4 com Jackson 3 e telemetria opt-in
+### AD-029 - Fronteiras executáveis do monólito modular
+
+- **Status:** active
+- **Decision:** Os pacotes de primeiro nível `domain`, `application`, `inventory`, `event`, `reservation`, `notification`, `operations`, `controller`, `config` e `adapter` representam os módulos internos desta versão. `FlashBookingApplication` é o bootstrap. O domínio permanece puro, os módulos não formam ciclos e código de negócio ou entrada não depende de adapters de saída; a composição explícita de infraestrutura pode fazê-lo.
+- **Reason:** O agrupamento anterior misturava reconciliação, expiração e limpeza operacional em pacotes técnicos que formavam ciclos aparentes e dificultavam a leitura. Mover essas responsabilidades e verificar todas as classes com ArchUnit torna regressões estruturais observáveis na CI.
+- **Trade-off:** Novos pacotes de primeiro nível exigem atualizar o mapa no teste e justificar sua responsabilidade. As regras não impõem novas camadas, serviços, interfaces ou modelo de deployment.
+- **Scope:** Organização Java, testes arquiteturais e build compartilhado pela demo e pelo desenho high-load.
+
+### AD-030 - Spring Boot 4 com Jackson 3 e telemetria opt-in
 
 - **Status:** active
 - **Decision:** O runtime usa Java 21, Spring Boot 4.0.8, Maven, arquitetura hexagonal em um monólito modular e Jackson 3. O perfil `observability` habilita exportação OTLP de métricas e traces HTTP; a configuração padrão mantém exportadores desligados. A instrumentação assíncrona da outbox/SQS não está incluída.

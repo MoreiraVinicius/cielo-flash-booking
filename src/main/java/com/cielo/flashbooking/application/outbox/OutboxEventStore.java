@@ -1,7 +1,7 @@
 package com.cielo.flashbooking.application.outbox;
 
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 

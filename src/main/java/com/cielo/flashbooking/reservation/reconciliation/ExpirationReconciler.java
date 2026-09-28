@@ -1,7 +1,7 @@
-package com.cielo.flashbooking.application.reconciliation;
+package com.cielo.flashbooking.reservation.reconciliation;
 
-import com.cielo.flashbooking.feature.reservation.expire.ExpireReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
+import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

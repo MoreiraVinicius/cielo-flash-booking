@@ -14,12 +14,9 @@ public record ReservationEmail(String recipient, String subject, String body) {
     }
 
     static ReservationEmail temporaryReservation(
-            String recipient,
-            UUID reservationId,
-            String eventName,
-            int quantity,
-            Instant expiresAt) {
-        String body = """
+            String recipient, UUID reservationId, String eventName, int quantity, Instant expiresAt) {
+        String body =
+                """
                 Sua reserva temporária foi registrada.
 
                 Reserva: %s
@@ -28,11 +25,7 @@ public record ReservationEmail(String recipient, String subject, String body) {
                 Válida até: %s
 
                 Esta reserva é temporária e não confirma compra nem pagamento.
-                """.formatted(
-                reservationId,
-                eventName,
-                quantity,
-                DateTimeFormatter.ISO_INSTANT.format(expiresAt));
+                """.formatted(reservationId, eventName, quantity, DateTimeFormatter.ISO_INSTANT.format(expiresAt));
         return new ReservationEmail(recipient, "Reserva temporária registrada", body);
     }
 }

@@ -26,8 +26,7 @@ class EventTest {
 
     @Test
     void rejectsBlankNameAfterTrimming() {
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> Event.create(UUID.randomUUID(), "   ", 1, Instant.now()));
+        assertThatIllegalArgumentException().isThrownBy(() -> Event.create(UUID.randomUUID(), "   ", 1, Instant.now()));
     }
 
     @Test
@@ -50,12 +49,18 @@ class EventTest {
     void rejectsInvalidSaleWindowCombinations() {
         Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
 
-        assertThatIllegalArgumentException().isThrownBy(
-                () -> Event.create(UUID.randomUUID(), "Flash sale", 1, createdAt, createdAt, null));
-        assertThatIllegalArgumentException().isThrownBy(
-                () -> Event.create(UUID.randomUUID(), "Flash sale", 1, createdAt,
-                        createdAt.plusSeconds(60), createdAt.plusSeconds(60)));
-        assertThatIllegalArgumentException().isThrownBy(
-                () -> Event.create(UUID.randomUUID(), "Flash sale", 1, createdAt, null, createdAt.plusSeconds(599)));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Event.create(UUID.randomUUID(), "Flash sale", 1, createdAt, createdAt, null));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Event.create(
+                        UUID.randomUUID(),
+                        "Flash sale",
+                        1,
+                        createdAt,
+                        createdAt.plusSeconds(60),
+                        createdAt.plusSeconds(60)));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() ->
+                        Event.create(UUID.randomUUID(), "Flash sale", 1, createdAt, null, createdAt.plusSeconds(599)));
     }
 }

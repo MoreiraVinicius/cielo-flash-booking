@@ -2,12 +2,12 @@ package com.cielo.flashbooking.application.idempotency;
 
 import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.application.error.ResourceNotFoundException;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class PersistentIdempotencyService {
@@ -40,7 +40,8 @@ public class PersistentIdempotencyService {
     }
 
     private IdempotencyResult existingResult(IdempotencyCommand command) {
-        IdempotencyStore.StoredIdempotencyResponse existing = idempotencyStore.findByKey(command.key())
+        IdempotencyStore.StoredIdempotencyResponse existing = idempotencyStore
+                .findByKey(command.key())
                 .orElseThrow(() -> new IllegalStateException("idempotency record disappeared"));
         if (!existing.matches(command)) {
             throw new ResourceConflictException("Idempotency-Key is incompatible with this request");

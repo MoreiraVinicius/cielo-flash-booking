@@ -39,7 +39,8 @@ public class ReservationEmailService {
         int attempts = claimed.get().attempts();
         String maskedRecipient = "recipient unavailable";
         try {
-            ReservationDetails reservation = reservationReader.findById(reservationId)
+            ReservationDetails reservation = reservationReader
+                    .findById(reservationId)
                     .orElseThrow(() -> new IllegalArgumentException("reservation was not found"));
             maskedRecipient = maskRecipient(reservation.customer().email());
             ReservationEmail email = ReservationEmail.temporaryReservation(
