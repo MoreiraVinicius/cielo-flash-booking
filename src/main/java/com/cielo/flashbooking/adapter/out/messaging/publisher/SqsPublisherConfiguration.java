@@ -14,6 +14,7 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
@@ -39,8 +40,17 @@ class SqsPublisherConfiguration {
 
     @Bean
     OutboxSqsPublisher outboxSqsPublisher(
-            OutboxEventStore outboxEventStore, SqsClient sqsClient, OutboxPublisherProperties properties, Clock clock) {
+            OutboxEventStore outboxEventStore,
+            SqsClient sqsClient,
+            OutboxPublisherProperties properties,
+            Clock clock,
+            JsonMapper objectMapper) {
         return new OutboxSqsPublisher(
-                outboxEventStore, sqsClient, properties.expirationQueueUrl(), properties.notificationQueueUrl(), clock);
+                outboxEventStore,
+                sqsClient,
+                properties.expirationQueueUrl(),
+                properties.notificationQueueUrl(),
+                clock,
+                objectMapper);
     }
 }

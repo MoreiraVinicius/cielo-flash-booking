@@ -1,17 +1,17 @@
 package com.cielo.flashbooking.application.idempotency;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 public record IdempotencyCommand(String key, String operation, String normalizedTarget, String payloadHash) {
 
     private static final int MAXIMUM_KEY_LENGTH = 128;
 
     public static IdempotencyCommand from(
-            String key, String operation, String normalizedTarget, Object payload, ObjectMapper objectMapper) {
+            String key, String operation, String normalizedTarget, Object payload, JsonMapper objectMapper) {
         if (key == null || key.isBlank()) {
             throw new IllegalArgumentException("Idempotency-Key is required");
         }
@@ -22,7 +22,7 @@ public record IdempotencyCommand(String key, String operation, String normalized
         try {
             return new IdempotencyCommand(
                     normalizedKey, operation, normalizedTarget, sha256(objectMapper.writeValueAsString(payload)));
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("could not serialize idempotency payload", exception);
         }
     }

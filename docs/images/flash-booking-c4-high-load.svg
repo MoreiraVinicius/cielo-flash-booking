@@ -100,7 +100,7 @@
   <rect x="370" y="115" width="1380" height="825" rx="12" class="system-boundary"/>
   <path d="M382 116 H1738 Q1749 116 1749 127 V184 H371 V127 Q371 116 382 116 Z" class="system-header"/>
   <text x="398" y="145" class="boundary-title">«Software System» Flash Booking</text>
-  <text x="398" y="170" class="boundary-subtitle">Mesmo artefato Java 21 / Spring Boot 3, executado em três modos com escala e permissões independentes.</text>
+  <text x="398" y="170" class="boundary-subtitle">Mesmo artefato Java 21 / Spring Boot 4.0.8, alvo não aplicado, executado em três modos com escala e permissões independentes.</text>
 
   <!-- Infrastructure entry containers -->
   <rect x="410" y="215" width="540" height="120" rx="8" class="infra"/>

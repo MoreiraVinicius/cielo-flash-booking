@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cielo.flashbooking.adapter.out.persistence.outbox.JdbcOutboxEventStore;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -22,6 +21,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
@@ -37,7 +37,7 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @Autowired
     private Clock clock;
@@ -161,7 +161,12 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
 
     private OutboxSqsPublisher publisher(String expirationUrl) {
         return new OutboxSqsPublisher(
-                new JdbcOutboxEventStore(jdbcTemplate), sqsClient, expirationUrl, notificationQueueUrl, clock);
+                new JdbcOutboxEventStore(jdbcTemplate),
+                sqsClient,
+                expirationUrl,
+                notificationQueueUrl,
+                clock,
+                JsonMapper.builder().build());
     }
 
     private UUID insertOutboxEvent(String eventType, Instant expiresAt) {

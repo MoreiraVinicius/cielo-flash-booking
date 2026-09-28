@@ -6,7 +6,6 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.event.application.CreateEventService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @Profile({"command-api", "all"})
@@ -27,13 +27,13 @@ class EventCommandController {
     private final CreateEventService createEventService;
     private final PersistentIdempotencyService idempotencyService;
     private final ProblemResponseFactory problemResponseFactory;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     EventCommandController(
             CreateEventService createEventService,
             PersistentIdempotencyService idempotencyService,
             ProblemResponseFactory problemResponseFactory,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.createEventService = createEventService;
         this.idempotencyService = idempotencyService;
         this.problemResponseFactory = problemResponseFactory;
@@ -60,7 +60,7 @@ class EventCommandController {
         if (result.status() == 201) {
             try {
                 builder.location(URI.create("/events/"
-                        + objectMapper.readTree(result.responseBody()).get("id").asText()));
+                        + objectMapper.readTree(result.responseBody()).get("id").asString()));
             } catch (Exception exception) {
                 throw new IllegalStateException("could not read idempotency response location", exception);
             }

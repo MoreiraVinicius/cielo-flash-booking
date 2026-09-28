@@ -126,6 +126,15 @@ services:
       mailpit:
         condition: service_healthy
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./docker/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "14318:4318"
+
   command-api-concurrency:
     <<: *application
     profiles: ["concurrency"]

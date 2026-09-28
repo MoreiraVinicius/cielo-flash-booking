@@ -39,16 +39,25 @@ function Wait-ForApiHealth {
     throw "$Name did not become healthy within 90 seconds"
 }
 
+function Test-SameInstant {
+    param(
+        [object]$Actual,
+        [string]$Expected
+    )
+
+    return ([DateTimeOffset]$Actual).UtcDateTime.Ticks -eq ([DateTimeOffset]$Expected).UtcDateTime.Ticks
+}
+
 Wait-ForApiHealth -Name 'command-api' -Uri 'http://localhost:8082/actuator/health'
 Wait-ForApiHealth -Name 'query-api' -Uri 'http://localhost:8081/actuator/health'
 
-$saleEndsAt = (Get-Date).ToUniversalTime().AddMinutes(11).ToString('o')
+$saleEndsAt = [DateTimeOffset]::UtcNow.AddMinutes(11).ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'")
 $event = Invoke-JsonRequest -Method POST -Uri 'http://localhost:8082/events' -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ name = 'Compose smoke event'; capacity = 2; endsAt = $saleEndsAt }
 $eventId = $event.id
-if ($event.startsAt -ne $null -or $event.endsAt -ne $saleEndsAt) { throw 'command-api did not preserve the immediate sale window' }
+if ($event.startsAt -ne $null -or -not (Test-SameInstant -Actual $event.endsAt -Expected $saleEndsAt)) { throw 'command-api did not preserve the immediate sale window' }
 $queriedEvent = Invoke-JsonRequest -Method GET -Uri "http://localhost:8081/events/$eventId"
 if ($queriedEvent.id -ne $eventId) { throw 'query-api did not expose the created event' }
-if ($queriedEvent.startsAt -ne $null -or $queriedEvent.endsAt -ne $saleEndsAt) { throw 'query-api did not expose the sale window' }
+if ($queriedEvent.startsAt -ne $null -or -not (Test-SameInstant -Actual $queriedEvent.endsAt -Expected $saleEndsAt)) { throw 'query-api did not expose the sale window' }
 
 $reservation = Invoke-JsonRequest -Method POST -Uri "http://localhost:8082/events/$eventId/reservations" -Headers @{ 'Idempotency-Key' = [guid]::NewGuid().ToString() } -Body @{ quantity = 1; customer = @{ name = 'Compose smoke'; email = 'compose-smoke@example.com' } }
 $reservationId = $reservation.id

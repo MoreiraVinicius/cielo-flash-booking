@@ -8,13 +8,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cielo.flashbooking.application.error.ResourceConflictException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class PersistentIdempotencyServiceTest {
@@ -22,7 +22,8 @@ class PersistentIdempotencyServiceTest {
     @Mock
     private IdempotencyStore idempotencyStore;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final JsonMapper objectMapper =
+            JsonMapper.builder().findAndAddModules().build();
 
     @Test
     void execute_whenKeyIsNew_persistsAndReturnsTheFinalResponse() {

@@ -2,7 +2,6 @@ package com.cielo.flashbooking.adapter.out.messaging.publisher;
 
 import com.cielo.flashbooking.application.outbox.OutboxEvent;
 import com.cielo.flashbooking.application.outbox.OutboxEventStore;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 public class OutboxSqsPublisher {
 
@@ -25,20 +25,21 @@ public class OutboxSqsPublisher {
     private final String expirationQueueUrl;
     private final String notificationQueueUrl;
     private final Clock clock;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public OutboxSqsPublisher(
             OutboxEventStore outboxEventStore,
             SqsClient sqsClient,
             String expirationQueueUrl,
             String notificationQueueUrl,
-            Clock clock) {
+            Clock clock,
+            JsonMapper objectMapper) {
         this.outboxEventStore = outboxEventStore;
         this.sqsClient = sqsClient;
         this.expirationQueueUrl = expirationQueueUrl;
         this.notificationQueueUrl = notificationQueueUrl;
         this.clock = clock;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
     @Scheduled(fixedDelayString = "${outbox.publisher.fixed-delay:1s}")
@@ -85,7 +86,7 @@ public class OutboxSqsPublisher {
         }
         try {
             Instant expiresAt = Instant.parse(
-                    objectMapper.readTree(event.payload()).required("expiresAt").asText());
+                    objectMapper.readTree(event.payload()).required("expiresAt").asString());
             Duration remaining = Duration.between(clock.instant(), expiresAt);
             if (remaining.isNegative() || remaining.isZero()) {
                 return 0;

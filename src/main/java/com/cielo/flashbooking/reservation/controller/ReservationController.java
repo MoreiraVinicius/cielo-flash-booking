@@ -6,7 +6,6 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.reservation.application.CreateReservationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @Profile({"command-api", "all"})
@@ -29,13 +29,13 @@ public class ReservationController {
     private final CreateReservationService createReservationService;
     private final PersistentIdempotencyService idempotencyService;
     private final ProblemResponseFactory problemResponseFactory;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public ReservationController(
             CreateReservationService createReservationService,
             PersistentIdempotencyService idempotencyService,
             ProblemResponseFactory problemResponseFactory,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.createReservationService = createReservationService;
         this.idempotencyService = idempotencyService;
         this.problemResponseFactory = problemResponseFactory;
@@ -64,7 +64,7 @@ public class ReservationController {
                 });
         try {
             String reservationId =
-                    objectMapper.readTree(result.responseBody()).get("id").asText();
+                    objectMapper.readTree(result.responseBody()).get("id").asString();
             return ResponseEntity.status(result.status())
                     .location(URI.create("/reservations/" + reservationId))
                     .contentType(MediaType.APPLICATION_JSON)

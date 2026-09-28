@@ -10,7 +10,7 @@
 
 ### AD-002 - Java e Spring Boot
 
-- **Status:** active
+- **Status:** superseded by AD-029
 - **Decision:** A aplicação usará Java 21, Spring Boot 3, Maven e arquitetura hexagonal em um monólito modular.
 - **Rationale:** A escolha prioriza a stack da vaga e mantém a operação viável para uma pessoa.
 
@@ -219,6 +219,14 @@
 - **Reason:** O agrupamento anterior misturava reconciliação, expiração e limpeza operacional em pacotes técnicos que formavam ciclos aparentes e dificultavam a leitura. Mover essas responsabilidades e verificar todas as classes com ArchUnit torna regressões estruturais observáveis na CI.
 - **Trade-off:** Novos pacotes de primeiro nível exigem atualizar o mapa no teste e justificar sua responsabilidade. As regras não impõem novas camadas, serviços, interfaces ou modelo de deployment.
 - **Scope:** Organização Java, testes arquiteturais e build compartilhado pela demo e pelo desenho high-load.
+
+### AD-030 - Spring Boot 4 com Jackson 3 e telemetria opt-in
+
+- **Status:** active
+- **Decision:** O runtime usa Java 21, Spring Boot 4.0.8, Maven, arquitetura hexagonal em um monólito modular e Jackson 3. O perfil `observability` habilita exportação OTLP de métricas e traces HTTP; a configuração padrão mantém exportadores desligados. A instrumentação assíncrona da outbox/SQS não está incluída.
+- **Reason:** A migração foi validada sem alterar os contratos de reserva, idempotência, expiração, persistência ou a autenticação IAM/SigV4 na borda. A instrumentação local permite estudar observabilidade Spring sem custo de conta AWS; o plano AWS é documentado separadamente e não aplicado.
+- **Trade-off:** Jackson 3 exigiu mudança de imports e APIs. O perfil de observabilidade requer collector configurado e pode introduzir custo/overhead quando ativado; a continuidade de traces através de mensagens não é prometida.
+- **Scope:** Runtime Java/Spring, serialização JSON, exportação de telemetria HTTP e documentação da arquitetura atual.
 
 ## Handoff
 

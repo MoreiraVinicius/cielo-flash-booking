@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
@@ -20,8 +21,9 @@ class SqsExpirationConsumerConfiguration {
     SqsExpirationConsumer sqsExpirationConsumer(
             SqsClient sqsClient,
             ExpireReservationService expireReservationService,
-            ExpirationConsumerProperties properties) {
+            ExpirationConsumerProperties properties,
+            JsonMapper objectMapper) {
         Assert.hasText(properties.queueUrl(), "expiration.consumer.queue-url must be configured");
-        return new SqsExpirationConsumer(sqsClient, expireReservationService, properties.queueUrl());
+        return new SqsExpirationConsumer(sqsClient, expireReservationService, properties.queueUrl(), objectMapper);
     }
 }

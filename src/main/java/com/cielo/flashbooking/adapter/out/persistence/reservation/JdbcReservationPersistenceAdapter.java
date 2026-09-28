@@ -5,8 +5,6 @@ import com.cielo.flashbooking.domain.reservation.Reservation;
 import com.cielo.flashbooking.reservation.application.ReservationDetails;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.cielo.flashbooking.reservation.application.ReservationWriter;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -16,14 +14,16 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 class JdbcReservationPersistenceAdapter implements ReservationWriter, ReservationReader {
 
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    JdbcReservationPersistenceAdapter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    JdbcReservationPersistenceAdapter(JdbcTemplate jdbcTemplate, JsonMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
@@ -201,7 +201,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                     "customerId", reservation.customerId().toString(),
                     "quantity", reservation.quantity(),
                     "expiresAt", reservation.expiresAt().toString()));
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("could not serialize reservation outbox payload", exception);
         }
     }

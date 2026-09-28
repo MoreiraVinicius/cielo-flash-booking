@@ -3,7 +3,6 @@ package com.cielo.flashbooking.reservation.expire;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
@@ -48,7 +48,7 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
     private StringRedisTemplate redisTemplate;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     private SqsClient sqsClient;
     private String queueUrl;
@@ -169,7 +169,11 @@ class SqsExpirationConsumerIT extends LocalIntegrationInfrastructure {
     }
 
     private SqsExpirationConsumer consumer() {
-        return new SqsExpirationConsumer(sqsClient, expireReservationService, queueUrl);
+        return new SqsExpirationConsumer(
+                sqsClient,
+                expireReservationService,
+                queueUrl,
+                JsonMapper.builder().build());
     }
 
     private void send(UUID reservationId) {

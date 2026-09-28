@@ -25,6 +25,24 @@ server:
     include-stacktrace: never
 
 management:
+  defaults:
+    metrics:
+      export:
+        enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      enabled: false
+      otlp:
+        enabled: false
+  opentelemetry:
+    logging:
+      export:
+        otlp:
+          enabled: false
   endpoints:
     web:
       exposure:
