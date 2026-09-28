@@ -2,8 +2,8 @@ package com.cielo.flashbooking.application.idempotency;
 
 import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.application.error.ResourceNotFoundException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PersistentIdempotencyService {
 
     private final IdempotencyStore idempotencyStore;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    public PersistentIdempotencyService(IdempotencyStore idempotencyStore, ObjectMapper objectMapper) {
+    public PersistentIdempotencyService(IdempotencyStore idempotencyStore, JsonMapper objectMapper) {
         this.idempotencyStore = idempotencyStore;
         this.objectMapper = objectMapper;
     }
@@ -51,7 +51,7 @@ public class PersistentIdempotencyService {
     private String serialize(Object responseBody) {
         try {
             return objectMapper.writeValueAsString(responseBody);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("could not serialize idempotency response", exception);
         }
     }

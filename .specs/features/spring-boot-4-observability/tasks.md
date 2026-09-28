@@ -86,6 +86,7 @@ T6 → T7
 **Tests:** integration existentes, ajustados para Jackson 3
 **Gate:** Full
 **Commit:** `refactor(json): migrate application to jackson 3`
+**Status:** Complete — `mvn test` 54/54; `mvn -Pintegration verify` 122/122 (54 unit + 68 integração), sem falhas.
 
 ### T4: Configurar OpenTelemetry opt-in
 

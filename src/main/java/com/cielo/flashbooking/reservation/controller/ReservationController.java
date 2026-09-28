@@ -6,7 +6,7 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.reservation.application.CreateReservationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -29,13 +29,13 @@ public class ReservationController {
     private final CreateReservationService createReservationService;
     private final PersistentIdempotencyService idempotencyService;
     private final ProblemResponseFactory problemResponseFactory;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public ReservationController(
             CreateReservationService createReservationService,
             PersistentIdempotencyService idempotencyService,
             ProblemResponseFactory problemResponseFactory,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.createReservationService = createReservationService;
         this.idempotencyService = idempotencyService;
         this.problemResponseFactory = problemResponseFactory;
@@ -65,7 +65,7 @@ public class ReservationController {
                     return new IdempotencyResponse(problem.getStatus(), problem);
                 });
         try {
-            String reservationId = objectMapper.readTree(result.responseBody()).get("id").asText();
+            String reservationId = objectMapper.readTree(result.responseBody()).get("id").asString();
             return ResponseEntity.status(result.status())
                     .location(URI.create("/reservations/" + reservationId))
                     .contentType(MediaType.APPLICATION_JSON)

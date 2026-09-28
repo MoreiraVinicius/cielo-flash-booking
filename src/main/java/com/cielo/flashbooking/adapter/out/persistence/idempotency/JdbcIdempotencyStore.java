@@ -3,8 +3,8 @@ package com.cielo.flashbooking.adapter.out.persistence.idempotency;
 import com.cielo.flashbooking.application.idempotency.IdempotencyCommand;
 import com.cielo.flashbooking.application.idempotency.IdempotencyResponse;
 import com.cielo.flashbooking.application.idempotency.IdempotencyStore;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,9 +14,9 @@ import org.springframework.stereotype.Repository;
 class JdbcIdempotencyStore implements IdempotencyStore {
 
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    JdbcIdempotencyStore(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    JdbcIdempotencyStore(JdbcTemplate jdbcTemplate, JsonMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
@@ -99,7 +99,7 @@ class JdbcIdempotencyStore implements IdempotencyStore {
     private String serialize(Object responseBody) {
         try {
             return objectMapper.writeValueAsString(responseBody);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("could not serialize idempotency response", exception);
         }
     }

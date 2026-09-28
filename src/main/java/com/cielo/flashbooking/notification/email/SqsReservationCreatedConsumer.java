@@ -1,6 +1,6 @@
 package com.cielo.flashbooking.notification.email;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,13 +16,13 @@ public class SqsReservationCreatedConsumer {
     private final SqsClient sqsClient;
     private final ReservationEmailService reservationEmailService;
     private final String queueUrl;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public SqsReservationCreatedConsumer(
             SqsClient sqsClient,
             ReservationEmailService reservationEmailService,
             String queueUrl,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.sqsClient = sqsClient;
         this.reservationEmailService = reservationEmailService;
         this.queueUrl = queueUrl;
@@ -46,7 +46,7 @@ public class SqsReservationCreatedConsumer {
             UUID outboxEventId = UUID.fromString(requiredAttribute(message, "outboxEventId"));
             UUID reservationId = UUID.fromString(objectMapper.readTree(message.body())
                     .required("reservationId")
-                    .asText());
+                    .asString());
             ReservationEmailService.ProcessingResult result = reservationEmailService.process(outboxEventId, reservationId);
             if (result.acknowledged()) {
                 sqsClient.deleteMessage(request -> request.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));

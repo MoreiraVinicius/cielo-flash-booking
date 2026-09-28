@@ -1,6 +1,6 @@
 package com.cielo.flashbooking.feature.reservation.expire;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,16 +15,17 @@ public class SqsExpirationConsumer {
     private final SqsClient sqsClient;
     private final ExpireReservationService expireReservationService;
     private final String queueUrl;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public SqsExpirationConsumer(
             SqsClient sqsClient,
             ExpireReservationService expireReservationService,
-            String queueUrl) {
+            String queueUrl,
+            JsonMapper objectMapper) {
         this.sqsClient = sqsClient;
         this.expireReservationService = expireReservationService;
         this.queueUrl = queueUrl;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
     @Scheduled(fixedDelayString = "${expiration.consumer.fixed-delay:1s}")
@@ -41,7 +42,7 @@ public class SqsExpirationConsumer {
         try {
             UUID reservationId = UUID.fromString(objectMapper.readTree(message.body())
                     .required("reservationId")
-                    .asText());
+                    .asString());
             expireReservationService.expire(reservationId);
             sqsClient.deleteMessage(request -> request.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));
         } catch (Exception exception) {

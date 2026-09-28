@@ -15,7 +15,7 @@ import software.amazon.awssdk.services.sesv2.SesV2Client;
 import software.amazon.awssdk.services.sesv2.SesV2ClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 @Profile({"worker", "all"})
@@ -69,7 +69,7 @@ class SqsReservationCreatedConsumerConfiguration {
             SqsClient sqsClient,
             ReservationEmailService reservationEmailService,
             NotificationConsumerProperties properties,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         Assert.hasText(properties.queueUrl(), "notification.consumer.queue-url must be configured");
         return new SqsReservationCreatedConsumer(sqsClient, reservationEmailService, properties.queueUrl(), objectMapper);
     }

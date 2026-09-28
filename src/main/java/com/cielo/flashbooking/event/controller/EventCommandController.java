@@ -6,7 +6,7 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.event.application.CreateEventService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -27,13 +27,13 @@ class EventCommandController {
     private final CreateEventService createEventService;
     private final PersistentIdempotencyService idempotencyService;
     private final ProblemResponseFactory problemResponseFactory;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     EventCommandController(
             CreateEventService createEventService,
             PersistentIdempotencyService idempotencyService,
             ProblemResponseFactory problemResponseFactory,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.createEventService = createEventService;
         this.idempotencyService = idempotencyService;
         this.problemResponseFactory = problemResponseFactory;
@@ -58,7 +58,7 @@ class EventCommandController {
                 .contentType(result.status() >= 400 ? MediaType.APPLICATION_PROBLEM_JSON : MediaType.APPLICATION_JSON);
         if (result.status() == 201) {
             try {
-                builder.location(URI.create("/events/" + objectMapper.readTree(result.responseBody()).get("id").asText()));
+                builder.location(URI.create("/events/" + objectMapper.readTree(result.responseBody()).get("id").asString()));
             } catch (Exception exception) {
                 throw new IllegalStateException("could not read idempotency response location", exception);
             }

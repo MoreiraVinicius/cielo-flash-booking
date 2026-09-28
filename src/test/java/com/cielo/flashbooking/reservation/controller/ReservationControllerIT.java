@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -84,7 +84,7 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
                 .getResponse()
                 .getContentAsString();
 
-        UUID reservationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+        UUID reservationId = UUID.fromString(objectMapper.readTree(response).get("id").asString());
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(7);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customer", Integer.class)).isEqualTo(1);

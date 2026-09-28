@@ -6,7 +6,7 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
@@ -26,13 +26,13 @@ class ReservationCancellationController {
     private final CancelReservationService cancelReservationService;
     private final PersistentIdempotencyService idempotencyService;
     private final ProblemResponseFactory problemResponseFactory;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     ReservationCancellationController(
             CancelReservationService cancelReservationService,
             PersistentIdempotencyService idempotencyService,
             ProblemResponseFactory problemResponseFactory,
-            ObjectMapper objectMapper) {
+            JsonMapper objectMapper) {
         this.cancelReservationService = cancelReservationService;
         this.idempotencyService = idempotencyService;
         this.problemResponseFactory = problemResponseFactory;

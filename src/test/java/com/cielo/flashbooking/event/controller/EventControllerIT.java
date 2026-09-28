@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.Map;
 import java.util.UUID;
 import java.time.Duration;
@@ -51,7 +51,7 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -90,7 +90,7 @@ class EventControllerIT extends LocalIntegrationInfrastructure {
                 .getResponse()
                 .getContentAsString();
 
-        String id = objectMapper.readTree(response).get("id").asText();
+        String id = objectMapper.readTree(response).get("id").asString();
         Map<String, Object> persisted = jdbcTemplate.queryForMap(
                 "SELECT name, capacity, available FROM event WHERE id = ?::uuid", id);
         assertThat(persisted)

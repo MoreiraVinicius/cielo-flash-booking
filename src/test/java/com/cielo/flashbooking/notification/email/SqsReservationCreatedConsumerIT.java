@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.cielo.flashbooking.adapter.out.persistence.notification.JdbcNotificationDeliveryStore;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -49,7 +49,7 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @Autowired
     private ReservationReader reservationReader;
@@ -197,7 +197,7 @@ class SqsReservationCreatedConsumerIT extends LocalIntegrationInfrastructure {
     private String deliveredEmail() throws Exception {
         JsonNode messages = mailboxMessages().required("messages");
         assertThat(messages).hasSize(1);
-        String messageId = messages.get(0).required("ID").asText();
+        String messageId = messages.get(0).required("ID").asString();
         HttpResponse<String> response = HTTP_CLIENT.send(HttpRequest.newBuilder(mailpitUri("/api/v1/message/" + messageId))
                 .timeout(Duration.ofSeconds(3))
                 .GET()

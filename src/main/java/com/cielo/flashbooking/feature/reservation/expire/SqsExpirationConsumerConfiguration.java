@@ -1,5 +1,6 @@
 package com.cielo.flashbooking.feature.reservation.expire;
 
+import tools.jackson.databind.json.JsonMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +21,9 @@ class SqsExpirationConsumerConfiguration {
     SqsExpirationConsumer sqsExpirationConsumer(
             SqsClient sqsClient,
             ExpireReservationService expireReservationService,
-            ExpirationConsumerProperties properties) {
+            ExpirationConsumerProperties properties,
+            JsonMapper objectMapper) {
         Assert.hasText(properties.queueUrl(), "expiration.consumer.queue-url must be configured");
-        return new SqsExpirationConsumer(sqsClient, expireReservationService, properties.queueUrl());
+        return new SqsExpirationConsumer(sqsClient, expireReservationService, properties.queueUrl(), objectMapper);
     }
 }

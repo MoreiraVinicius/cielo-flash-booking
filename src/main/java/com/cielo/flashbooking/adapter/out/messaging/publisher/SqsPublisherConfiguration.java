@@ -1,6 +1,7 @@
 package com.cielo.flashbooking.adapter.out.messaging.publisher;
 
 import com.cielo.flashbooking.application.outbox.OutboxEventStore;
+import tools.jackson.databind.json.JsonMapper;
 import java.net.URI;
 import java.time.Clock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -42,12 +43,14 @@ class SqsPublisherConfiguration {
             OutboxEventStore outboxEventStore,
             SqsClient sqsClient,
             OutboxPublisherProperties properties,
-            Clock clock) {
+            Clock clock,
+            JsonMapper objectMapper) {
         return new OutboxSqsPublisher(
                 outboxEventStore,
                 sqsClient,
                 properties.expirationQueueUrl(),
                 properties.notificationQueueUrl(),
-                clock);
+                clock,
+                objectMapper);
     }
 }

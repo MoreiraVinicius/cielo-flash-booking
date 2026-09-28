@@ -2,9 +2,9 @@ package com.cielo.flashbooking.controller.error;
 
 import com.cielo.flashbooking.application.error.ResourceConflictException;
 import com.cielo.flashbooking.application.error.ResourceNotFoundException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -14,9 +14,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProblemResponseFactory {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    public ProblemResponseFactory(ObjectMapper objectMapper) {
+    public ProblemResponseFactory(JsonMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -54,7 +54,7 @@ public class ProblemResponseFactory {
             ObjectNode problem = (ObjectNode) objectMapper.readTree(responseBody);
             problem.put("correlationId", correlationId(request));
             return objectMapper.writeValueAsString(problem);
-        } catch (JsonProcessingException | ClassCastException exception) {
+        } catch (JacksonException | ClassCastException exception) {
             throw new IllegalStateException("could not refresh problem correlation id", exception);
         }
     }

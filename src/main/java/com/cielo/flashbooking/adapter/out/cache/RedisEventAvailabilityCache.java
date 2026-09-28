@@ -2,8 +2,8 @@ package com.cielo.flashbooking.adapter.out.cache;
 
 import com.cielo.flashbooking.domain.event.Event;
 import com.cielo.flashbooking.event.application.EventAvailabilityCache;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -18,9 +18,9 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
     private static final String KEY_PREFIX = "event-availability:";
 
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    RedisEventAvailabilityCache(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+    RedisEventAvailabilityCache(StringRedisTemplate redisTemplate, JsonMapper objectMapper) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
@@ -35,7 +35,7 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
             CacheEntry entry = objectMapper.readValue(value, CacheEntry.class);
             return Optional.of(Event.restore(
                     entry.id(), entry.name(), entry.capacity(), entry.available(), entry.createdAt(), entry.startsAt(), entry.endsAt()));
-        } catch (JsonProcessingException invalidCacheEntry) {
+        } catch (JacksonException invalidCacheEntry) {
             throw new IllegalStateException("invalid event cache entry", invalidCacheEntry);
         }
     }
@@ -47,7 +47,7 @@ class RedisEventAvailabilityCache implements EventAvailabilityCache {
         try {
             redisTemplate.opsForValue().set(
                     key(event.id()), objectMapper.writeValueAsString(entry), TTL);
-        } catch (JsonProcessingException serializationFailure) {
+        } catch (JacksonException serializationFailure) {
             throw new IllegalStateException("could not serialize event cache entry", serializationFailure);
         }
     }

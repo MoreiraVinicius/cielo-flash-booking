@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +49,7 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -197,8 +197,8 @@ class IdempotencyControllerIT extends LocalIntegrationInfrastructure {
                 .andExpect(header().string("X-Correlation-ID", "replayed-attempt"))
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(objectMapper.readTree(first).get("code").asText()).isEqualTo("resource-conflict");
-        assertThat(objectMapper.readTree(repeated).get("code").asText()).isEqualTo("resource-conflict");
+        assertThat(objectMapper.readTree(first).get("code").asString()).isEqualTo("resource-conflict");
+        assertThat(objectMapper.readTree(repeated).get("code").asString()).isEqualTo("resource-conflict");
         assertThat(jdbcTemplate.queryForObject("SELECT response_status FROM idempotency_record WHERE idempotency_key = ?", Integer.class, key))
                 .isEqualTo(409);
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
