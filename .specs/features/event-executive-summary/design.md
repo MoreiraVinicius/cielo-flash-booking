@@ -86,6 +86,7 @@ Inicio: {inicio} | Fim: {fim} | Apurado: {asOf} | Capacidade: {capacity} ingress
 {ate duas frases da IA; secao omitida se indisponivel}
 
 ## Operacao
+Sinais observados no ambiente; nao ha confirmacao de relacao com este evento.
 {ate duas notas de alerta em linguagem comum; secao omitida se nao houver transicoes}
 {nota discreta apenas se monitoramento parcial/indisponivel}
 
@@ -124,7 +125,7 @@ O scheduler roda apenas no perfil `worker`/`all`, com intervalo default de 30 se
 
 ## AWS, custo e privacidade
 
-Somente eventos elegiveis durante a chave global ligada consultam CloudWatch e, quando houver ao menos uma reserva aceita, chamam Bedrock uma vez. Discord recebe uma mensagem por relatorio, sem nova inferencia; GETs repetidos nao chamam AWS nem Discord. Evento sem reservas pula Bedrock. O model id e a regiao usam `executive-summary.bedrock.model-id` e `executive-summary.bedrock.region`, sobrescritiveis por `EXECUTIVE_SUMMARY_MODEL_ID` e `AWS_REGION`; a chamada tem timeout configuravel ate 60 segundos e retry SDK desativado. A lista `executive-summary.operational-signals.alarms` aceita ate 12 pares de nome CloudWatch e rotulo legivel. Cada historico pede somente transicoes de estado no intervalo, limita a 10 itens por alarme e nao le o resumo da AWS como texto publico. Historico sem transicoes omite Operacao; configuracao ausente, truncamento ou falha indicam verificacao indisponivel/parcial. Rótulos e timestamps de no maximo duas transicoes sao apresentados sem enviar alertas ao modelo.
+Somente eventos elegiveis durante a chave global ligada consultam CloudWatch e, quando houver ao menos uma reserva aceita, chamam Bedrock uma vez. Discord recebe uma mensagem por relatorio, sem nova inferencia; GETs repetidos nao chamam AWS nem Discord. Evento sem reservas pula Bedrock. O model id e a regiao usam `executive-summary.bedrock.model-id` e `executive-summary.bedrock.region`, sobrescritiveis por `EXECUTIVE_SUMMARY_MODEL_ID` e `AWS_REGION`; a chamada tem timeout configuravel ate 60 segundos e retry SDK desativado. A lista `executive-summary.operational-signals.alarms` aceita ate 12 pares de nome CloudWatch e rotulo legivel. Cada historico pede somente transicoes de estado no intervalo, limita a 10 itens por alarme e nao le o resumo da AWS como texto publico. Historico sem transicoes omite Operacao; configuracao ausente, truncamento ou falha indicam verificacao indisponivel/parcial. Quando houver transicoes, rotulos e timestamps de no maximo duas sao precedidos pela ressalva "Sinais observados no ambiente; nao ha confirmacao de relacao com este evento." Alertas nao sao enviados ao modelo.
 
 O operador cria um Incoming Webhook nas configuracoes do canal Discord e copia a URL. No AWS Console, cria um segredo de texto (`SecretString`) em Secrets Manager com essa URL. Em `infra/environments/demo/demo.tfvars`, define apenas `discord_webhook_secret_arn` com o ARN (o exemplo versionado deixa-o vazio); esse arquivo e ignorado pelo Git. Terraform passa somente o ARN como `EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN` ao worker e limita `secretsmanager:GetSecretValue` ao ARN exato. Sem ARN, o worker nao consulta Secrets Manager. Com ARN, a transacao marca `UNKNOWN` e devolve o Markdown salvo antes de qualquer leitura do segredo ou POST. O worker le/cacheia o segredo na primeira publicacao; a URL nao aparece na task definition, variaveis de ambiente ou logs. O cliente desativa redirect e retry e usa timeout limitado; resposta HTTP 2xx vira `SENT`, erro HTTP definitivo `FAILED`, e timeout/queda ambigua `UNKNOWN`. A mensagem e limitada a 2.000 caracteres; acima de 1.900, remove primeiro leitura da IA e operacao, mantendo fatos, ritmo e ressalva.
 
@@ -170,7 +171,7 @@ Referencias AWS: [Amazon Nova Micro](https://docs.aws.amazon.com/bedrock/latest/
 | Feature flag | Uma chave global persistida, default off, sem ativacao por evento | Ativacao manual durante a apresentacao; nenhum custo de inferencia quando desligada. |
 | Momento da apuracao | Primeira varredura apos `endsAt` | Relatorio de conclusao, sem aguardar expiracao de reservas. |
 | Fonte de numeros | PostgreSQL por `event_id` e corte em `endsAt` | Separar volume aceito de reservas validas no fechamento. |
-| Redacao | Template deterministico + ate duas frases comerciais | Precisao e custo baixo para publico nao tecnico. |
+| Redacao | Template deterministico + ate duas frases comerciais | Precisao e custo baixo para publico nao tecnico; alertas sao descritos como sinais do ambiente sem relacao causal confirmada com o evento. |
 | Entrega | GET autenticado e um Incoming Webhook Discord | Publicar o texto salvo sem nova inferencia. |
 | Segredo Discord | AWS Secrets Manager; ARN apenas no `demo.tfvars` local | A URL e credencial de publicacao e nao deve aparecer no estado/codigo Terraform. |
 

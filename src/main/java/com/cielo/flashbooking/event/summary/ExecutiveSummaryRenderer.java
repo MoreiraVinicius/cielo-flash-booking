@@ -81,6 +81,9 @@ public class ExecutiveSummaryRenderer {
             return;
         }
         markdown.append("\n## Operação\n");
+        if (!result.signals().isEmpty()) {
+            markdown.append("Sinais observados no ambiente; não há confirmação de relação com este evento.\n");
+        }
         result.signals().stream()
                 .sorted(java.util.Comparator.comparing(OperationalSignal::occurredAt))
                 .limit(2)

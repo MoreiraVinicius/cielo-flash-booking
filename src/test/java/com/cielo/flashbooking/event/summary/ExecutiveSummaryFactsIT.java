@@ -109,6 +109,27 @@ class ExecutiveSummaryFactsIT extends LocalIntegrationInfrastructure {
         assertThat(factsReader.read(UUID.randomUUID())).isEmpty();
     }
 
+    @Test
+    void usesCreatedAtAndShowsAllReportTimesWhenSaleStartIsUnscheduled() {
+        Instant createdAt = Instant.parse("2026-10-01T10:00:00Z");
+        Instant endsAt = createdAt.plusSeconds(1800);
+        UUID eventId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO event (id, name, capacity, available, created_at, starts_at, ends_at) VALUES (?, 'Unscheduled', 10, 10, ?, NULL, ?)",
+                eventId,
+                Timestamp.from(createdAt),
+                Timestamp.from(endsAt));
+
+        EventSummaryFacts facts = factsReader.read(eventId).orElseThrow();
+        String markdown = new ExecutiveSummaryRenderer().render(facts, OperationalSignalResult.empty(), null);
+
+        assertThat(facts.saleStartsAt()).isEqualTo(createdAt);
+        assertThat(markdown)
+                .contains("Início: 01/10/2026 07:00")
+                .contains("Fim: 01/10/2026 07:30")
+                .contains("Apurado: ");
+    }
+
     private UUID insertEvent(String name, int capacity, Instant startsAt, Instant endsAt) {
         UUID eventId = UUID.randomUUID();
         Instant createdAt = startsAt == null ? Instant.now().minusSeconds(60) : startsAt.minusSeconds(60);

@@ -59,6 +59,9 @@ class ExecutiveSummaryActivationIT extends LocalIntegrationInfrastructure {
                 .andExpect(jsonPath("$.enabled").value(true))
                 .andExpect(jsonPath("$.enabledAt").isNotEmpty());
 
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM event_executive_summary", Integer.class))
+                .isZero();
+
         String firstEnabledAt = jdbcTemplate.queryForObject(
                 "SELECT enabled_at::text FROM executive_summary_control WHERE id = TRUE", String.class);
 

@@ -6,7 +6,7 @@ Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar
 
 **Design:** `.specs/features/event-executive-summary/design.md`
 **Status:** Approved for local execution
-**Task count:** 8
+**Task count:** 9
 
 ## Test Coverage Matrix
 
@@ -31,7 +31,7 @@ Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar
 ## Execution Plan
 
 ```text
-T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
+T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09
 ```
 
 ## Task Breakdown
@@ -257,21 +257,50 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 **Verdict:** consulta HTTP e rotas passaram em PostgreSQL/Testcontainers e Terraform simulado. Nenhum deploy, acesso AWS real ou publicacao Discord foi executado.
 
+### T09: Fechar lacunas de evidencia e neutralidade dos alertas
+
+**Status:** Complete
+**What:** Demonstrar limites da janela de ativacao, espera de transacoes de inventario, datas/fallback do template, caminhos sem reservas/fatos inconsistentes e consulta sem efeitos; qualificar alertas como sinais do ambiente sem relacao causal confirmada.
+**Where:** testes PostgreSQL/HTTP e renderer executivo
+**Depends on:** T08
+**Requirement:** EXECSUM-02, EXECSUM-04, EXECSUM-05, EXECSUM-08, EXECSUM-11, EXECSUM-17, EXECSUM-20, EXECSUM-25, EXECSUM-26, EXECSUM-27, EXECSUM-30, EXECSUM-33, EXECSUM-34, EXECSUM-36
+**Done when:** Testes verificam que ativacao nao cria relatorio, eventos anteriores/retirados da janela nao sao recuperados, claim espera commit de reserva concorrente, inicio/fim/apuracao aparecem em America/Sao_Paulo e inicio usa `createdAt` quando `startsAt` e nulo; saida cobre zero reservas, fatos inconsistentes sem Bedrock, claim persistido antes de falha abrupta, sinais comuns a dois eventos sem atribuicao, e GET nao chama adapters externos.
+**Tests:** unit e PostgreSQL integration direcionados; `clean verify -Pintegration`, gates Terraform afetados e validadores TLC.
+**Gate:** Build
+**Commit:** `test(summary): prove close timing and neutral reporting`
+
+**Gate result:** `clean verify -Pintegration` passou (81 unitarios + 95 integracao em 22 grupos; 0 falhas/erros/skips); `terraform fmt -check -recursive` passou; `terraform test` nos modulos compute (2 runs) e edge-observability (1 run) passou; `validate_tasks.py --strict` e `git diff --check` passaram.
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Activation alone creates no report; an event closed while disabled and events started before later activation are not recovered | `ExecutiveSummaryActivationIT.java:54-63` - report row count is zero; `EventSummarySchedulerIT.java:124-146` - event remains unreported while open, is closed after disabling, then remains unreported after reactivation; prior-start event remains unreported and `verify(signals/narrative, never())` | A reactivated global flag only permits events that began during the current window | Yes |
+| Close claim waits for an inventory transaction and includes its committed reservation | `EventSummarySchedulerIT.java:148-197` - scan future remains incomplete while the transaction holds the event row, then persisted `accepted_tickets == 1` and Markdown includes the reservation | First post-close scan observes accepted inventory work that held the event row before claim | Yes |
+| Report displays all three timestamps in Sao Paulo time and falls back to `createdAt` | `ExecutiveSummaryRendererTest.java:29-31` - exact `Início/Fim/Apurado` local timestamps; `ExecutiveSummaryFactsIT.java:113-130` - null `starts_at` resolves to stored `created_at` and renders local start/end/as-of | No scheduled start remains understandable and time values use the specified zone | Yes |
+| No activity renders zero without rhythm indicators; inconsistent facts preserve partial output and skip all external adapters | `ExecutiveSummaryRendererTest.java:38-45` - zero-reservation wording and no peak/first-five note; `EventSummarySchedulerIT.java:202-232` - `PARTIAL`, incomplete note, inconsistent metric absent, signals/narrative `never()` | Do not imply absent demand, and do not infer or call AI from inconsistent aggregates | Yes |
+| Shared operational signal is explicitly neutral for either event; a committed claim remains durable across worker interruption | `ExecutiveSummaryRendererTest.java:76-91` - same signal rendered for two event instances with environment/no-confirmed-relation text; `EventSummarySchedulerIT.java:235-258` - prior claim remains one `PARTIAL` Markdown and later scan calls no adapters/delivery | Environment alarms do not claim event causality; persisted claim is not recomputed/retried | Yes |
+| Repeated GET does not call analysis or delivery adapters | `ExecutiveSummaryQueryIT.java:99-104` - `never().read/write/publish` after repeated GETs | GET only reads the saved snapshot and causes no external cost | Yes |
+
+*Check C - Necessary:* os seis grupos de evidencia enderecam as lacunas do primeiro Verifier para EXECSUM-02/04/05/08/11/17/20/25/26/27/30/33/34/36; sem assertions alheias ao contrato.
+
+**Verdict:** as correcoes de evidencia passaram unitarios e PostgreSQL/Testcontainers. Os registros externos continuam mockados; nenhum deploy, chamada AWS real ou publicacao Discord foi executado.
+
 ## Traceability Review
 
 | Requirement group | Tasks | Evidence planned |
 | --- | --- | --- |
-| EXECSUM-01..05, 27..29 | T01, T02, T06, T08 | Persistencia e API global, elegibilidade e erros |
-| EXECSUM-06..10, 33..34 | T01, T06, T08 | Claim, fechamento, estados e consulta sem efeitos externos |
-| EXECSUM-11..19, 26, 31..32, 35, 37..38 | T03, T04, T05 | Marco, horario de aceite, agregacao e template |
-| EXECSUM-20..23, 25, 30, 36 | T05 | Alertas contextuais, limites Bedrock, falha e ausencia de reserva |
+| EXECSUM-01..05, 27..29 | T01, T02, T06, T08, T09 | Persistencia e API global, elegibilidade e erros |
+| EXECSUM-06..10, 33..34 | T01, T06, T08, T09 | Claim, fechamento, estados e consulta sem efeitos externos |
+| EXECSUM-11..19, 26, 31..32, 35, 37..38 | T03, T04, T05, T09 | Marco, horario de aceite, agregacao e template |
+| EXECSUM-20..23, 25, 30, 36 | T05, T09 | Alertas contextuais, limites Bedrock, falha e ausencia de reserva |
 | EXECSUM-39..44 | T01, T07, T08 | Estado, configuracao, segredo, entrega unica e limite de mensagem |
 
 ## Test Co-location Validation
 
 | Tasks | Layer | Matrix requires | Planned | Result |
 | --- | --- | --- | --- | --- |
-| T01-T04, T06 | JDBC/worker | integration | integration in each task | Match |
-| T05, T07 | AWS adapters/renderer | unit | unit in each task | Match |
+| T01-T04, T06, T09 | JDBC/worker | integration | integration in each task | Match |
+| T05, T07, T09 | AWS adapters/renderer | unit | unit in each task | Match |
 | T07-T08 | Terraform | static | `terraform test` in affected modules | Match |
 | T02, T08 | HTTP | integration | controller integration tests | Match |

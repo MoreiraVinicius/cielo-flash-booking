@@ -27,6 +27,8 @@ class ExecutiveSummaryRendererTest {
                 .contains("2 ingressos tiveram reservas canceladas e 1 venceram até o fechamento")
                 .contains("50% dos ingressos foram reservados nos primeiros cinco minutos")
                 .contains("Início: 28/09/2026 09:00")
+                .contains("Fim: 28/09/2026 09:30")
+                .contains("Apurado: 28/09/2026 10:00")
                 .contains("As reservas se concentraram no inicio do evento.")
                 .contains("Reservas são temporárias; compras concluídas não são verificadas aqui.")
                 .doesNotContain("Discord:", "SENT", "PENDING", "EXPIRED");
@@ -40,7 +42,9 @@ class ExecutiveSummaryRendererTest {
         String partial = renderer.render(
                 facts, new OperationalSignalResult(OperationalSignalResult.Status.PARTIAL, List.of()), null);
 
-        assertThat(empty).doesNotContain("## Operação", "Leitura");
+        assertThat(empty)
+                .contains("Nenhuma reserva foi aceita.")
+                .doesNotContain("pico", "primeiros cinco minutos", "## Operação", "Leitura");
         assertThat(partial)
                 .contains("## Operação")
                 .contains("Não foi possível verificar todos os alertas de infraestrutura.")
@@ -61,10 +65,30 @@ class ExecutiveSummaryRendererTest {
 
         assertThat(markdown)
                 .contains("Worker sem tarefas ativas", "Fila com atraso")
+                .contains("Sinais observados no ambiente; não há confirmação de relação com este evento.")
                 .doesNotContain("Gateway com erros", "FAILED");
         assertThat(incomplete)
                 .contains("Apuração incompleta")
-                .doesNotContain("3 ingressos", "## Ritmo", "Inventado.", "## Operacao");
+                .doesNotContain("3 ingressos", "## Ritmo", "Inventado.", "## Operação");
+    }
+
+    @Test
+    void labelsTheSameOperationalAlertAsAnEnvironmentSignalForDifferentEvents() {
+        OperationalSignalResult sharedSignal = new OperationalSignalResult(
+                OperationalSignalResult.Status.OBSERVED,
+                List.of(new OperationalSignal("Fila com atraso", Instant.parse("2026-09-28T12:03:00Z"))));
+
+        String firstEvent = renderer.render(facts(true, 1, 1, 1, 0, 0, 1L, 1L), sharedSignal, null);
+        String secondEvent = renderer.render(facts(true, 1, 1, 1, 0, 0, 1L, 1L), sharedSignal, null);
+
+        assertThat(firstEvent)
+                .contains("Sinais observados no ambiente; não há confirmação de relação com este evento.")
+                .contains("Fila com atraso")
+                .doesNotContain("causou");
+        assertThat(secondEvent)
+                .contains("Sinais observados no ambiente; não há confirmação de relação com este evento.")
+                .contains("Fila com atraso")
+                .doesNotContain("causou");
     }
 
     private EventSummaryFacts facts(

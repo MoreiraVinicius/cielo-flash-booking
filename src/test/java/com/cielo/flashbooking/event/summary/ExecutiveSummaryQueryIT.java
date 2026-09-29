@@ -1,5 +1,7 @@
 package com.cielo.flashbooking.event.summary;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -38,6 +41,15 @@ class ExecutiveSummaryQueryIT extends LocalIntegrationInfrastructure {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    private OperationalSignalsReader operationalSignalsReader;
+
+    @MockitoBean
+    private ExecutiveNarrative executiveNarrative;
+
+    @MockitoBean
+    private DiscordSummaryPublisher discordSummaryPublisher;
 
     @BeforeEach
     void clearRows() {
@@ -83,6 +95,12 @@ class ExecutiveSummaryQueryIT extends LocalIntegrationInfrastructure {
         mockMvc.perform(get("/events/{id}/executive-summary", eligibleId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markdown").value("# Saved report"));
+
+        verify(operationalSignalsReader, never())
+                .read(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(executiveNarrative, never()).write(org.mockito.ArgumentMatchers.any());
+        verify(discordSummaryPublisher, never())
+                .publish(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
