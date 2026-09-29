@@ -18,18 +18,21 @@ public class EventSummaryScheduler {
     private final ExecutiveNarrative executiveNarrative;
     private final ExecutiveSummaryRenderer renderer;
     private final EventSummarySchedulerProperties properties;
+    private final ExecutiveSummaryDeliveryService deliveryService;
 
     public EventSummaryScheduler(
             ExecutiveSummaryReportStore reportStore,
             OperationalSignalsReader operationalSignalsReader,
             ExecutiveNarrative executiveNarrative,
             ExecutiveSummaryRenderer renderer,
-            EventSummarySchedulerProperties properties) {
+            EventSummarySchedulerProperties properties,
+            ExecutiveSummaryDeliveryService deliveryService) {
         this.reportStore = reportStore;
         this.operationalSignalsReader = operationalSignalsReader;
         this.executiveNarrative = executiveNarrative;
         this.renderer = renderer;
         this.properties = properties;
+        this.deliveryService = deliveryService;
     }
 
     @Scheduled(fixedDelayString = "${executive-summary.scheduler.fixed-delay:30s}")
@@ -86,6 +89,7 @@ public class EventSummaryScheduler {
                 model == null ? null : model.inputTokens(),
                 model == null ? null : model.outputTokens(),
                 errorCode);
+        deliveryService.deliver(facts.eventId());
     }
 
     private void logFailure(String operation, RuntimeException exception) {

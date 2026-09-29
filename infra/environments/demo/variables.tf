@@ -36,6 +36,17 @@ variable "notification_consumer_enabled" {
   default     = true
 }
 
+variable "discord_webhook_secret_arn" {
+  description = "Optional ARN of the AWS Secrets Manager secret containing the Discord Incoming Webhook URL as SecretString."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.discord_webhook_secret_arn == "" || startswith(var.discord_webhook_secret_arn, "arn:")
+    error_message = "discord_webhook_secret_arn must be empty or a Secrets Manager ARN."
+  }
+}
+
 variable "trusted_principal_arns" {
   type        = list(string)
   description = "Principals that may assume ApiInvokerRole."

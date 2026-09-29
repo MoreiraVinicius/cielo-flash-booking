@@ -19,6 +19,13 @@ locals {
     { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = "${var.database_secret_arn}:password::" }
   ]
 
+  executive_summary_alarm_environment = flatten([
+    for index, alarm in var.executive_summary_operational_alarms : [
+      { name = "EXECUTIVE_SUMMARY_OPERATIONAL_SIGNALS_ALARMS_${index}_NAME", value = alarm.name },
+      { name = "EXECUTIVE_SUMMARY_OPERATIONAL_SIGNALS_ALARMS_${index}_LABEL", value = alarm.label }
+    ]
+  ])
+
   ecs_task_assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -160,6 +167,38 @@ resource "aws_iam_role_policy" "worker_messaging" {
         }
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "worker_executive_summary" {
+  name = "generate-and-deliver-executive-summaries"
+  role = aws_iam_role.worker.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat(
+      [
+        {
+          Sid      = "InvokeNovaMicro"
+          Effect   = "Allow"
+          Action   = ["bedrock:InvokeModel"]
+          Resource = ["arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-micro-v1:0"]
+        },
+        {
+          Sid      = "ReadConfiguredAlarmHistory"
+          Effect   = "Allow"
+          Action   = ["cloudwatch:DescribeAlarmHistory"]
+          Resource = ["*"]
+        }
+      ],
+      var.discord_webhook_secret_arn == "" ? [] : [
+        {
+          Sid      = "ReadDiscordWebhook"
+          Effect   = "Allow"
+          Action   = ["secretsmanager:GetSecretValue"]
+          Resource = [var.discord_webhook_secret_arn]
+        }
+      ]
+    )
   })
 }
 
@@ -306,8 +345,10 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "NOTIFICATION_CONSUMER_QUEUE_URL", value = var.notification_queue_url },
       { name = "NOTIFICATION_EMAIL_PROVIDER", value = "ses" },
       { name = "NOTIFICATION_EMAIL_FROM_ADDRESS", value = var.ses_sender_email },
-      { name = "NOTIFICATION_EMAIL_REGION", value = var.aws_region }
-    ])
+      { name = "NOTIFICATION_EMAIL_REGION", value = var.aws_region },
+      { name = "EXECUTIVE_SUMMARY_BEDROCK_REGION", value = var.aws_region },
+      { name = "EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN", value = var.discord_webhook_secret_arn }
+    ], local.executive_summary_alarm_environment)
     secrets = local.database_secrets
     healthCheck = {
       command     = ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health || exit 1"]

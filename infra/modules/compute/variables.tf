@@ -35,6 +35,29 @@ variable "notification_consumer_enabled" {
   type        = bool
   default     = true
 }
+variable "discord_webhook_secret_arn" {
+  description = "Optional ARN of the Discord webhook SecretString; the webhook URL is never passed to Terraform."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.discord_webhook_secret_arn == "" || startswith(var.discord_webhook_secret_arn, "arn:")
+    error_message = "discord_webhook_secret_arn must be empty or a Secrets Manager ARN."
+  }
+}
+variable "executive_summary_operational_alarms" {
+  description = "CloudWatch alarms and public-friendly labels queried by the executive summary worker."
+  type = list(object({
+    name  = string
+    label = string
+  }))
+  default = []
+
+  validation {
+    condition     = length(var.executive_summary_operational_alarms) <= 12
+    error_message = "At most 12 operational alarms may be configured for event summaries."
+  }
+}
 variable "ses_sender_email" { type = string }
 variable "alarm_topic_arn" {
   type    = string

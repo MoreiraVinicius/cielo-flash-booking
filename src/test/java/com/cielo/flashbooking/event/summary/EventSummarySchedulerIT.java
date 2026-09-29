@@ -57,12 +57,13 @@ class EventSummarySchedulerIT extends LocalIntegrationInfrastructure {
         jdbcTemplate.update("UPDATE executive_summary_control SET enabled = FALSE, enabled_at = NULL WHERE id = TRUE");
         signals = mock(OperationalSignalsReader.class);
         narrative = mock(ExecutiveNarrative.class);
+        ExecutiveSummaryDeliveryService deliveryService = mock(ExecutiveSummaryDeliveryService.class);
         when(signals.read(any(), any())).thenReturn(OperationalSignalResult.empty());
         when(narrative.write(any()))
                 .thenReturn(Optional.of(new ExecutiveNarrative.Narrative(
                         "As reservas se concentraram no início.", "amazon.nova-micro-v1:0", 40, 12)));
         scheduler = new EventSummaryScheduler(
-                reportStore, signals, narrative, renderer, new EventSummarySchedulerProperties());
+                reportStore, signals, narrative, renderer, new EventSummarySchedulerProperties(), deliveryService);
     }
 
     @Test

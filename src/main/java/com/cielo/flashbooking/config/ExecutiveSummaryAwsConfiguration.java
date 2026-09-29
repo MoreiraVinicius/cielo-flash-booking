@@ -1,6 +1,7 @@
 package com.cielo.flashbooking.config;
 
 import com.cielo.flashbooking.event.summary.ExecutiveSummaryProperties;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +11,7 @@ import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 @Configuration(proxyBeanMethods = false)
 @Profile({"worker", "all"})
@@ -38,6 +40,27 @@ class ExecutiveSummaryAwsConfiguration {
                         .apiCallTimeout(timeout)
                         .retryPolicy(RetryPolicy.none())
                         .build())
+                .build();
+    }
+
+    @Bean(destroyMethod = "close")
+    SecretsManagerClient secretsManagerClient(ExecutiveSummaryProperties properties) {
+        Duration timeout = properties.getBedrock().getApiTimeout();
+        return SecretsManagerClient.builder()
+                .region(Region.of(properties.getBedrock().getRegion()))
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .apiCallAttemptTimeout(timeout)
+                        .apiCallTimeout(timeout)
+                        .retryPolicy(RetryPolicy.none())
+                        .build())
+                .build();
+    }
+
+    @Bean
+    HttpClient discordHttpClient() {
+        return HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 }

@@ -25,6 +25,8 @@ O produto desta feature e um relatorio curto por evento sobre capacidade, volume
 - O resumo continua sendo criado automaticamente em `endsAt`. O worker salva primeiro os fatos; Bedrock e Discord recebem no maximo uma tentativa cada. GETs nao repetem nenhum efeito externo.
 - A URL do Discord e um Incoming Webhook. O operador cria o webhook nas configuracoes do canal, armazena sua URL como `SecretString` em AWS Secrets Manager e configura somente o ARN no arquivo local ignorado `infra/environments/demo/demo.tfvars`, na variavel `discord_webhook_secret_arn`.
 - Terraform nao cria nem guarda o valor secreto. O worker recebe IAM `secretsmanager:GetSecretValue` restrito ao ARN; a aplicacao busca o segredo apenas quando for enviar e mantem cache em memoria.
+- O nome da propriedade/configuracao ECS e `executive-summary.discord.webhook-secret-arn` / `EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN`; no `demo.tfvars`, preencher somente `discord_webhook_secret_arn`, nunca a URL.
+- A role worker usa `bedrock:InvokeModel` restrito ao foundation model Nova Micro e `cloudwatch:DescribeAlarmHistory`; os alarmes observados sao configurados por pares nome/rotulo em `executive_summary_operational_alarms` no modulo `compute` (ate 12).
 - Falha na entrega Discord nao apaga o relatorio. O GET mostra `SENT`, `FAILED`, `UNKNOWN` ou `NOT_CONFIGURED`.
 - O texto publico usa "ingressos em reservas aceitas", "reservas validas no fechamento" e "primeira vez sem ingressos disponiveis". Nao usa "vendas concluidas" nem apresenta siglas de estado.
 - Eventos sem reservas nao fazem chamada Bedrock. Alertas do ambiente aparecem apenas se houver transicoes observadas; ausencia de alertas nao declara ausencia de incidente.
@@ -45,8 +47,8 @@ O produto desta feature e um relatorio curto por evento sobre capacidade, volume
 
 1. No Discord, abrir as configuracoes do canal de destino, ir a **Integracoes > Webhooks** e criar um Incoming Webhook.
 2. Copiar a URL do webhook e criar no AWS Secrets Manager um segredo do tipo texto simples (`SecretString`) com essa URL como valor.
-3. Copiar o ARN do segredo. Em `infra/environments/demo/demo.tfvars` local, definir `discord_webhook_secret_arn = "<ARN>"`. Esse arquivo e ignorado pelo Git; nunca colar a URL secreta no arquivo.
-4. Aplicar Terraform para passar o ARN ao worker e conceder acesso ao segredo. O envio acontece no fechamento dos eventos elegiveis enquanto a chave global estiver ligada.
+3. Copiar o ARN do segredo. Em `infra/environments/demo/demo.tfvars` local, definir `discord_webhook_secret_arn = "<ARN>"`; deixar vazio desativa a entrega. Esse arquivo e ignorado pelo Git; nunca colar a URL secreta no arquivo.
+4. Terraform passa o ARN (nao a URL) ao worker e concede `GetSecretValue` somente nesse recurso. O worker consulta Secrets Manager apenas no envio, que ocorre no fechamento dos eventos elegiveis enquanto a chave global estiver ligada.
 5. Ao terminar a apresentacao, desligar a chave global. Mensagens ja enviadas e relatorios persistidos permanecem disponiveis.
 
 ## Ideias adiadas

@@ -18,4 +18,10 @@ public interface ExecutiveSummaryReportStore {
             Integer inputTokens,
             Integer outputTokens,
             String errorCode);
+
+    void markDeliveryNotConfigured(UUID eventId);
+
+    Optional<String> beginDelivery(UUID eventId);
+
+    void finishDelivery(UUID eventId, DiscordSummaryPublisher.DeliveryStatus status);
 }

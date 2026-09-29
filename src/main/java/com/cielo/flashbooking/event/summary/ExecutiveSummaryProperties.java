@@ -20,6 +20,9 @@ public class ExecutiveSummaryProperties {
     @Valid
     private OperationalSignals operationalSignals = new OperationalSignals();
 
+    @Valid
+    private Discord discord = new Discord();
+
     public Bedrock getBedrock() {
         return bedrock;
     }
@@ -34,6 +37,27 @@ public class ExecutiveSummaryProperties {
 
     public void setOperationalSignals(OperationalSignals operationalSignals) {
         this.operationalSignals = operationalSignals;
+    }
+
+    public Discord getDiscord() {
+        return discord;
+    }
+
+    public void setDiscord(Discord discord) {
+        this.discord = discord;
+    }
+
+    public static class Discord {
+
+        private String webhookSecretArn = "";
+
+        public String getWebhookSecretArn() {
+            return webhookSecretArn;
+        }
+
+        public void setWebhookSecretArn(String webhookSecretArn) {
+            this.webhookSecretArn = webhookSecretArn;
+        }
     }
 
     public static class Bedrock {

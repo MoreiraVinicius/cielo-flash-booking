@@ -63,8 +63,13 @@ module "compute" {
   notification_queue_arn        = module.data_plane.notification_queue_arn
   notification_queue_url        = module.data_plane.notification_queue_url
   notification_consumer_enabled = var.notification_consumer_enabled
-  ses_sender_email              = module.data_plane.ses_sender_email
-  alarm_topic_arn               = aws_sns_topic.operational_alerts.arn
+  discord_webhook_secret_arn    = var.discord_webhook_secret_arn
+  executive_summary_operational_alarms = [{
+    name  = "${var.name}-worker-running-tasks"
+    label = "Worker sem tarefas ativas"
+  }]
+  ses_sender_email = module.data_plane.ses_sender_email
+  alarm_topic_arn  = aws_sns_topic.operational_alerts.arn
 }
 
 module "edge_observability" {

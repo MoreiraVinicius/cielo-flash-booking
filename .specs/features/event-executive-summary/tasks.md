@@ -201,7 +201,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T07: Publicar no Discord com segredo configuravel
 
-**Status:** Planned
+**Status:** Complete
 **What:** Implementar publicador Discord, leitura lazy de Secrets Manager, IAM restrito e configuracao Terraform por ARN.
 **Where:** adapter HTTP, propriedades, `infra/modules/compute/main.tf`, testes Java e Terraform
 **Depends on:** T06
@@ -210,6 +210,24 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** unit com Secrets Manager/HTTP simulados e `terraform test` para IAM/config.
 **Gate:** Infra
 **Commit:** `feat(summary): publish reports through configured Discord webhook`
+
+**Gate result:** 9 testes unitarios passaram; `ExecutiveSummaryDeliveryIT` e `EventSummarySchedulerIT` passaram (4 integracao PostgreSQL); `terraform test` no modulo compute passou (2 runs; 0 falhas).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| ARN vazio nao consulta o publisher/segredo | `ExecutiveSummaryDeliveryServiceTest.java:31-36` - `verify(markDeliveryNotConfigured)`, `never(beginDelivery)`, `never(publish)` | Entrega opcional nao faz chamada Secrets Manager/Discord sem configuracao | Yes |
+| `UNKNOWN` e persistido antes do unico POST e o resultado confirmado persiste | `ExecutiveSummaryDeliveryServiceTest.java:40-50` - `InOrder(beginDelivery, publish, finishDelivery)` | Mensagem nao e repetida apos resultado ambiguo | Yes |
+| Reivindicacao de entrega concorrente nao inicia outro POST | `ExecutiveSummaryDeliveryServiceTest.java:54-61` - `beginDelivery` vazio e `never(publish/finishDelivery)` | Estado nao-`NOT_CONFIGURED` impede qualquer segunda tentativa | Yes |
+| PostgreSQL marca a tentativa como UNKNOWN e confirma SENT uma unica vez | `ExecutiveSummaryDeliveryIT.java:44-70` - primeira chamada retorna Markdown, estado UNKNOWN; segunda retorna vazio; SENT grava `delivery_confirmed_at` | Invariante de entrega protegida atomicamente por estado persistido | Yes |
+| URL invalida e timeout tem resultados seguros; segredo e lido sob demanda e cacheado | `SecretsManagerDiscordSummaryPublisherTest.java:31-68` - uma leitura para duas mensagens; URI HTTPS Discord; invalido nao envia; IOException vira UNKNOWN | Nenhum host arbitrario, segredo nao e carregado antes da publicacao e timeout ambiguo nao causa retry | Yes |
+| Mensagem longa preserva resultado, esgotamento, ritmo e ressalva sob 2.000 caracteres | `DiscordSummaryMessageFormatterTest.java:12-26` - `hasSizeLessThanOrEqualTo(2_000)` e secao opcional removida | Texto continua util em publico Discord | Yes |
+| Terraform passa so o ARN e restringe IAM; sem ARN nao concede GetSecretValue | `compute.tftest.hcl:97-105, 136-140` - variavel do container corresponde ao ARN e `Resource` e lista de uma entrada; sem ARN `anytrue` falso | Nenhum webhook URL no ambiente e nenhum acesso a segredo nao configurado | Yes |
+
+*Check C - Necessary:* os sete grupos provam configuracao opcional, sequenciamento, unicidade, classificacao de resultado, limite de mensagem e menor privilégio AWS; sem assertions estranhas ao comportamento.
+
+**Verdict:** T07 cobre a publicacao com adapters simulados, estado PostgreSQL concorrente e Terraform mocked, sem publicar em um Discord real nem acessar AWS.
 
 ### T08: Expor consulta e documentar operacao
 

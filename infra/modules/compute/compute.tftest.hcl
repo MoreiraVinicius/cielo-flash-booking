@@ -30,8 +30,13 @@ run "uses_one_image_with_separate_least_privilege_services" {
     expiration_queue_url        = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
     notification_queue_arn      = "arn:aws:sqs:sa-east-1:123456789012:notification"
     notification_queue_url      = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
-    ses_sender_email            = "demo@example.com"
-    alarm_topic_arn             = "arn:aws:sns:sa-east-1:123456789012:alerts"
+    discord_webhook_secret_arn  = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:discord-webhook"
+    executive_summary_operational_alarms = [{
+      name  = "flash-booking-demo-worker-running-tasks"
+      label = "Worker sem tarefas ativas"
+    }]
+    ses_sender_email = "demo@example.com"
+    alarm_topic_arn  = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
   assert {
@@ -88,6 +93,16 @@ run "uses_one_image_with_separate_least_privilege_services" {
     condition     = !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[0].Action, "secretsmanager:GetSecretValue") && contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ReceiveMessage") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ChangeMessageVisibility") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[2].Action, "ses:SendRawEmail")
     error_message = "Only the execution role reads the database secret, while the worker receives queue messages."
   }
+
+  assert {
+    condition     = one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN"]) == var.discord_webhook_secret_arn && one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "EXECUTIVE_SUMMARY_OPERATIONAL_SIGNALS_ALARMS_0_NAME"]) == "flash-booking-demo-worker-running-tasks" && !anytrue([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : can(regex("/api/webhooks/", item.value))])
+    error_message = "The worker must receive only the configured secret ARN and allowlisted alarm identity."
+  }
+
+  assert {
+    condition     = one([for statement in jsondecode(aws_iam_role_policy.worker_executive_summary.policy).Statement : statement.Resource if statement.Sid == "ReadDiscordWebhook"]) == [var.discord_webhook_secret_arn] && contains(one([for statement in jsondecode(aws_iam_role_policy.worker_executive_summary.policy).Statement : statement.Action if statement.Sid == "ReadDiscordWebhook"]), "secretsmanager:GetSecretValue")
+    error_message = "The worker may read only the configured Discord webhook secret ARN."
+  }
 }
 
 run "pauses_only_notification_consumer" {
@@ -109,6 +124,7 @@ run "pauses_only_notification_consumer" {
     notification_queue_arn        = "arn:aws:sqs:sa-east-1:123456789012:notification"
     notification_queue_url        = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
     notification_consumer_enabled = false
+    discord_webhook_secret_arn    = ""
     ses_sender_email              = "demo@example.com"
     alarm_topic_arn               = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
@@ -116,6 +132,11 @@ run "pauses_only_notification_consumer" {
   assert {
     condition     = one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "NOTIFICATION_CONSUMER_ENABLED"]) == "false"
     error_message = "The worker must receive a disabled notification consumer when the flag is false."
+  }
+
+  assert {
+    condition     = !anytrue([for statement in jsondecode(aws_iam_role_policy.worker_executive_summary.policy).Statement : contains(statement.Action, "secretsmanager:GetSecretValue")]) && one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN"]) == ""
+    error_message = "Without a configured Discord ARN the worker must not receive secret-read permission or a secret value."
   }
 
   assert {

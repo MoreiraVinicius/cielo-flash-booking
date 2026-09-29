@@ -1,6 +1,7 @@
 package com.cielo.flashbooking.adapter.out.persistence.summary;
 
 import com.cielo.flashbooking.event.summary.ClaimedExecutiveSummary;
+import com.cielo.flashbooking.event.summary.DiscordSummaryPublisher;
 import com.cielo.flashbooking.event.summary.EventSummaryFacts;
 import com.cielo.flashbooking.event.summary.EventSummaryFactsReader;
 import com.cielo.flashbooking.event.summary.ExecutiveSummaryRenderer;
@@ -155,6 +156,39 @@ class JdbcExecutiveSummaryReportStore implements ExecutiveSummaryReportStore {
                 claim.facts().eventId());
         if (updated != 1) {
             throw new IllegalStateException("Executive summary claim could not be completed");
+        }
+    }
+
+    @Override
+    public void markDeliveryNotConfigured(UUID eventId) {
+        jdbcTemplate.update(
+                "UPDATE event_executive_summary SET delivery_status = 'NOT_CONFIGURED' WHERE event_id = ? AND delivery_status = 'NOT_CONFIGURED'",
+                eventId);
+    }
+
+    @Override
+    public Optional<String> beginDelivery(UUID eventId) {
+        return jdbcTemplate.query(
+                """
+                UPDATE event_executive_summary
+                SET delivery_status = 'UNKNOWN'
+                WHERE event_id = ? AND delivery_status = 'NOT_CONFIGURED'
+                RETURNING markdown
+                """,
+                resultSet -> resultSet.next() ? Optional.of(resultSet.getString("markdown")) : Optional.empty(),
+                eventId);
+    }
+
+    @Override
+    public void finishDelivery(UUID eventId, DiscordSummaryPublisher.DeliveryStatus status) {
+        int updated = jdbcTemplate.update("""
+                UPDATE event_executive_summary
+                SET delivery_status = ?,
+                    delivery_confirmed_at = CASE WHEN ? = 'SENT' THEN clock_timestamp() ELSE NULL END
+                WHERE event_id = ? AND delivery_status = 'UNKNOWN'
+                """, status.name(), status.name(), eventId);
+        if (updated != 1) {
+            throw new IllegalStateException("Executive summary delivery attempt could not be completed");
         }
     }
 
