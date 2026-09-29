@@ -118,7 +118,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T04: Apurar fatos no encerramento
 
-**Status:** Planned
+**Status:** Complete
 **What:** Criar leitura JDBC por evento com corte temporal em `endsAt`.
 **Where:** adapter JDBC de fatos e testes PostgreSQL
 **Depends on:** T03
@@ -127,6 +127,20 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** integration cobrindo cenarios temporais, dois eventos, zero, quantidade maior que um e apuracao parcial.
 **Gate:** Full
 **Commit:** `feat(summary): aggregate event facts at close`
+
+**Gate result:** Focused `verify -Pintegration -Dtest=CreateReservationServiceTest -Dit.test=ExecutiveSummaryFactsIT` passed; 4 unit tests and 4 PostgreSQL integration tests passed (0 failures/errors/skips).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Volume, valid reservations, cancellations and expiry reconstructed at `endsAt` | `ExecutiveSummaryFactsIT.java:33` - four reservations include pre-close cancel, expires by close, and post-close cancel; `:47-55` - exact counts/tickets asserted | Post-close changes do not rewrite the closing snapshot; volume and validity remain distinct | Yes |
+| Peak minute and first-five-minute count use quantities and deterministic minute grouping | `ExecutiveSummaryFactsIT.java:53-55` - peak timestamp/tickets and first-five count asserted | Quantities larger than one contribute to rhythm and minute peak | Yes |
+| Aggregates remain scoped to one event; short/empty events omit rhythm | `ExecutiveSummaryFactsIT.java:61` - two separate events; `:77-85` - zero/one-event totals and null rhythm asserted | No cross-event mixing; omit first-five for <10 minutes and no activity | Yes |
+| Inconsistent close partition is explicitly incomplete | `ExecutiveSummaryFactsIT.java:90` - impossible expired state; `:98-101` - accepted total differs from close partition and `complete=false` | Downstream renderer can omit inconsistent numbers and avoid Bedrock | Yes |
+| Event without `endsAt` and missing event do not produce facts | `ExecutiveSummaryFactsIT.java:105` - both `read` results are empty | Only events with a commercial close can be summarized | Yes |
+
+*Check C - Necessary:* all five test groups map to T04 `Done when` and EXECSUM-11/12/13/15/16/17/18/26/32/35/37; no unclaimed tests added.
 
 ### T05: Renderizar template e leitura opcional
 
