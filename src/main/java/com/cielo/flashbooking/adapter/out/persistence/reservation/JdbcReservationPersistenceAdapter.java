@@ -2,6 +2,7 @@ package com.cielo.flashbooking.adapter.out.persistence.reservation;
 
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
+import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import com.cielo.flashbooking.reservation.application.ReservationDetails;
 import com.cielo.flashbooking.reservation.application.ReservationReader;
 import com.cielo.flashbooking.reservation.application.ReservationWriter;
@@ -193,6 +194,86 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 reservationId);
     }
 
+    @Override
+    public Optional<ConfirmationTransition> confirmPending(UUID reservationId) {
+        Optional<LockedReservation> locked = jdbcTemplate.query(
+                """
+                SELECT event_id, quantity, status, expires_at, confirmed_at
+                FROM reservation
+                WHERE id = ?
+                FOR UPDATE
+                """,
+                resultSet -> resultSet.next() ? Optional.of(toLockedReservation(resultSet)) : Optional.empty(),
+                reservationId);
+        if (locked.isEmpty()) {
+            return Optional.empty();
+        }
+
+        LockedReservation reservation = locked.orElseThrow();
+        if (reservation.status() != ReservationStatus.PENDING) {
+            return Optional.of(new ConfirmationTransition(reservation.status(), reservation.confirmedAt(), null));
+        }
+
+        Instant decidedAt = currentTime();
+        if (decidedAt.isBefore(reservation.expiresAt())) {
+            int updated = jdbcTemplate.update("""
+                    UPDATE reservation
+                    SET status = 'CONFIRMED', confirmed_at = ?, updated_at = ?
+                    WHERE id = ? AND status = 'PENDING'
+                    """, Timestamp.from(decidedAt), Timestamp.from(decidedAt), reservationId);
+            requireSingleTransition(updated, reservationId);
+            return Optional.of(new ConfirmationTransition(ReservationStatus.CONFIRMED, decidedAt, null));
+        }
+
+        int updated = jdbcTemplate.update("""
+                UPDATE reservation
+                SET status = 'EXPIRED',
+                    closure_reason_code = 'RESERVATION_DEADLINE_REACHED',
+                    closure_reason_description = 'Prazo da reserva encerrado',
+                    updated_at = ?
+                WHERE id = ? AND status = 'PENDING'
+                """, Timestamp.from(decidedAt), reservationId);
+        requireSingleTransition(updated, reservationId);
+        return Optional.of(new ConfirmationTransition(
+                ReservationStatus.EXPIRED, null, new CapacityRelease(reservation.eventId(), reservation.quantity())));
+    }
+
+    @Override
+    public Optional<CancellationRequest> requestConfirmedCancellation(UUID reservationId, UUID cancellationId) {
+        return jdbcTemplate.query(
+                """
+                UPDATE reservation
+                SET status = 'CANCELLATION_PENDING', cancellation_id = ?, updated_at = clock_timestamp()
+                WHERE id = ? AND status = 'CONFIRMED'
+                RETURNING event_id, quantity
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new CancellationRequest(
+                                reservationId,
+                                resultSet.getObject("event_id", UUID.class),
+                                resultSet.getInt("quantity"),
+                                cancellationId))
+                        : Optional.empty(),
+                cancellationId,
+                reservationId);
+    }
+
+    private LockedReservation toLockedReservation(ResultSet resultSet) throws SQLException {
+        Timestamp confirmedAt = resultSet.getTimestamp("confirmed_at");
+        return new LockedReservation(
+                resultSet.getObject("event_id", UUID.class),
+                resultSet.getInt("quantity"),
+                ReservationStatus.valueOf(resultSet.getString("status")),
+                resultSet.getTimestamp("expires_at").toInstant(),
+                confirmedAt == null ? null : confirmedAt.toInstant());
+    }
+
+    private void requireSingleTransition(int updated, UUID reservationId) {
+        if (updated != 1) {
+            throw new IllegalStateException("locked reservation changed unexpectedly: " + reservationId);
+        }
+    }
+
     private String reservationPayload(Reservation reservation) {
         try {
             return objectMapper.writeValueAsString(Map.of(
@@ -225,4 +306,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 resultSet.getTimestamp("expires_at").toInstant(),
                 closureReason);
     }
+
+    private record LockedReservation(
+            UUID eventId, int quantity, ReservationStatus status, Instant expiresAt, Instant confirmedAt) {}
 }

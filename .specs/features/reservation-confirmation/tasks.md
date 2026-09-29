@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T02 está concluída; T03 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
+**Status:** Execução aprovada. T03 está concluída; T04 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
 
 ## Execution Protocol
 
@@ -82,6 +82,8 @@ T08 → T09 → T10
 **Done when:** Confirmação antes do prazo não altera `available`; expiração/cancelamento vencedores impedem confirmação; `CANCELLATION_PENDING` retém capacidade até resposta externa positiva e nunca retorna a `CONFIRMED`; testes de lock e invariante passam.
 **Tests:** unit + integration + concorrência, incluídos na tarefa.
 **Gate:** Java.
+
+**Status:** Complete; decisão usa relógio PostgreSQL depois do lock, expiração tardia libera uma vez e pedido de cancelamento confirmado conserva a capacidade.
 
 ### T04: Preparar canais de integração
 

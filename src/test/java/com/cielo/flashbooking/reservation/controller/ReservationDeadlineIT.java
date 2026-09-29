@@ -6,8 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import com.cielo.flashbooking.event.application.EventAvailabilityCache;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
+import com.cielo.flashbooking.reservation.application.ConfirmReservationService;
+import com.cielo.flashbooking.reservation.application.ReservationConfirmationResult;
 import com.cielo.flashbooking.reservation.expire.ExpireReservationService;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -54,6 +57,9 @@ class ReservationDeadlineIT {
 
     @Autowired
     private CancelReservationService cancelReservationService;
+
+    @Autowired
+    private ConfirmReservationService confirmReservationService;
 
     @Autowired
     private ExpireReservationService expireReservationService;
@@ -173,6 +179,97 @@ class ReservationDeadlineIT {
         expiration.get(5, TimeUnit.SECONDS);
 
         assertTerminalState(fixture, "EXPIRED", "RESERVATION_DEADLINE_REACHED", "Prazo da reserva encerrado");
+    }
+
+    @Test
+    void confirm_whenBeforeDeadlineCommitsReservationWithoutChangingCapacity() {
+        Fixture fixture = insertPendingReservation(databaseNow().plus(Duration.ofMinutes(10)));
+        var result = confirmReservationService.confirm(fixture.reservationId()).orElseThrow();
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(result.confirmedAt()).isNotNull().isBefore(databaseNow());
+
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, fixture.reservationId()))
+                .isEqualTo("CONFIRMED");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT confirmed_at IS NOT NULL FROM reservation WHERE id = ?",
+                        Boolean.class,
+                        fixture.reservationId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
+                .isEqualTo(7);
+        assertThat(expireReservationService.expire(fixture.reservationId())).isFalse();
+    }
+
+    @Test
+    void confirm_whenLockWaitCrossesDeadlineExpiresAndReturnsCapacityOnce() throws Exception {
+        Instant expiresAt = databaseNow().plus(Duration.ofSeconds(2));
+        Fixture fixture = insertPendingReservation(expiresAt);
+
+        try (Connection blocker = connection()) {
+            blocker.setAutoCommit(false);
+            lockReservation(blocker, fixture.reservationId());
+
+            Future<java.util.Optional<ReservationConfirmationResult>> confirmation =
+                    executor.submit(() -> confirmReservationService.confirm(fixture.reservationId()));
+            awaitBlockedReservationUpdate();
+            awaitDatabaseDeadline(expiresAt);
+            blocker.commit();
+            assertThat(confirmation.get(5, TimeUnit.SECONDS)).isPresent();
+        }
+
+        assertTerminalState(fixture, "EXPIRED", "RESERVATION_DEADLINE_REACHED", "Prazo da reserva encerrado");
+        assertThat(expireReservationService.expire(fixture.reservationId())).isFalse();
+    }
+
+    @Test
+    void confirmAndCancel_whenTheyRaceOnlyCommitOrReleaseCapacityOnce() throws Exception {
+        Fixture fixture = insertPendingReservation(databaseNow().plus(Duration.ofMinutes(10)));
+        CountDownLatch start = new CountDownLatch(1);
+        Future<?> confirmation = executor.submit(() -> {
+            await(start);
+            return confirmReservationService.confirm(fixture.reservationId());
+        });
+        Future<?> cancellation = executor.submit(() -> {
+            await(start);
+            return cancelReservationService.cancel(fixture.reservationId());
+        });
+
+        start.countDown();
+        confirmation.get(5, TimeUnit.SECONDS);
+        cancellation.get(5, TimeUnit.SECONDS);
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM reservation WHERE id = ?", String.class, fixture.reservationId());
+        int expectedAvailable = "CANCELLED".equals(status) ? 10 : 7;
+        assertThat(status).isIn("CANCELLED", "CANCELLATION_PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
+                .isEqualTo(expectedAvailable);
+    }
+
+    @Test
+    void cancel_whenConfirmedRetainsCapacityAndStableCancellationIdWhileExpirationRuns() {
+        Fixture fixture = insertPendingReservation(databaseNow().plus(Duration.ofMinutes(10)));
+        assertThat(confirmReservationService.confirm(fixture.reservationId())).isPresent();
+
+        cancelReservationService.cancel(fixture.reservationId());
+        UUID cancellationId = jdbcTemplate.queryForObject(
+                "SELECT cancellation_id FROM reservation WHERE id = ?", UUID.class, fixture.reservationId());
+        assertThat(expireReservationService.expire(fixture.reservationId())).isFalse();
+        cancelReservationService.cancel(fixture.reservationId());
+
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT status FROM reservation WHERE id = ?", String.class, fixture.reservationId()))
+                .isEqualTo("CANCELLATION_PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT cancellation_id FROM reservation WHERE id = ?", UUID.class, fixture.reservationId()))
+                .isEqualTo(cancellationId);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
+                .isEqualTo(7);
     }
 
     private Fixture insertPendingReservation(Instant expiresAt) {

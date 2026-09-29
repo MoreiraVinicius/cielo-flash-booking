@@ -2,6 +2,7 @@ package com.cielo.flashbooking.reservation.application;
 
 import com.cielo.flashbooking.domain.reservation.Customer;
 import com.cielo.flashbooking.domain.reservation.Reservation;
+import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,5 +29,16 @@ public interface ReservationWriter {
 
     Optional<CapacityRelease> expirePending(UUID reservationId);
 
+    /** Locks the reservation, then decides whether confirmation or expiry wins using PostgreSQL time. */
+    Optional<ConfirmationTransition> confirmPending(UUID reservationId);
+
+    /** Starts cancellation only if the reservation is still CONFIRMED. */
+    Optional<CancellationRequest> requestConfirmedCancellation(UUID reservationId, UUID cancellationId);
+
     record CapacityRelease(UUID eventId, int quantity) {}
+
+    record ConfirmationTransition(
+            ReservationStatus status, Instant confirmedAt, CapacityRelease expiredCapacityRelease) {}
+
+    record CancellationRequest(UUID reservationId, UUID eventId, int quantity, UUID cancellationId) {}
 }

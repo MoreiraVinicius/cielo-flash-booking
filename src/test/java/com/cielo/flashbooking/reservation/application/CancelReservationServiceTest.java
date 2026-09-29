@@ -2,6 +2,8 @@ package com.cielo.flashbooking.reservation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -54,6 +56,34 @@ class CancelReservationServiceTest {
         assertThat(service(writer, reader, inventory, publisher).cancel(reservationId))
                 .isEqualTo(terminal);
 
+        verify(inventory, never()).increment(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
+        verify(publisher, never()).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));
+    }
+
+    @Test
+    void cancel_whenReservationIsConfirmedBeginsExternalCancellationWithoutReleasingCapacity() {
+        UUID reservationId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        ReservationWriter writer = mock(ReservationWriter.class);
+        ReservationReader reader = mock(ReservationReader.class);
+        InventoryOperations inventory = mock(InventoryOperations.class);
+        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+        ReservationDetails cancellationPending = new ReservationDetails(
+                reservationId,
+                new ReservationDetails.Event(eventId, "Reservation event"),
+                new ReservationDetails.Customer(UUID.randomUUID(), "Ana", "ana@example.com"),
+                3,
+                ReservationStatus.CANCELLATION_PENDING,
+                Instant.parse("2026-09-09T12:10:00Z"),
+                null);
+        when(writer.closePendingOnCancellation(reservationId)).thenReturn(Optional.empty());
+        when(writer.requestConfirmedCancellation(eq(reservationId), any())).thenReturn(Optional.empty());
+        when(reader.findById(reservationId)).thenReturn(Optional.of(cancellationPending));
+
+        assertThat(service(writer, reader, inventory, publisher).cancel(reservationId))
+                .isEqualTo(cancellationPending);
+
+        verify(writer).requestConfirmedCancellation(eq(reservationId), any());
         verify(inventory, never()).increment(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
         verify(publisher, never()).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));
     }

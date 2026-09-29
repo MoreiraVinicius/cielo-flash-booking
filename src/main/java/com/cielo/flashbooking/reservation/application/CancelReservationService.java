@@ -32,9 +32,14 @@ public class CancelReservationService {
         return reservationWriter
                 .closePendingOnCancellation(reservationId)
                 .map(release -> closeAndReturn(reservationId, release))
-                .orElseGet(() -> reservationReader
-                        .findById(reservationId)
-                        .orElseThrow(() -> new ResourceNotFoundException("reservation not found: " + reservationId)));
+                .orElseGet(() -> beginConfirmedCancellationAndRead(reservationId));
+    }
+
+    private ReservationDetails beginConfirmedCancellationAndRead(UUID reservationId) {
+        reservationWriter.requestConfirmedCancellation(reservationId, UUID.randomUUID());
+        return reservationReader
+                .findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("reservation not found: " + reservationId));
     }
 
     private ReservationDetails closeAndReturn(UUID reservationId, ReservationWriter.CapacityRelease release) {

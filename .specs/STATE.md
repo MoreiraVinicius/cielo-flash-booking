@@ -239,10 +239,10 @@
 ## Handoff
 
 - **Feature**: `reservation-confirmation`
-- **Phase / Task**: Execute / T02 concluída.
-- **Completed**: T01 consolidou AD-031 e specs vigentes. V6 acrescentou `CONFIRMED`, `CANCELLATION_PENDING`, metadados de ciclo e `confirmation_inbox`; oito testes PostgreSQL cobriram constraints, idempotência, retenção e migração de reservas legadas.
+- **Phase / Task**: Execute / T03 concluída.
+- **Completed**: T01 consolidou AD-031 e specs vigentes. T02 acrescentou a V6 e oito testes de schema. T03 implementou decisão pós-lock com horário PostgreSQL, transições concorrentes e retenção de estoque em `CANCELLATION_PENDING`; passaram oito testes unitários e oito integrações.
 - **In-progress**: Nenhum.
-- **Next step**: Implementar as transições autoritativas e concorrentes de confirmação na T03.
+- **Next step**: Preparar as duas filas direcionais e permissões de integração na T04.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Preservar mudanças paralelas preexistentes fora do escopo desta feature.
 - **Branch**: `main`
