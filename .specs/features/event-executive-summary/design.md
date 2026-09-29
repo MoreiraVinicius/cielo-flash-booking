@@ -41,7 +41,7 @@ A ativacao e global e persistida para que o operador possa liga-la/desliga-la se
 | `JdbcInventoryOperations` | Registrar o primeiro zero somente para evento ativado. | Decremento condicional, timestamp do PostgreSQL na mesma transacao. |
 | `EventSummaryFactsReader` | Agregar volume, validade em `endsAt`, ritmo e invariantes. | `read(eventId, endsAt)` sem PII e sem depender do status observado depois. |
 | `ExecutiveSummaryRenderer` | Montar o texto curto com numeros fixos. | `render(facts, signals, narrative)`; omite secao de IA/alertas quando nao houver dados. |
-| `EventSummaryScheduler` | Varredura limitada, claim duravel e orquestracao fora de transacao. | `scan()` no perfil worker; uma linha por `event_id`. |
+| `EventSummaryScheduler` | Varredura limitada, claim duravel e orquestracao fora de transacao. | `scan()` no perfil worker; lote default 25 (limite 100), intervalo default 30 s; uma linha por `event_id`. |
 | `OperationalSignalsReader` | Observar ate duas transicoes relevantes de alarmes do ambiente. | `read(start, endsAt)` retorna `OBSERVED/EMPTY/UNAVAILABLE/PARTIAL` e rotulos comuns. |
 | `ExecutiveNarrative` | Redigir ate duas frases sobre fatos comerciais. | `write(facts)` retorna texto validado ou ausencia; uma tentativa. |
 | `DiscordSummaryPublisher` | Enviar o Markdown ja salvo a um canal Discord. | Uma requisicao POST por relatorio; resultado `SENT/FAILED/UNKNOWN/NOT_CONFIGURED`. |
@@ -65,7 +65,7 @@ O ritmo vem de `created_at` e `quantity`: pico = maior soma de ingressos em um m
 
 ```markdown
 # {nome do evento}
-{inicio} a {fim} | Capacidade: {capacity} ingressos | Discord: {deliveryStatus}
+Inicio: {inicio} | Fim: {fim} | Apurado: {asOf} | Capacidade: {capacity} ingressos
 
 ## Resultado
 {accepted_tickets} ingressos passaram por {accepted_reservations} reservas aceitas.
@@ -112,7 +112,7 @@ Reservas sao temporarias; compras concluidas nao sao verificadas aqui.
 
 ## Trigger, flag e estados
 
-`DISABLED` e calculado quando a chave global esta desligada e nao ha relatorio; `NOT_ELIGIBLE` indica que a janela comercial comecou antes de `enabled_at`; `SCHEDULED` significa janela elegivel ainda aberta. Na primeira varredura apos `endsAt`, o worker verifica o controle global, bloqueia a linha do evento para esperar commits de reservas que ja obtiveram o lock de inventario e, numa nova leitura sob lock, agrega e insere `PARTIAL` com fatos/Markdown em transacao curta. Tentativas que alcancem o inventario depois do fechamento sao recusadas. Se Bedrock produzir leitura valida, atualiza Markdown e status para `READY`; CloudWatch indisponivel mantem resultado parcial com nota curta. Sem ARN configurado, registra `NOT_CONFIGURED` sem consultar Secrets Manager. Antes de iniciar o unico POST, o worker persiste `UNKNOWN`; confirmacao vira `SENT`, erro definitivo vira `FAILED`, e timeout ou queda ambigua permanece `UNKNOWN`. Nenhum desses estados inicia novo POST automaticamente. Nao ha retry automatico de Bedrock nem Discord; consultas GET nao produzem efeitos externos. O operador mantem a flag ligada ate a mensagem ser enviada e entao a desliga.
+`DISABLED` e calculado quando a chave global esta desligada e nao ha relatorio; `NOT_ELIGIBLE` indica que a janela comercial comecou antes de `enabled_at`; `SCHEDULED` significa janela elegivel ainda aberta ou aguardando a proxima varredura. O scheduler roda apenas no perfil `worker`/`all`, com intervalo default de 30 segundos e lote default de 25 eventos (configuravel ate 100). Primeiro seleciona candidatos fechados com a chave global ligada; para cada candidato, uma transacao curta bloqueia o controle global com `FOR SHARE`, bloqueia o evento com `FOR UPDATE`, revalida elegibilidade/fechamento, agrega os fatos e insere `PARTIAL` com Markdown deterministico. Isso aguarda commits de reservas que ja obtiveram o lock do inventario; tentativas novas apos `endsAt` sao recusadas. A chave unica por evento permite um vencedor entre workers concorrentes. A transacao termina antes de CloudWatch ou Bedrock. Se os fatos forem inconsistentes, nenhuma chamada externa e feita. Caso contrario, CloudWatch e (havendo reservas aceitas) Bedrock sao consultados no maximo uma vez. O sistema atualiza o mesmo Markdown e marca `READY` somente com fatos completos, cobertura de monitoramento completa e leitura valida quando aplicavel; falha, cobertura parcial/ausente ou queda apos o claim deixa o Markdown basico em `PARTIAL`. Uma linha ja reivindicada nunca volta a ser candidata, portanto nova varredura/GET nao repete custo. `deliveryStatus` e metadado separado, nunca faz parte do Markdown: o relatorio e identico antes e depois da confirmacao do Discord. Sem ARN configurado, a etapa de entrega registra `NOT_CONFIGURED` sem consultar Secrets Manager. Antes do unico POST, o worker persiste `UNKNOWN`; confirmacao vira `SENT`, erro definitivo vira `FAILED`, e timeout ou queda ambigua permanece `UNKNOWN`. Nenhum desses estados inicia novo POST automaticamente. O operador mantem a flag ligada ate a publicacao terminar e entao a desliga.
 
 ## AWS, custo e privacidade
 

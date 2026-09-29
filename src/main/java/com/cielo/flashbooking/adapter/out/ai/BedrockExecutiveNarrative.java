@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock;
@@ -19,6 +20,7 @@ import software.amazon.awssdk.services.bedrockruntime.model.Message;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
+@Profile({"worker", "all"})
 class BedrockExecutiveNarrative implements ExecutiveNarrative {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BedrockExecutiveNarrative.class);

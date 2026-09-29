@@ -16,7 +16,6 @@ class ExecutiveSummaryRendererTest {
 
         String markdown = renderer.render(
                 facts,
-                "SENT",
                 new OperationalSignalResult(OperationalSignalResult.Status.EMPTY, List.of()),
                 "As reservas se concentraram no inicio do evento.");
 
@@ -30,17 +29,16 @@ class ExecutiveSummaryRendererTest {
                 .contains("Início: 28/09/2026 09:00")
                 .contains("As reservas se concentraram no inicio do evento.")
                 .contains("Reservas são temporárias; compras concluídas não são verificadas aqui.")
-                .contains("Discord: mensagem enviada ao canal")
-                .doesNotContain("## Operação", "SENT", "PENDING", "EXPIRED");
+                .doesNotContain("Discord:", "SENT", "PENDING", "EXPIRED");
     }
 
     @Test
     void omitsAlertSectionWhenThereAreNoTransitionsAndExplainsPartialCoverage() {
         EventSummaryFacts facts = facts(true, 0, 0, 0, 0, 0, null, null);
 
-        String empty = renderer.render(facts, "NOT_CONFIGURED", OperationalSignalResult.empty(), null);
+        String empty = renderer.render(facts, OperationalSignalResult.empty(), null);
         String partial = renderer.render(
-                facts, "UNKNOWN", new OperationalSignalResult(OperationalSignalResult.Status.PARTIAL, List.of()), null);
+                facts, new OperationalSignalResult(OperationalSignalResult.Status.PARTIAL, List.of()), null);
 
         assertThat(empty).doesNotContain("## Operação", "Leitura");
         assertThat(partial)
@@ -58,8 +56,8 @@ class ExecutiveSummaryRendererTest {
                         new OperationalSignal("Worker sem tarefas ativas", Instant.parse("2026-09-28T12:01:00Z")),
                         new OperationalSignal("Fila com atraso", Instant.parse("2026-09-28T12:02:00Z")),
                         new OperationalSignal("Gateway com erros", Instant.parse("2026-09-28T12:03:00Z"))));
-        String markdown = renderer.render(complete, "FAILED", signals, null);
-        String incomplete = renderer.render(facts(false, 1, 3, 0, 0, 0, null, null), "SENT", signals, "Inventado.");
+        String markdown = renderer.render(complete, signals, null);
+        String incomplete = renderer.render(facts(false, 1, 3, 0, 0, 0, null, null), signals, "Inventado.");
 
         assertThat(markdown)
                 .contains("Worker sem tarefas ativas", "Fila com atraso")

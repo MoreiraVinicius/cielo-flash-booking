@@ -173,7 +173,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T06: Gerar automaticamente no fechamento
 
-**Status:** Planned
+**Status:** Complete
 **What:** Adicionar varredura do worker, elegibilidade global, claim unico, persistencia do relatorio e transicoes `PARTIAL/READY`.
 **Where:** servico/scheduler de resumo e testes unitarios e de integracao
 **Depends on:** T05
@@ -182,6 +182,22 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** integration com relogio de banco controlado, eventos elegiveis/ineligiveis, concorrencia e falhas.
 **Gate:** Full
 **Commit:** `feat(summary): generate one report after event close`
+
+**Gate result:** `verify -Pintegration -Dit.test=EventSummarySchedulerIT -Dtest=ExecutiveSummaryRendererTest` passou (3 testes de integracao PostgreSQL + 3 testes unitarios; 0 falhas/erros/skips).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Flag desligada e evento ainda aberto nao consultam servicos externos | `EventSummarySchedulerIT.java:68-79` - zero reports; `verify(signals, never())`; `verify(narrative, never())` antes e depois da ativacao, com `ends_at` futuro | Nenhum resumo/custo antes do fechamento ou com a chave global desligada | Yes |
+| Duas varreduras concorrentes produzem um claim/relatorio e uma tentativa de cada adapter | `EventSummarySchedulerIT.java:82-112` - duas chamadas paralelas; `reportCount == 1`, `status == READY`; `verify(signals).read`; `verify(narrative).write` apos varredura adicional | Uma linha por evento e no maximo uma inferencia/consulta por reivindicacao vencedora | Yes |
+| Markdown comercial e claim sao persistidos antes da entrega | `EventSummarySchedulerIT.java:97-109` - estado final e Markdown persistido com fatos/leitura; `delivery_status == NOT_CONFIGURED`; sem linha Discord no conteudo | Conteudo publico nao depende de confirmacao de entrega e ja e duravel antes de T07 | Yes |
+| Falha externa preserva Markdown parcial e nao e repetida | `EventSummarySchedulerIT.java:114-132` - excecao simulada, segunda varredura, `status == PARTIAL`, `error_code`, reader uma vez | Claim parcial continua consultavel sem retry/custo duplicado | Yes |
+| Renderer nao expoe estado de entrega | `ExecutiveSummaryRendererTest.java:13-33` - `doesNotContain("Discord:", "SENT", ...)` | O mesmo texto salvo pode ser publicado sem status especulativo | Yes |
+
+*Check C - Necessary:* os cinco grupos de evidencia cobrem elegibilidade, unicidade, persistencia anterior a efeitos externos, falha e estabilidade do conteudo Discord; nenhuma assercao fora da tarefa.
+
+**Verdict:** criterios T06 demonstrados com PostgreSQL real em Testcontainers e adapters externos simulados; nenhuma chamada AWS real.
 
 ### T07: Publicar no Discord com segredo configuravel
 

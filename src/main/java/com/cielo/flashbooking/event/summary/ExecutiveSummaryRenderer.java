@@ -15,11 +15,7 @@ public class ExecutiveSummaryRenderer {
                     "dd/MM/yyyy HH:mm", Locale.forLanguageTag("pt-BR"))
             .withZone(SAO_PAULO);
 
-    public String render(
-            EventSummaryFacts facts,
-            String deliveryStatus,
-            OperationalSignalResult operationalSignals,
-            String narrative) {
+    public String render(EventSummaryFacts facts, OperationalSignalResult operationalSignals, String narrative) {
         StringBuilder markdown = new StringBuilder();
         markdown.append("# ").append(facts.eventName()).append('\n');
         markdown.append("Início: ")
@@ -31,7 +27,7 @@ public class ExecutiveSummaryRenderer {
                 .append(" | Capacidade: ")
                 .append(facts.capacity())
                 .append(" ingressos\n");
-        markdown.append("Discord: ").append(deliveryLabel(deliveryStatus)).append("\n\n");
+        markdown.append('\n');
 
         if (!facts.complete()) {
             return markdown.append("Apuração incompleta. Os números do resultado não puderam ser confirmados.\n")
@@ -96,15 +92,6 @@ public class ExecutiveSummaryRenderer {
                 || result.status() == OperationalSignalResult.Status.UNAVAILABLE) {
             markdown.append("Não foi possível verificar todos os alertas de infraestrutura.\n");
         }
-    }
-
-    private String deliveryLabel(String status) {
-        return switch (status) {
-            case "SENT" -> "mensagem enviada ao canal";
-            case "FAILED" -> "não foi possível enviar a mensagem";
-            case "UNKNOWN" -> "envio sem confirmação";
-            default -> "canal do Discord não configurado";
-        };
     }
 
     private String format(Instant instant) {
