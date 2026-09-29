@@ -66,7 +66,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T02: Expor ativacao manual global
 
-**Status:** Planned
+**Status:** Complete
 **What:** Implementar `PUT /executive-summary/activation`, sem endpoint ou propriedade de ativacao por evento.
 **Where:** command API, controller, servico e testes HTTP
 **Depends on:** T01
@@ -75,6 +75,20 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** integration para transicoes, repeticao, validacao e concorrencia com fechamento.
 **Gate:** Full
 **Commit:** `feat(summary): add global report activation command`
+
+**Gate result:** Focused `verify -Pintegration -Dit.test=ExecutiveSummaryActivationIT` passed; 63 unit tests and 4 focused integration tests passed (0 failures/errors/skips).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Enabling returns persisted global state and timestamp | `ExecutiveSummaryActivationIT.java:54` - PUT `enabled=true`, response `enabled=true`, `enabledAt` present | Operator can see persisted activation state | Yes |
+| Repeating enable does not reopen the window | `ExecutiveSummaryActivationIT.java:63` - capture DB timestamp; `:72-73` - DB timestamp remains equal | Repeated PUT is idempotent for activation window | Yes |
+| Disabling closes current window and persists disabled state | `ExecutiveSummaryActivationIT.java:77` - PUT false; `:85` - timestamp is null; `:88-91` - DB off/null assertions | No current active window remains | Yes |
+| Missing, null, and non-boolean input returns 400 without mutation | `ExecutiveSummaryActivationIT.java:96` - three invalid request bodies; `:109` - enabledAt unchanged | Validation failure does not alter the global control | Yes |
+| Concurrent enable requests preserve one global window | `ExecutiveSummaryActivationIT.java:114` - four concurrent PUTs; `:131` - enabled is true; DB singleton from T01 | Concurrent calls cannot create per-event state or lose activation | Yes |
+
+*Check C - Necessary:* all five assertion groups map to T02 `Done when` and EXECSUM-02/03/07; no unclaimed tests added.
 
 ### T03: Registrar marco de inventario e horario de aceite
 
