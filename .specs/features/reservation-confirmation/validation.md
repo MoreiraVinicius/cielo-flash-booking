@@ -179,7 +179,7 @@ Esta revisão é documental; os testes funcionais de T01–T12 são a evidência
 
 ### Resultado inicial do Verifier (supersedido por T15)
 
-**Initial result:** FAIL — AC7 label gap and one surviving documentation mutant. T15 corrige ambos e solicita nova verificação independente.
+**Initial result (superseded by T15):** FAIL — AC7 label gap and one surviving documentation mutant. T15 corrige ambos e solicita nova verificação independente.
 
 ## Independent fresh re-verification of T13–T15 (29/09/2026)
 
@@ -221,3 +221,41 @@ Grouped the full visible step 08 under SVG id `step08-result` at `docs/images/fl
 Repeated the exact targeted mutation: only the step 08 line was shortened to `Rejected.` in a scratch copy. `validate-readme.ps1 -AwsVisualDirectory <scratch>` now fails specifically at `visible AWS step 08 result contract`; 1/1 targeted mutation killed. Scratch was removed and real working tree status matched its baseline. The correct diagram passed the README, spec, tasks, XML and diff gates, and a fresh Chrome render was visually inspected.
 
 This is author-side evidence only. A fresh independent Verifier must confirm the correction and write the final PASS before `validate_state.py` can close the feature.
+
+## Fresh independent re-verification of T15 (29/09/2026)
+
+**Verdict: FAIL — the T15 visible-label contract and targeted mutation pass, but this verifier could not independently complete the required rendered visual inspection.** Scope: `git diff 53de354..b16fdf2`, CONFIRM-04 AC6/AC7, the current image inventory, and the Java/Terraform contracts represented by the documentation. No implementation or spec change was made by this verifier.
+
+### Spec-anchored evidence
+
+| Criterion | Spec-defined outcome | Independent evidence | Result |
+| --- | --- | --- | --- |
+| CONFIRM-04 AC6 (`spec.md:128`) | Visible AWS sequence 01–08 shows the hold/outbox, external owner work, resolution, PostgreSQL decision, result and external reaction; includes expiration/cancellation branches and marks AWS resources unapplied without detailing IAM. | `docs/images/flash-booking-confirmation-aws-components.svg:26–28`, `:126–186`, `:195–205`; README embeds it at `README.md:88–90`. Terraform declares the two owner queues and dedicated DLQs at `infra/modules/data-plane/main.tf:121–160`. Source event creation/routing remains consistent at `CreateReservationService.java:59–61` and `OutboxSqsPublisher.java:80–86`. | ✅ Structural/content PASS; independent rendered inspection unavailable (see ranked gap). |
+| CONFIRM-04 AC7 (`spec.md:129`) | Current visible diagrams use current states, complete message names and event counts; historic and target views are identified. | Step 08 group `step08-result` visibly contains `08`, `Entrega o resultado`, `ReservationConfirmed` and `ReservationConfirmationRejected` at `docs/images/flash-booking-confirmation-aws-components.svg:180–186`. Runtime result names match `ReservationResolutionProcessor.java:49–51` and persistence validation `JdbcReservationPersistenceAdapter.java:197–198`; three creation events match `CreateReservationService.java:59–61`, publisher routing `OutboxSqsPublisher.java:80–86`, and outbox labels `flash-booking-transactional-outbox.svg:47,55,63`. README marks historical and target scope at `README.md:141–147`; `documentation-audit.md:23–48` inventories all 22 image files and classifications. | ✅ PASS for source, labels, contracts and inventory. |
+| T15 Done when (`tasks.md:229`) | Correct gate passes; abbreviating the visible step 08 result in a scratch copy fails. | Replaced only `<text x="70" y="1711" class="stepBody ink">ReservationConfirmationRejected.</text>` with `Rejected.` in a scratch copy of all `docs/images/`. `validate-readme.ps1 -AwsVisualDirectory <scratch>` exited 1 specifically: `visible AWS step 08 result contract is missing 'ReservationConfirmed ou ReservationConfirmationRejected.'`. Scratch was removed; `git status --porcelain=v1 -uall` before/after was byte-for-byte identical. | ✅ PASS; 1/1 targeted mutation killed. |
+
+### Gates and isolation
+
+| Gate | Result |
+| --- | --- |
+| `scripts/validate-readme.ps1` | PASS — 7 README images, 47 local references, 3 performance scenarios |
+| `validate_spec.py .specs/features/reservation-confirmation/spec.md` | PASS — 0 errors, 0 warnings |
+| `validate_tasks.py .specs/features/reservation-confirmation/tasks.md` | PASS — 0 errors, 0 warnings |
+| XML | PASS — 19/19 SVGs parse |
+| Inventory | PASS — 22/22 `docs/images/` files listed and classified |
+| `git diff --check 53de354..b16fdf2` | PASS |
+| Targeted scratch sensor | PASS — shortened visible step 08 result was rejected by the required contract assertion |
+| Real working-tree status around sensor | PASS — unchanged byte-for-byte; pre-existing unrelated dirty files remained present |
+| Independent rendered inspection | NOT VERIFIED — browser policy blocked opening the local SVG (`file:` protocol); the policy forbids alternate browser surfaces or indirect workarounds. Earlier render notes remain author-side evidence only. |
+
+### Ranked gap
+
+1. **Verification gap — independently render and inspect the final AWS SVG for legibility and clipping.** This is required by the diagram acceptance evidence; the browser rejected the local file protocol and explicitly disallowed alternate surfaces/workarounds. The SVG's visual content was unchanged in this diff apart from grouping step 08, but that does not substitute for fresh rendered inspection. No code, gate, state-name, event-count or inventory gap was found.
+
+**Summary:** AC6/AC7 source and contract checks pass; the exact T15 abbreviation mutant is killed; all documentation gates pass. The independent verification remains FAIL until rendered inspection is independently completed. No Java or Terraform production files changed in the reviewed range.
+
+## Validation: Reservation Confirmation T15 — PASS
+
+**Final independent visual follow-up (29/09/2026):** Opened the provided final Chrome headless render `C:\Users\vinic\projetos\cielo\.tmp\aws-step08-final.png` with the local image inspection tool. Step 08 is legible: the number, heading, both full result names, and compensation note are visible inside the card. No text in step 08 is clipped; the full diagram's sequence cards and alternative-path panels are within the rendered canvas. This completes the only outstanding check recorded above. The PNG is author-generated evidence, but the screenshot inspection and conclusion here are independent.
+
+**Updated verdict: PASS.** AC6/AC7 structural and contract checks remain PASS; the exact abbreviation mutant is killed; README/spec/task/XML/inventory/diff gates pass; rendered legibility and clipping inspection now passes. Ranked gaps: none.
