@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,8 @@ class CreateReservationServiceTest {
         UUID eventId = UUID.randomUUID();
         Customer customer = Customer.create(UUID.randomUUID(), "Ana", "ana@example.com", CLOCK.instant());
         when(reservationWriter.eventExists(eventId)).thenReturn(true);
-        when(inventoryOperations.decrement(eventId, 2)).thenReturn(true);
+        Instant acceptedAt = CLOCK.instant().plusSeconds(3);
+        when(inventoryOperations.decrement(eventId, 2)).thenReturn(Optional.of(acceptedAt));
         when(reservationWriter.upsertCustomer(any(Customer.class))).thenReturn(customer);
         CreateReservationService service = service();
 
@@ -57,7 +59,8 @@ class CreateReservationServiceTest {
         assertThat(result.customer()).isEqualTo(customer);
         assertThat(result.reservation().eventId()).isEqualTo(eventId);
         assertThat(result.reservation().quantity()).isEqualTo(2);
-        assertThat(result.reservation().expiresAt()).isEqualTo(CLOCK.instant().plus(Duration.ofMinutes(10)));
+        assertThat(result.reservation().createdAt()).isEqualTo(acceptedAt);
+        assertThat(result.reservation().expiresAt()).isEqualTo(acceptedAt.plus(Duration.ofMinutes(10)));
         verify(reservationWriter).save(result.reservation());
         verify(reservationWriter).addReservationCreatedOutboxEvent(result.reservation());
         verify(reservationWriter).addReservationExpirationScheduledOutboxEvent(result.reservation());
@@ -83,7 +86,7 @@ class CreateReservationServiceTest {
     void create_whenCapacityIsInsufficient_doesNotPersistCustomerReservationOrOutbox() {
         UUID eventId = UUID.randomUUID();
         when(reservationWriter.eventExists(eventId)).thenReturn(true);
-        when(inventoryOperations.decrement(eventId, 3)).thenReturn(false);
+        when(inventoryOperations.decrement(eventId, 3)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().create(eventId, 3, "Ana", "ana@example.com"))
                 .isInstanceOf(ResourceConflictException.class);

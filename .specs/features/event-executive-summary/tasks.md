@@ -92,7 +92,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T03: Registrar marco de inventario e horario de aceite
 
-**Status:** Planned
+**Status:** Complete
 **What:** Registrar o primeiro zero enquanto a flag global esta ligada e usar o relogio PostgreSQL da decisao de aceite em `reservation.created_at` e expiracao.
 **Where:** `JdbcInventoryOperations`, `CreateReservationService` e testes existentes
 **Depends on:** T02
@@ -101,6 +101,20 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** integration para capacidade, reposicao, flag, limite temporal e concorrencia.
 **Gate:** Full
 **Commit:** `fix(summary): record authoritative inventory timestamps`
+
+**Gate result:** Focused `verify -Pintegration -Dtest=CreateReservationServiceTest -Dit.test=InventoryConcurrencyIT` passed; 4 unit tests and 6 PostgreSQL integration tests passed (0 failures/errors/skips).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Atomic decrement returns accepted decision time and rejects insufficient capacity | `InventoryConcurrencyIT.java:50` - accepted decrement is present, insufficient decrement is empty; capacity checked after each | Inventory result is aligned with the database update | Yes |
+| First zero is recorded only while global activation is enabled | `InventoryConcurrencyIT.java:108` - zero while disabled leaves marker null; enabling then decrementing records it | Disabled flag incurs no event marker; enabled flag captures first exhaustion | Yes |
+| Marker is stable after inventory is replenished and exhausted again | `InventoryConcurrencyIT.java:119-132` - stored marker equals first captured timestamp after restock and second decrement | “First” exhaustion remains the first even if seats return | Yes |
+| Acceptance time is after waiting for event-row lock | `InventoryConcurrencyIT.java:135` - hold `FOR UPDATE`; `:163` - returned time is at least 450 ms later | Lock waiting cannot backdate the acceptance | Yes |
+| Reservation start and expiry use acceptance time | `CreateReservationServiceTest.java:62-63` - `createdAt == acceptedAt`, `expiresAt == acceptedAt + holdDuration` | Hold period starts after inventory acceptance | Yes |
+
+*Check C - Necessary:* all five assertions map to T03 `Done when` and EXECSUM-14/31/38; no unclaimed tests added.
 
 ### T04: Apurar fatos no encerramento
 

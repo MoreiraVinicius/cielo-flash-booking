@@ -46,13 +46,15 @@ public class CreateReservationService {
         if (!reservationWriter.eventExists(eventId)) {
             throw new ResourceNotFoundException("event was not found");
         }
-        if (!inventoryOperations.decrement(eventId, quantity)) {
-            throw new ResourceConflictException("event does not have enough available capacity");
-        }
+        Instant acceptedAt = inventoryOperations
+                .decrement(eventId, quantity)
+                .orElseThrow(() -> new ResourceConflictException("event does not have enough available capacity"));
 
-        Customer customer = reservationWriter.upsertCustomer(requestedCustomer);
+        Customer customerAtAcceptance = Customer.create(
+                requestedCustomer.id(), requestedCustomer.name(), requestedCustomer.email(), acceptedAt);
+        Customer customer = reservationWriter.upsertCustomer(customerAtAcceptance);
         Reservation reservation = Reservation.pending(
-                UUID.randomUUID(), eventId, customer, quantity, createdAt.plus(properties.holdDuration()), createdAt);
+                UUID.randomUUID(), eventId, customer, quantity, acceptedAt.plus(properties.holdDuration()), acceptedAt);
         reservationWriter.save(reservation);
         reservationWriter.addReservationCreatedOutboxEvent(reservation);
         reservationWriter.addReservationExpirationScheduledOutboxEvent(reservation);
