@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="1220" viewBox="0 0 1840 1220" role="img" aria-labelledby="title desc">
+  <title id="title">Quem confirma a reserva: fronteiras e dados</title>
+  <desc id="desc">Visão C4 de containers com dados internos. O Flash Booking grava a reserva PENDING e ReservationHeld na outbox do PostgreSQL. Seu worker publica a mensagem na SQS reservation-to-owner. Um único sistema externo, mostrado como caixa preta, resolve todas as pendências e envia ReservationConfirmationRequested pela SQS reservation-from-owner. O worker bloqueia a reserva, deduplica pela inbox e decide pelo estado e horário do PostgreSQL. CONFIRMED mantém o estoque comprometido; rejeição exige compensação externa. O resultado volta pela outbox. Cancelamento de CONFIRMED aguarda uma conclusão externa correlacionada.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}.bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#526b80}.blue{fill:#1168bd}.teal{fill:#087f76}
+      .eyebrow{font-size:17px;font-weight:700;letter-spacing:1.7px}.heading{font-size:39px;font-weight:700}.sub{font-size:20px}
+      .boundary{fill:#fff;stroke:#6e879c;stroke-width:2.5;stroke-dasharray:11 7}.app{fill:#e8f3fc;stroke:#1168bd;stroke-width:2.5}
+      .store{fill:#eef3f7;stroke:#6d879a;stroke-width:2.5}.table{fill:#fff;stroke:#b6c8d8;stroke-width:2}
+      .queue{fill:#e5f4f2;stroke:#328a80;stroke-width:2.5}.external{fill:#243c52;stroke:#172b3b;stroke-width:3}
+      .note{fill:#fff;stroke:#c5d4df;stroke-width:2}.type{font-size:15px;font-weight:700;letter-spacing:1px}.name{font-size:25px;font-weight:700}
+      .body{font-size:18px}.small{font-size:16px}.code{font-size:17px;font-family:Consolas,'Courier New',monospace}.compact{font-size:14px}.queueName{font-size:21px;font-weight:700}
+      .white{fill:#fff}.light{fill:#d9e6ef}.line{stroke:#1168bd;stroke-width:3;fill:none;marker-end:url(#blueArrow)}
+      .return{stroke:#087f76;stroke-width:3;fill:none;marker-end:url(#tealArrow)}.data{stroke:#6d879a;stroke-width:2.5;fill:none;marker-end:url(#grayArrow)}
+    </style>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+    <marker id="tealArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#087f76"/></marker>
+    <marker id="grayArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#6d879a"/></marker>
+  </defs>
+  <rect width="1840" height="1220" class="bg"/>
+  <text x="52" y="55" class="eyebrow blue">RUNTIME LOCAL IMPLEMENTADO · AWS DECLARADA, NÃO APLICADA</text>
+  <text x="52" y="108" class="heading ink">Quem confirma a reserva?</text>
+  <text x="52" y="145" class="sub muted">Visão C4 de containers com os dados decisivos; o responsável por todas as pendências é uma caixa preta.</text>
+
+  <rect x="45" y="211" width="840" height="758" rx="22" class="boundary"/>
+  <text x="75" y="248" class="type muted">LIMITE DO SISTEMA · FLASH BOOKING</text>
+
+  <rect x="77" y="277" width="468" height="632" rx="16" class="store"/>
+  <text x="102" y="312" class="type muted">CONTAINER · POSTGRESQL</text>
+  <text x="102" y="349" class="name ink">Fonte de verdade</text>
+  <text x="102" y="378" class="small muted">Estado, prazo, estoque e mensagens persistidas</text>
+
+  <rect x="102" y="405" width="418" height="127" rx="10" class="table"/>
+  <text x="121" y="434" class="type blue">RESERVATION + EVENT</text>
+  <text x="121" y="464" class="code ink">status · expires_at · confirmed_at</text>
+  <text x="121" y="492" class="code ink">cancellation_id · quantity · available</text>
+  <text x="121" y="518" class="small muted">PENDING já compromete a quantidade.</text>
+
+  <rect x="102" y="550" width="418" height="102" rx="10" class="table"/>
+  <text x="121" y="580" class="type blue">OUTBOX EVENT</text>
+  <text x="121" y="609" class="code ink">id · event_type · payload</text>
+  <text x="121" y="636" class="small muted">id vira outboxEventId; transação do estado.</text>
+
+  <rect x="102" y="670" width="418" height="102" rx="10" class="table"/>
+  <text x="121" y="700" class="type blue">CONFIRMATION INBOX</text>
+  <text x="121" y="729" class="code ink">source + resolution_id · outcome</text>
+  <text x="121" y="756" class="small muted">Deduplica pedido e preserva o resultado.</text>
+
+  <text x="102" y="817" class="body ink">Decisão: lock na reserva + relógio do banco.</text>
+  <text x="102" y="846" class="small muted">Inbox e outbox são tabelas, não serviços.</text>
+  <text x="102" y="874" class="small muted">E-mail e idempotência HTTP não estão nesta vista.</text>
+
+  <rect x="585" y="320" width="265" height="475" rx="16" class="app"/>
+  <text x="608" y="354" class="type compact blue">CONTAINER · SPRING BOOT</text>
+  <text x="608" y="394" class="name ink">Worker</text>
+  <text x="608" y="432" class="body ink">Publica a outbox.</text>
+  <text x="608" y="461" class="body ink">Consome a fila de entrada.</text>
+  <path d="M608 493 H826" stroke="#a7c7de" stroke-width="2"/>
+  <text x="608" y="530" class="type compact blue">AO RECEBER CONFIRMAÇÃO</text>
+  <text x="608" y="563" class="body ink">1. Bloqueia a reserva.</text>
+  <text x="608" y="594" class="body ink">2. Deduplica na inbox.</text>
+  <text x="608" y="625" class="body ink">3. Compara estado e prazo.</text>
+  <text x="608" y="659" class="small muted">PENDING antes do prazo</text>
+  <text x="608" y="685" class="small muted">→ CONFIRMED</text>
+  <text x="608" y="711" class="small muted">sem novo débito.</text>
+  <text x="608" y="749" class="small muted">Tardia/encerrada → rejeição.</text>
+  <path d="M545 399 H585" class="data"/>
+  <path d="M585 760 H565 V716 H545" class="data"/>
+
+  <rect x="920" y="320" width="310" height="192" rx="15" class="queue"/>
+  <text x="944" y="354" class="type compact teal">SQS · SAÍDA AO RESPONSÁVEL</text>
+  <text x="944" y="393" class="queueName ink">reservation-to-owner</text>
+  <text x="944" y="427" class="body ink">ReservationHeld inicia o trabalho.</text>
+  <text x="944" y="456" class="small muted">Resultado e pedido de cancelamento</text>
+  <text x="944" y="482" class="small muted">também saem pela outbox.</text>
+
+  <rect x="920" y="607" width="310" height="187" rx="15" class="queue"/>
+  <text x="944" y="641" class="type compact teal">SQS · ENTRADA AO FLASH BOOKING</text>
+  <text x="944" y="680" class="queueName ink">reservation-from-owner</text>
+  <text x="944" y="713" class="small ink">ReservationConfirmationRequested</text>
+  <text x="944" y="742" class="small muted">ou conclusão do cancelamento.</text>
+  <text x="944" y="770" class="small muted">resolutionId estável em retries.</text>
+
+  <rect x="1280" y="320" width="510" height="474" rx="18" class="external"/>
+  <text x="1310" y="357" class="type light">SISTEMA EXTERNO · CAIXA PRETA</text>
+  <text x="1310" y="405" class="name white">Único responsável por</text>
+  <text x="1310" y="439" class="name white">todas as pendências</text>
+  <path d="M1310 463 H1760" stroke="#6e879c" stroke-width="2"/>
+  <text x="1310" y="503" class="body white">Recebe ReservationHeld.</text>
+  <text x="1310" y="536" class="body white">Deduplica por reserva + operação.</text>
+  <text x="1310" y="584" class="body white">Só solicita confirmação depois de</text>
+  <text x="1310" y="616" class="body white">resolver TODAS as pendências.</text>
+  <text x="1310" y="664" class="body light">Consome resultado: confirmado ou</text>
+  <text x="1310" y="694" class="body light">rejeitado; compensa a rejeição.</text>
+  <text x="1310" y="753" class="small light">Implementação externa não faz parte deste repo.</text>
+
+  <path d="M850 412 H920" class="line"/>
+  <path d="M1230 412 H1280" class="line"/>
+  <text x="886" y="299" class="small blue">Saída · fato inicial e resultado</text>
+  <path d="M1280 699 H1230" class="return"/>
+  <path d="M920 699 H850" class="return"/>
+  <text x="901" y="587" class="small teal">Entrada · pedido após resolver tudo</text>
+
+  <rect x="45" y="992" width="560" height="175" rx="15" class="note"/>
+  <text x="70" y="1026" class="type blue">CONFIRMAÇÃO ACEITA</text>
+  <text x="70" y="1062" class="body ink">PENDING → CONFIRMED antes do prazo.</text>
+  <text x="70" y="1094" class="body ink">Estoque continua comprometido.</text>
+  <text x="70" y="1130" class="small muted">Outbox publica ReservationConfirmed.</text>
+
+  <rect x="638" y="992" width="560" height="175" rx="15" class="note"/>
+  <text x="663" y="1026" class="type teal">CONFIRMAÇÃO REJEITADA</text>
+  <text x="663" y="1062" class="body ink">Expirada ou encerrada → sem confirmação.</text>
+  <text x="663" y="1094" class="body ink">O responsável compensa fora do sistema.</text>
+  <text x="663" y="1130" class="small muted">Outbox publica ReservationConfirmationRejected.</text>
+
+  <rect x="1231" y="992" width="559" height="175" rx="15" class="note"/>
+  <text x="1256" y="1026" class="type blue">CANCELAMENTO DE CONFIRMED</text>
+  <text x="1256" y="1062" class="body ink">DELETE → CANCELLATION_PENDING.</text>
+  <text x="1256" y="1094" class="body ink">Estoque só volta após resposta externa</text>
+  <text x="1256" y="1123" class="body ink">correlacionada por cancellationId.</text>
+  <text x="1256" y="1151" class="small muted">Não acompanha compensação de rejeições.</text>
+</svg>

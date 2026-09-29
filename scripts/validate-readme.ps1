@@ -1,7 +1,9 @@
-param(
+﻿param(
     [string]$ReadmePath,
     [string]$AwsVisualDirectory
 )
+
+$PSDefaultParameterValues['Get-Content:Encoding'] = 'UTF8'
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -69,12 +71,13 @@ Assert-Condition -Condition (Test-Path -LiteralPath $awsVisualRoot -PathType Con
 foreach ($requiredTruth in @(
     'case técnico independente',
     'reserva temporária de ingressos',
-    'Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega.',
+    'não processa pagamentos, não interpreta o estado financeiro e não emite ingressos.',
     'Spring Boot 4.0.8',
     'Jackson 3',
     'ficam desligados por padrão',
     'aws-plan.md',
-    '125 testes'
+    'O ciclo de confirmação externa está implementado no runtime local:',
+    'não foi aplicada'
 )) {
     Assert-Contains -Text $readme -Expected $requiredTruth -Context 'README truth contract'
 }
@@ -113,7 +116,7 @@ foreach ($match in $imageMatches) {
 
 foreach ($requiredAsset in @(
     'flash-booking-hero.svg',
-    'flash-booking-data-model.png',
+    'flash-booking-data-model.svg',
     'flash-booking-transactional-outbox.png'
 )) {
     Assert-Contains -Text $readme -Expected $requiredAsset -Context 'README image set'
@@ -129,8 +132,8 @@ foreach ($obsoleteAsset in @(
     Assert-Condition -Condition (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot "docs\images\$obsoleteAsset"))) -Message "obsolete architecture asset still exists: $obsoleteAsset"
 }
 
-# The consolidated README links only its three overview visuals; deeper assets remain in docs/images
-# for specifications and future navigation, so an orphan-image inventory would contradict that policy.
+# The README links the current overview and confirmation views. Historical deployment
+# diagrams remain in docs/images with their scope and deployment status stated accessibly.
 
 $detailsOpen = [regex]::Matches($readme, '<details>').Count
 $detailsClose = [regex]::Matches($readme, '</details>').Count
@@ -247,7 +250,8 @@ $awsVisualContracts = @(
             'VPC em pelo menos 2 AZs',
             'serviços gerenciados regionais fora da VPC',
             'NAT GATEWAY POR AZ',
-            'Mesmos três modos Java',
+            'Topologia Multi-AZ não provisionada',
+            'ciclo de confirmação está em diagrama próprio',
             'failover e escala ainda precisam de evidência',
             'tasks Multi-AZ · autoscaling independente',
             'QUERY · N TASKS',
@@ -410,6 +414,47 @@ foreach ($fact in '>7<', '>13<', '>29<', '>94<', '>43/43<', 'baseline integral h
 $architectureSvg = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs\images\flash-booking-architecture-evolution.svg') -Raw
 foreach ($fact in 'RDS PostgreSQL Single-AZ', 'Aurora + RDS Proxy', 'Valkey Multi-AZ', 'VALIDADA', 'NÃO APLICADA') {
     Assert-Contains -Text $architectureSvg -Expected $fact -Context 'architecture comparison'
+}
+
+# The reservation lifecycle is implemented locally; AWS resources remain unapplied.
+foreach ($fact in @(
+    'PENDING',
+    'CANCELLED',
+    'EXPIRED',
+    'CONFIRMED',
+    'CANCELLATION_PENDING',
+    'implementado no runtime local',
+    'não foi aplicada',
+    'módulo externo',
+    'ReservationHeld',
+    'ReservationConfirmationRequested',
+    'ReservationConfirmationRejected',
+    'ReservationHoldClosed',
+    'ReservationCancellationRequested',
+    'C4 Model e ciclo de confirmação',
+    'flash-booking-confirmation-c4-context.svg',
+    'flash-booking-confirmation-c4-containers.svg',
+    'flash-booking-confirmation-lifecycle.svg'
+)) {
+    Assert-Contains -Text $readme -Expected $fact -Context 'reservation lifecycle implementation'
+}
+
+$lifecycleContracts = @(
+    @{ Name = 'flash-booking-confirmation-c4-context.svg'; Facts = @('RUNTIME LOCAL', 'AWS NÃO APLICADA', 'Flash Booking', 'ÚNICO DONO', 'SQS direta', 'Compensa rejeição') },
+    @{ Name = 'flash-booking-confirmation-c4-containers.svg'; Facts = @('RUNTIME LOCAL', 'AWS NÃO APLICADA', 'Command API', 'Query API', 'Worker', 'POSTGRESQL', 'Saída ao externo', 'Entrada ao Flash', 'Outbox e inbox são tabelas', 'nenhuma assinatura SNS') },
+    @{ Name = 'flash-booking-confirmation-lifecycle.svg'; Facts = @('CICLO IMPLEMENTADO', 'AWS NÃO APLICADA', 'PENDING', 'CONFIRMED', 'CANCELLATION_PENDING', 'CANCELLED', 'EXPIRED', 'ReservationConfirmationRejected', 'ReservationHoldClosed', 'resolutionId') }
+)
+foreach ($contract in $lifecycleContracts) {
+    $path = Join-Path $awsVisualRoot $contract.Name
+    Assert-Condition -Condition (Test-Path -LiteralPath $path -PathType Leaf) -Message "missing lifecycle diagram: $($contract.Name)"
+    $content = Get-Content -LiteralPath $path -Raw
+    [xml]$xml = $content
+    Assert-Condition -Condition ($xml.DocumentElement.LocalName -eq 'svg') -Message "proposed diagram has no svg root: $($contract.Name)"
+    Assert-Condition -Condition ($content -match 'role="img" aria-labelledby="title desc"') -Message "lifecycle diagram lacks accessibility labels: $($contract.Name)"
+    Assert-Condition -Condition ($null -ne $xml.DocumentElement.title -and $null -ne $xml.DocumentElement.desc) -Message "lifecycle diagram lacks title or description: $($contract.Name)"
+    foreach ($fact in $contract.Facts) {
+        Assert-Contains -Text $content -Expected $fact -Context $contract.Name
+    }
 }
 
 Write-Output "validate-readme: PASS - current specs linked, $($imageMatches.Count) README images, $($localReferences.Count) local references, 3 performance scenarios"

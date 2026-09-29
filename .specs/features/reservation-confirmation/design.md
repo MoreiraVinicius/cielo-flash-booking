@@ -1,18 +1,18 @@
 # Confirmação externa da reserva — desenho
 
 **Spec:** `.specs/features/reservation-confirmation/spec.md`
-**Status:** Arquitetura aprovada; implementação em andamento.
+**Status:** Implementada no runtime local. Recursos AWS declarados em Terraform ainda não aplicados.
 
 ## Veredito sobre o sistema atual
 
-O fluxo implementado reserva e devolve capacidade com segurança, mas não conclui uma retenção como compromisso definitivo. `ReservationCreated` e `ReservationExpirationScheduled` na outbox são eventos de saída para notificação e expiração. A menção a “confirmação assíncrona aceita” em `flash-booking-high-load/design.md` trata de retornar HTTP `202` ao pedido de reserva sob carga, não de confirmar depois uma reserva existente. Portanto, a outbox atual não resolve a entrada de uma decisão externa.
+O runtime agora reserva, confirma integralmente e cancela com decisão de inventário no PostgreSQL. `ReservationCreated` e `ReservationExpirationScheduled` mantêm suas filas de notificação e expiração; `ReservationHeld`, resultados, fechamentos e pedidos de cancelamento usam uma SQS direta para o único responsável externo. A menção a “confirmação assíncrona aceita” em `flash-booking-high-load/design.md` trata do HTTP `202` da criação inicial sob carga, não do estado final `CONFIRMED`.
 
 ## Alternativas de interface
 
 | Abordagem | Vantagem | Custo ou limite | Recomendação |
 | --- | --- | --- | --- |
 | Comando HTTP interno autenticado | Devolve aceite/rejeição imediatamente; reduz atraso antes do prazo. | Acopla disponibilidade e latência dos módulos; exige controle de autorização entre serviços. | Alternativa se o produtor precisar de decisão síncrona. |
-| Mensagem assíncrona de confirmação + inbox | Mantém intenção durável e tolera indisponibilidade; reutiliza worker, PostgreSQL e outbox. | A mensagem pode chegar após o prazo; produtor precisa esperar resultado e compensar rejeição. | **Escolhida pelo usuário** para o plano. |
+| Mensagem assíncrona de confirmação + inbox | Mantém intenção durável e tolera indisponibilidade; reutiliza worker, PostgreSQL e outbox. | A mensagem pode chegar após o prazo; produtor precisa esperar resultado e compensar rejeição. | **Implementada**. |
 | Webhook direto do provedor de pagamento | Parece encurtar o caminho. | Faz Flash Booking interpretar credenciais e semântica de pagamento que não lhe pertencem. | Não adotar nesta fronteira. |
 
 ## Architecture Overview
@@ -29,17 +29,17 @@ flowchart LR
     W --> P
 ```
 
-O único responsável externo trata todas as pendências e solicita a confirmação antes do prazo. Somente a role IAM desse responsável recebe `sqs:SendMessage` para a fila de entrada; essa permissão lhe concede autoridade para declarar todas as pendências resolvidas. O campo `source` da mensagem é dado autodeclarado para correlação, não autenticação. O worker registra `resolutionId` na inbox, bloqueia a reserva, consulta o relógio PostgreSQL após o lock e decide `PENDING → CONFIRMED` ou uma rejeição. Na mesma transação grava o resultado na outbox; o publisher o entrega depois. O produtor não considera a reserva definitiva até receber `ReservationConfirmed`.
+O único responsável externo trata todas as pendências e solicita a confirmação antes do prazo. Somente a role IAM desse responsável recebe `sqs:SendMessage` para a fila de entrada; essa permissão lhe concede autoridade para declarar todas as pendências resolvidas. O campo `source` da mensagem é dado autodeclarado para correlação, não autenticação. O worker bloqueia primeiro a linha da reserva, depois registra `resolutionId` na inbox e decide a transição usando o relógio PostgreSQL após o lock. Essa ordem serializa resoluções distintas para a mesma reserva antes que a FK da inbox adquira sua referência e evita deadlock de conversão de lock compartilhado em exclusivo. Inbox, reserva e resultado da outbox permanecem na mesma transação; o publisher entrega o resultado depois. O produtor não considera a reserva definitiva até receber `ReservationConfirmed`.
 
-Há um único módulo externo responsável por **todas** as pendências. Suas réplicas competem por uma fila de trabalho; uma mensagem vai a uma réplica de cada vez, embora redelivery seja possível e exija idempotência no processamento externo. A criação já grava `ReservationCreated` e `ReservationExpirationScheduled` na outbox da mesma transação e publica cada tipo em uma SQS específica; por isso, um `ReservationHeld` com payload mínimo na outbox e uma SQS direta para o único responsável é mais coeso que exigir que o cliente repasse `reservationId` após o HTTP `201`. A proposta mantém o consumidor de e-mail atual: `ReservationCreated` continua interno, enquanto `ReservationHeld` é contrato da integração externa. Não há SNS Fan-Out.
+Há um único módulo externo responsável por **todas** as pendências. Suas réplicas competem por uma fila de trabalho; uma mensagem vai a uma réplica de cada vez, embora redelivery seja possível e exija idempotência no processamento externo. A criação grava `ReservationCreated`, `ReservationExpirationScheduled` e `ReservationHeld` na outbox da mesma transação, e o publisher encaminha cada tipo à fila correspondente. `ReservationCreated` continua interno para o consumidor de e-mail, enquanto `ReservationHeld` inicia a integração externa. Não há SNS Fan-Out.
 
-### Filas e permissões provisionadas
+### Filas e permissões declaradas e executadas localmente
 
 Terraform e Compose declaram duas filas SQS Standard direcionais, cada uma com criptografia gerenciada pelo SQS, long polling de 20 segundos, visibility timeout configurável (60 segundos por padrão) e DLQ própria. `reservation-to-owner` carrega `ReservationHeld`, resultados e solicitações de cancelamento para o módulo externo; `reservation-from-owner` recebe confirmação e conclusão correlacionada de cancelamento. As filas existentes de notificação e expiração mantêm suas finalidades.
 
 No worker, a role da task publica somente em `reservation-to-owner` e consome somente `reservation-from-owner`, além das permissões atuais das filas internas. A variável opcional `reservation_owner_role_arn` instala uma resource policy que permite à role configurada consumir a fila de saída e publicar na fila de entrada. Ausência da configuração não concede acesso externo; outputs expõem ambas as URLs ao responsável. Para integração cross-account, a role externa também precisa de uma identity policy correspondente na própria conta. Os alarmes e dashboard da demo incluem backlog, idade e mensagens em DLQs dessas duas filas.
 
-O ambiente local cria as mesmas quatro filas com LocalStack e fornece as URLs ao worker. O simulador do responsável externo que as usa pertence à tarefa T07; não existe implementação de compra ou pagamento.
+O ambiente local cria as mesmas quatro filas com LocalStack e fornece as URLs ao worker. O teste de integração simula o responsável externo nessas filas; não existe implementação de compra ou pagamento. A infraestrutura AWS está em Terraform e não foi aplicada.
 
 ## Filas de trabalho e fan-out
 
@@ -82,7 +82,7 @@ stateDiagram-v2
 
 Invariante por evento: `capacity - available = SUM(quantity WHERE status IN ('PENDING','CONFIRMED','CANCELLATION_PENDING'))`. Uma reserva `CONFIRMED` não tem motivo de encerramento; `confirmedAt` fica presente também durante e depois do cancelamento pendente para preservar o histórico da confirmação. Expiração só atua sobre `PENDING` e ignora `CONFIRMED` e `CANCELLATION_PENDING`. `DELETE` em `PENDING` mantém o encerramento imediato existente. `DELETE` em `CONFIRMED` grava `CANCELLATION_PENDING` e responde `202` sem afirmar conclusão; repetir o pedido mantém `202` sem nova solicitação. Depois de entrar em `CANCELLATION_PENDING`, a reserva não retorna a `CONFIRMED`. Falha ou ausência de resposta externa conserva esse estado e o estoque até chegada do desfecho positivo.
 
-## Contrato de integração proposto
+## Contrato de integração implementado
 
 - Início do fluxo externo: gravar `ReservationHeld` na outbox junto da criação e publicá-lo em uma SQS direta do único módulo responsável por todas as pendências. O payload v1 contém `outboxEventId`, `type`, `reservationId`, `eventId`, `quantity` e `expiresAt`, sem dados pessoais ou financeiros; `outboxEventId` é igual à chave primária da outbox e estável em republicações. O evento interno atual `ReservationCreated` alimenta a fila de notificação por e-mail e seu payload inclui `customerId`; não o expor diretamente como contrato público. Não usar SNS para esse trabalho.
 - Entrada: `ReservationConfirmationRequested` versão 1, como objeto JSON com exatamente `version`, `type`, `source`, `resolutionId`, `reservationId` e `requestedAt`; `ReservationCancellationCompleted` versão 1 usa os mesmos campos comuns, substitui `requestedAt` por `cancellationId`. Tipos, UUIDs, `Instant`, identificadores e campos são validados; campos extras/desconhecidos ou payload acima de 16 KiB UTF-8 são inválidos e seguem retry/DLQ sem tocar a reserva. O `messageId` nativo do SQS é apenas transporte e não integra a identidade de negócio. `requestedAt` serve para auditoria, nunca para substituir o relógio da decisão. O responsável só envia confirmação depois de resolver todas as pendências.
@@ -102,16 +102,16 @@ O evento `ReservationHeld` conserva o mesmo `outboxEventId` em cada tentativa de
 
 | Artefato atual | Reuso ou mudança planejada |
 | --- | --- |
-| `reservation/application/*` | Concentrar a decisão de transição em um módulo de ciclo de reserva, com interface pequena para o consumidor. |
-| `JdbcReservationPersistenceAdapter` | Reaproveitar `FOR UPDATE` e tempo PostgreSQL pós-lock; adicionar transição condicional e leitura de resultado. |
-| `outbox_event` e publisher | V7 permite tipos de integração. Registrar `ReservationHeld`, resultados, `ReservationHoldClosed` e `ReservationCancellationRequested` na mesma transação do estado/inbox; rotear ao SQS do responsável sem reutilizar filas de notificação/expiração. |
+| `reservation/application/*` | Aplicar a decisão de transição em serviços do ciclo de reserva com interface pequena para o consumidor. |
+| `JdbcReservationPersistenceAdapter` | Usar `FOR UPDATE` e tempo PostgreSQL pós-lock; transições condicionais e leitura de resultado estão implementadas. |
+| `outbox_event` e publisher | V7 aceita eventos de integração. `ReservationHeld`, resultados, `ReservationHoldClosed` e `ReservationCancellationRequested` são gravados com o estado/inbox e roteados ao SQS do responsável sem reutilizar filas de notificação/expiração. |
 | `ExpirationReconciler`, `SqsExpirationConsumer` e `DELETE` tardio | Somente o vencedor de `PENDING → EXPIRED` devolve capacidade e grava `ReservationHoldClosed(EXPIRED)` na mesma transação. |
-| `GET /reservations/{id}` | Expor `CONFIRMED`/`confirmedAt` sem dados de pagamento. |
-| `docs/images/flash-booking-c4-*.svg` | Reusar convenções visuais e mostrar a arquitetura implementada e seus limites. |
+| `GET /reservations/{id}` | Expõe `CONFIRMED`/`confirmedAt` sem dados de pagamento. |
+| `docs/images/flash-booking-c4-*.svg` | Convenções visuais aplicadas às vistas atuais e aos limites de deployment. |
 
 ## Data Models
 
-- `reservation.status`: adicionar `CONFIRMED` e `CANCELLATION_PENDING` ao `CHECK`; `confirmed_at TIMESTAMPTZ` e `cancellation_id UUID` nullable, com coerência por status. `confirmed_at` é nulo antes da confirmação e obrigatório em `CONFIRMED`, `CANCELLATION_PENDING` e no `CANCELLED` vindo de reserva confirmada. `cancellation_id` é obrigatório em `CANCELLATION_PENDING`, único enquanto não nulo e permanece no `CANCELLED` originado dele; é nulo nos outros estados. Motivos terminais continuam identificando cancelamento solicitado ou prazo alcançado.
+- `reservation.status` inclui `CONFIRMED` e `CANCELLATION_PENDING`; `confirmed_at TIMESTAMPTZ` e `cancellation_id UUID` são nullable, com coerência por status. `confirmed_at` é nulo antes da confirmação e obrigatório em `CONFIRMED`, `CANCELLATION_PENDING` e no `CANCELLED` vindo de reserva confirmada. `cancellation_id` é obrigatório em `CANCELLATION_PENDING`, único enquanto não nulo e permanece no `CANCELLED` originado dele; é nulo nos outros estados. Motivos terminais continuam identificando cancelamento solicitado ou prazo alcançado.
 - `confirmation_inbox`: `source` e `resolution_id` são texto não vazio de até 128 caracteres e formam a chave primária de deduplicação; `reservation_id` nullable permite armazenar `NOT_FOUND` e referencia a reserva com exclusão restrita quando ela existe. `message_type` só aceita confirmação solicitada ou conclusão de cancelamento; o fingerprint é SHA-256 hexadecimal minúsculo de 64 caracteres; `outcome` é um objeto JSON reproduzível, `processed_at` usa o relógio PostgreSQL e `cancellation_id` é obrigatório somente para conclusão de cancelamento. Não há índice secundário até existir uma consulta medida que o justifique.
 - A inbox conserva o resultado enquanto a reserva existir nesta versão. Limpeza ou arquivamento posterior exige janela de redrive definida para não perder a semântica de replay.
 - `outbox_event`: novos tipos de resultado e solicitação de cancelamento com payload versionado. Publicação segue o padrão transacional existente.
@@ -119,13 +119,13 @@ O evento `ReservationHeld` conserva o mesmo `outboxEventId` em cada tentativa de
 
 ## Representações visuais no README
 
-| Vista | Pergunta que responde | Artefato publicado como proposta |
+| Vista | Pergunta que responde | Artefato atual |
 | --- | --- | --- |
 | C4 System Context | Quem solicita confirmação e cancelamento e qual sistema decide/compensa? | `docs/images/flash-booking-confirmation-c4-context.svg` |
 | C4 Container | Onde estão APIs, worker, PostgreSQL, outbox e as duas filas direcionais da integração, sem SNS? | `docs/images/flash-booking-confirmation-c4-containers.svg` |
 | Dinâmica/estado | O que acontece com aceite, duplicata, atraso, expiração e cancelamento pendente? | `docs/images/flash-booking-confirmation-lifecycle.svg` |
 
-As vistas C4 seguem níveis distintos: contexto mostra pessoas e sistemas; containers mostram processos e armazenamentos dentro do Flash Booking e as duas SQS fora do limite do software, com dono lógico identificado; o diagrama de estados mostra desfechos e corridas. O README mantém os cinco endpoints e as figuras atuais como entrega comprovada. As novas vistas têm título e legenda “proposta — não implementada”, descrição acessível e nenhuma afirmação de pagamento realizado. Os SVGs foram renderizados e submetidos ao validador documental; T08–T10 exigem reconciliação com o runtime futuro.
+As vistas C4 seguem níveis distintos: contexto mostra pessoas e sistemas; containers mostram processos e armazenamentos dentro do Flash Booking e as duas SQS fora do limite do software, com dono lógico identificado; o diagrama de estados mostra desfechos e corridas. O README mantém os cinco endpoints. As vistas descrevem o ciclo executável local e identificam que os recursos AWS ainda não foram aplicados; nenhuma afirma pagamento realizado.
 
 ## Error Handling Strategy
 
@@ -143,8 +143,8 @@ As vistas C4 seguem níveis distintos: contexto mostra pessoas e sistemas; conta
 
 | Concern | Evidência atual | Impacto | Mitigação |
 | --- | --- | --- | --- |
-| Runtime anterior aceitava somente três estados | `.specs/STATE.md` e schema inicial | Uma migração e transições incorretas poderiam liberar estoque já confirmado. | AD-031 supersede AD-007; a migration e os testes cobrem cada estado e cada devolução. |
-| Expiração e `DELETE` hoje só fecham `PENDING` | `JdbcReservationPersistenceAdapter.java` | Uma atualização ingênua poderia devolver estoque confirmado. | Transições condicionais e teste de corrida contra PostgreSQL real. |
+| Estados e constraints precisam permanecer alinhados | V1 e V6, `.specs/STATE.md` AD-031 | Uma migração ou transição incorreta poderia liberar estoque já confirmado. | Constraints, migration e testes cobrem cada estado e cada devolução. |
+| Expiração e `DELETE` afetam estados diferentes | `JdbcReservationPersistenceAdapter.java` e testes PostgreSQL | Uma atualização não condicional poderia devolver estoque confirmado. | Transições condicionais e testes de corrida contra PostgreSQL real. |
 | O prazo é calculado antes da espera pelo lock de estoque | `CreateReservationService.java:43-55` | Reduz a janela efetiva para confirmação sob contenção. | Medir o prazo na decisão de criação e testar lock wait na mesma mudança. |
 | Mensagem externa pode chegar tarde | Nova fronteira assíncrona | O produtor pode ter concluído sua própria operação sem reserva. | Resultado explícito e contrato de compensação; não presumir sucesso pela publicação. |
 | Cancelamento de confirmado depende de responsável externo | Fronteira assíncrona | `CANCELLATION_PENDING` pode durar indefinidamente e reter estoque. | Não liberar estoque sem `ReservationCancellationCompleted`; fila e consumidor mantêm retry/DLQ e o módulo externo controla sua recuperação. |

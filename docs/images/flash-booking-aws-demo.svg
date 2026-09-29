@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
   <title id="title">Flash Booking — topologia AWS da demo</title>
-  <desc id="desc">Topologia AWS efetivamente provisionada para a demo do Flash Booking. API Gateway e WAF protegem a borda; VPC Link v2 e Application Load Balancer interno encaminham para três serviços Amazon ECS Fargate. RDS PostgreSQL Single-AZ é a fonte de verdade, Valkey single-node acelera consultas, duas filas SQS com DLQs suportam expiração e notificação, e SES envia e-mails. CloudWatch, Secrets Manager e Budgets cobrem operação. A infraestrutura foi aplicada, validada e destruída.</desc>
+  <desc id="desc">Topologia AWS historicamente provisionada para a demo de reserva temporária, sem integração de confirmação externa. API Gateway e WAF protegem a borda; VPC Link v2 e Application Load Balancer interno encaminham para três serviços Amazon ECS Fargate. RDS PostgreSQL Single-AZ é a fonte de verdade, Valkey single-node acelera consultas, duas filas SQS com DLQs suportam expiração e notificação, e SES envia e-mails. CloudWatch, Secrets Manager e Budgets cobrem operação. A infraestrutura foi aplicada, validada e destruída.</desc>
   <defs>
     <linearGradient id="page" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F8FCFF"/><stop offset="1" stop-color="#EDF7FC"/></linearGradient>
     <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#061B4F"/><stop offset="1" stop-color="#204986"/></linearGradient>

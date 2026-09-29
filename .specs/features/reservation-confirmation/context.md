@@ -1,6 +1,6 @@
 # Contexto da confirmação externa
 
-**Status:** T01–T06 implementadas; T07 e reconciliação documental/visual continuam no plano AD-031.
+**Status:** Ciclo de reserva implementado localmente e documentação reconciliada. Infraestrutura AWS foi declarada, mas não aplicada; o módulo externo é simulado nos testes.
 
 ## Linguagem de domínio
 

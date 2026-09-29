@@ -37,10 +37,10 @@ function Get-ValkeyTelemetry {
 
 function Get-InventoryAudit {
     $sql = @'
-WITH pending AS (
+WITH committed AS (
     SELECT event_id, COALESCE(SUM(quantity), 0) AS quantity
     FROM reservation
-    WHERE status = 'PENDING'
+    WHERE status IN ('PENDING', 'CONFIRMED', 'CANCELLATION_PENDING')
     GROUP BY event_id
 )
 SELECT COALESCE(json_agg(row_to_json(result)), '[]'::json)
@@ -51,7 +51,7 @@ FROM (
         NOT EXISTS (SELECT 1 FROM reservation WHERE quantity <= 0) AS "quantitiesPositive",
         event.capacity - event.available = COALESCE(pending.quantity, 0) AS "inventoryBalanced"
     FROM event
-    LEFT JOIN pending ON pending.event_id = event.id
+    LEFT JOIN committed ON committed.event_id = event.id
     ORDER BY event.id
 ) result;
 '@

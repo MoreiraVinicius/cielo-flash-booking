@@ -1,21 +1,22 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T01–T06 estão concluídas; T07 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
+**Status:** T01–T12 concluídas. O runtime local e a documentação foram verificados; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
 
 ## Execution Protocol
 
-Seguir `tlc-spec-driven`: atualizar spec/context/design e decisões antes de alterar comportamento, testar cada tarefa contra seus critérios, concluir cada tarefa em commit atômico e executar o Verifier independente após a última. A execução altera arquivos e prepara Terraform, mas não autoriza `terraform apply`, publicação AWS nem implementação de pagamentos.
+Seguir `tlc-spec-driven`: atualizar spec/context/design e decisões antes de alterar comportamento, testar cada tarefa contra seus critérios, concluir cada tarefa em commit atômico e executar um Verifier independente após a última. A execução alterou arquivos e preparou Terraform, mas não autorizou `terraform apply`, publicação AWS nem implementação de pagamentos.
 
 ## Test Coverage Matrix
 
 | Camada | Teste exigido | Resultado observado |
 | --- | --- | --- |
-| Estado e transições | unit + PostgreSQL integration | `PENDING → CONFIRMED`, cancelamento pendente sem retorno a `CONFIRMED`, corridas, prazo pós-lock e invariante por evento. |
+| Estado e transições | unit + PostgreSQL integration | 98 testes unitários passaram; integrações cobrem `PENDING → CONFIRMED`, cancelamento pendente sem retorno a `CONFIRMED`, corridas, prazo pós-lock e invariante por evento. |
 | Infraestrutura de integração | Terraform/static + Compose smoke | T04: 7 testes Terraform passaram nos módulos data-plane, compute e edge-observability; `terraform validate` passou na composição demo; LocalStack saudável criou as 4 filas novas, cada qual com DLQ própria, long polling de 20s e visibility timeout de 60s. |
 | Inbox, outbox, SQS | integration | T05: 8 integrações SQS/PostgreSQL passaram para inbox, replay, concorrência e retry. T06: 37 integrações selecionadas passaram; outbox de `ReservationHeld`, resultado, fechamento e cancelamento, roteamento ao dono, criação, expiração e concorrência. |
-| HTTP | integration | `GET` confirmado/em cancelamento e `DELETE` confirmado assíncrono; cinco rotas do case preservadas. |
-| Specs e diagramas | validation + inspeção visual | Links, SVG acessível, distinção atual/proposto e contratos verdadeiros. |
+| HTTP e fluxo externo simulado | integration | T07: 8 testes `ReservationQueryControllerIT` e 10 `SqsReservationConfirmationConsumerIT` passaram; a simulação percorre retenção, confirmação e cancelamento; cinco rotas do case preservadas. |
+| Specs e diagramas | validation + inspeção visual | Gate documental passou: 6 imagens README, 44 referências resolvidas; SVGs de C4, lifecycle e modelo renderizados e inspecionados. |
+| Regressões do Verifier | focused PostgreSQL/LocalStack integration + discrimination sensor | T12: 13 integrações focadas passaram; os três cenários identificados foram adicionados; sensor isolado matou 1/1 mutações. |
 
 ## Gate Check Commands
 
@@ -59,7 +60,7 @@ T08 → T09 → T10
 **Tests:** validation documental dos critérios e links.
 **Gate:** Spec, Tasks, Diff.
 
-**Status:** Complete; decisões e specs afetadas agora descrevem o ciclo aprovado. Os contratos de runtime e a reconciliação visual seguem nas tarefas dependentes.
+**Status:** Complete; decisões e specs afetadas descrevem o ciclo atual.
 
 ### T02: Evoluir o schema de reserva e inbox
 
@@ -71,7 +72,7 @@ T08 → T09 → T10
 **Tests:** integration de schema e constraints, incluídos na tarefa.
 **Gate:** Java.
 
-**Status:** Complete; V6 e oito casos de integração PostgreSQL cobrem os estados, a inbox, unicidade, retenção e migração dos três estados legados.
+**Status:** Complete; V6 e oito casos de integração PostgreSQL cobrem os estados, a inbox, unicidade, retenção e migração dos estados anteriores.
 
 ### T03: Implementar a decisão autoritativa
 
@@ -131,15 +132,19 @@ T08 → T09 → T10
 **Tests:** integration HTTP, resumo executivo, auditoria de inventário, contratos Postman e fluxo local completo, incluídos na tarefa.
 **Gate:** Java.
 
+**Status:** Complete; `GET` expõe `confirmedAt`, `DELETE` confirmado responde 202 sem liberar capacidade, repetição mantém uma solicitação, resumo reconstrói o corte do evento com reservas confirmadas e auditoria de carga inclui todo o estoque comprometido. A simulação sem pagamentos percorre retenção, confirmação e cancelamento. Passaram 98 testes unitários e 23 integrações focadas; o cenário do resumo soma 15 ingressos no minuto de pico.
+
 ### T08: Reconciliar as vistas C4 com a implementação
 
-**What:** Revisar as vistas C4 e AWS de demo/alta carga junto às novas vistas C4 para representar as filas de integração, o responsável externo e a fronteira entre runtime local, Terraform atual e implantação histórica destruída.
+**What:** Revisar as vistas C4 e AWS de demo/alta carga junto às vistas C4 da confirmação para representar as filas de integração, o responsável externo e a fronteira entre runtime local, infraestrutura declarada e implantação histórica destruída.
 **Where:** `docs/images/`
 **Depends on:** T07
 **Requirement:** CONFIRM-04
-**Done when:** Contexto mostra ator, Flash Booking e responsável externo; containers mostra APIs, worker, PostgreSQL e filas direcionais com o dono lógico correto; AWS e evolução distinguem recursos declarados em Terraform da última implantação já destruída e da topologia high-load não provisionada.
+**Done when:** Contexto mostra ator, Flash Booking e responsável externo; containers mostra APIs, worker, PostgreSQL e filas direcionais com o dono lógico correto; AWS e evolução distinguem runtime local com ciclo implementado, recursos declarados ainda não aplicados, implantação histórica destruída e topologia high-load não provisionada.
 **Tests:** renderização e inspeção visual, incluídas na tarefa.
 **Gate:** Docs, Diff.
+
+**Status:** Complete; vistas C4 de contexto e containers identificam o runtime local, o dono de cada fila e AWS não aplicada. C4 de componentes foi atualizado; demo AWS histórica e alvo high-load permanecem distintos. SVGs foram renderizados e inspecionados.
 
 ### T09: Reconciliar a dinâmica e os desfechos
 
@@ -147,9 +152,11 @@ T08 → T09 → T10
 **Where:** `docs/images/`
 **Depends on:** T08
 **Requirement:** CONFIRM-02, CONFIRM-04
-**Done when:** Setas e legendas distinguem pedido, decisão PostgreSQL e resultado externo; `CONFIRMED` mantém estoque, nenhuma mensagem confirma após prazo e só conclusão correlacionada libera o estoque de `CANCELLATION_PENDING`; figuras que registram apenas o baseline anterior são claramente rotuladas como históricas.
+**Done when:** Setas e legendas distinguem pedido, decisão PostgreSQL e resultado externo; `CONFIRMED` mantém estoque, nenhuma mensagem confirma após prazo e só conclusão correlacionada libera o estoque de `CANCELLATION_PENDING`; modelo de dados mostra `confirmed_at`, `cancellation_id` e inbox; figuras de demo/AWS/high-load preservam corretamente o estado de cada runtime e deployment.
 **Tests:** renderização, inspeção visual e conferência com cenários integration, incluídas na tarefa.
 **Gate:** Docs, Diff.
+
+**Status:** Complete; lifecycle, modelo de dados, último ingresso, sequência, outbox, demo e figuras AWS/high-load foram revisados. O modelo vigente mostra `confirmed_at`, `cancellation_id` e inbox; a imagem anterior foi renomeada e rotulada como baseline histórico. Figuras modificadas foram renderizadas para conferência visual.
 
 ### T10: Reconciliar a explicação do README com o runtime
 
@@ -157,9 +164,11 @@ T08 → T09 → T10
 **Where:** `README.md`, `scripts/`, `.specs/features/reservation-confirmation/`
 **Depends on:** T09
 **Requirement:** CONFIRM-04
-**Done when:** Os cinco endpoints continuam descritos corretamente; o ciclo de reserva e as integrações assíncronas têm documentação de ponta a ponta; diagramas atuais, históricos e de alta carga têm rótulos verdadeiros; o README não sugere pagamentos implementados nem recursos AWS aplicados após as mudanças; validação de links, SVGs e contratos passa.
+**Done when:** Os cinco endpoints continuam descritos corretamente; o ciclo de reserva e as integrações assíncronas têm documentação de ponta a ponta; diagramas atuais, históricos e de alta carga têm rótulos verdadeiros; o README não sugere pagamentos implementados nem recursos AWS aplicados; validação de links, SVGs e contratos passa.
 **Tests:** validation documental e inspeção visual do README, incluídas na tarefa.
 **Gate:** Docs, Diff.
+
+**Status:** Complete; README distingue runtime local implementado, implantação AWS histórica e recursos atuais ainda não aplicados. O validador atualizado passou, com links locais, contratos de endpoint e SVG.
 
 ### T11: Reconciliar guias operacionais e fronteiras de infraestrutura
 
@@ -167,16 +176,30 @@ T08 → T09 → T10
 **Where:** `docs/`, `infra/modules/`
 **Depends on:** T10
 **Requirement:** CONFIRM-03, CONFIRM-04, CONFIRM-05
-**Done when:** Um operador consegue reproduzir a integração simulada localmente e identificar quem publica/consome cada fila; guias não sugerem módulo de pagamento, role externa já provisionada ou deploy AWS dos novos recursos.
+**Done when:** Um operador consegue executar o cenário de integração simulada localmente e identificar quem publica/consome cada fila; guias não sugerem módulo de pagamento, role externa já provisionada ou deploy AWS dos novos recursos.
 **Tests:** validação de links/contratos, revisão dos comandos documentados e inspeção dos exemplos locais.
 **Gate:** Docs, Diff.
+
+**Status:** Complete; guia local documenta o Compose/LocalStack e o comando de integração que simula o responsável; Postman explica que cobre HTTP, não publicação SQS; guias de carga e seed não alegam simular confirmação.
+
+### T12: Fechar lacunas independentes de concorrência e discriminação
+
+**What:** Corrigir o deadlock encontrado quando resoluções distintas para a mesma reserva inserem na inbox antes de obter o lock exclusivo; provar a concorrência, confirmação após cancelamento vencedor e confirmação depois do fim da venda mas antes de `expiresAt`; executar o sensor em scratch.
+**Where:** `ReservationResolutionProcessor`, `ReservationWriter`, `JdbcReservationPersistenceAdapter`, `SqsReservationConfirmationConsumerIT`, `.specs/features/reservation-confirmation/`.
+**Depends on:** T11.
+**Requirement:** CONFIRM-02, CONFIRM-03.
+**Done when:** O worker bloqueia a reserva antes de a inbox estabelecer a referência FK; resoluções distintas recebem um resultado cada sem deadlock e com efeito de estoque único; mensagem de confirmação após `CANCELLED` é rejeitada sem nova devolução; `endsAt` passado não rejeita mensagem ainda válida pelo prazo da reserva; um mutante de `confirmedAt` é morto por teste em scratch isolado.
+**Tests:** `SqsReservationConfirmationConsumerIT` e sensor independente em cópia temporária.
+**Gate:** Integration, Sensor, Diff.
+
+**Status:** Complete; 13 integrações focadas passaram, os três gaps de comportamento têm asserts explícitos e o sensor isolado matou a mutação `confirmedAt = null` no GET confirmado.
 
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 → T02
 Phase 2: T02 → T03 → T04 → T05 → T06 → T07
-Phase 3: T07 → T08 → T09 → T10 → T11
+Phase 3: T07 → T08 → T09 → T10 → T11 → T12
 ```
 
 ## Diagram-Definition Cross-Check
@@ -194,6 +217,7 @@ Phase 3: T07 → T08 → T09 → T10 → T11
 | T09 | T08 | T08 → T09 | OK |
 | T10 | T09 | T09 → T10 | OK |
 | T11 | T10 | T10 → T11 | OK |
+| T12 | T11 | T11 → T12 | OK |
 
 ## Test Co-location Validation
 
@@ -210,3 +234,4 @@ Phase 3: T07 → T08 → T09 → T10 → T11
 | T09 | SVG | visual | visual | OK |
 | T10 | README | validation | validation | OK |
 | T11 | Operational docs | validation | validation | OK |
+| T12 | Concorrência | integration + sensor | integration + sensor | OK |

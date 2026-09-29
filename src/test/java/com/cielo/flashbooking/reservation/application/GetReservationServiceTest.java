@@ -70,6 +70,7 @@ class GetReservationServiceTest {
                 4,
                 ReservationStatus.PENDING,
                 Instant.parse("2026-09-09T12:10:00Z"),
+                null,
                 null);
     }
 }

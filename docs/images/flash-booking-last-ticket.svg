@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="780" viewBox="0 0 1600 780" role="img" aria-labelledby="title desc">
   <title id="title">Como o Flash Booking impede oversell no último ingresso</title>
-  <desc id="desc">Duas reservas concorrentes disputam um único ingresso. O PostgreSQL executa um decremento condicional; uma transação cria a reserva e a outra recebe conflito sem efeito. Reservas pendentes podem ser canceladas ou expirar e devolvem a capacidade uma única vez.</desc>
+  <desc id="desc">Duas reservas concorrentes disputam um único ingresso. O PostgreSQL executa um decremento condicional; uma transação cria a reserva e a outra recebe conflito sem efeito. Reservas pendentes podem ser canceladas ou expirar e devolvem a capacidade uma única vez. A confirmação externa implementada preserva o débito já feito, sem retirar mais ingressos.</desc>
   <defs>
     <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
       <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#17324d" flood-opacity="0.12"/>

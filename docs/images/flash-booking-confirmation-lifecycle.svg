@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1200" viewBox="0 0 1760 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Estados e corridas da confirmação externa da reserva</title>
+  <desc id="desc">Ciclo implementado no runtime local. PENDING retém estoque. Resolução completa aceita antes do prazo leva a CONFIRMED sem novo débito; cancelamento ou expiração de PENDING libera uma vez e emite ReservationHoldClosed. DELETE de CONFIRMED leva a CANCELLATION_PENDING, mantendo estoque até sucesso externo que conclui CANCELLED. Mensagem tardia ou perdida para expiração é rejeitada; duplicidade reproduz o resultado pela inbox. PostgreSQL decide após lock.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}.bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#526b80}.blue{fill:#1168bd}
+      .eyebrow{font-size:17px;font-weight:700;letter-spacing:2px}.heading{font-size:38px;font-weight:700}.sub{font-size:20px}
+      .state{fill:#e8f3fc;stroke:#1168bd;stroke-width:2.5}.waiting{fill:#fff3dd;stroke:#bb852e;stroke-width:2.5}
+      .terminal{fill:#e8f2ed;stroke:#488065;stroke-width:2.5}.note{fill:#fff;stroke:#c4d3df;stroke-width:2}
+      .type{font-size:15px;font-weight:700;letter-spacing:1px}.name{font-size:27px;font-weight:700}
+      .body{font-size:17px}.small{font-size:15px}.path{stroke:#55758d;stroke-width:3.5;fill:none;marker-end:url(#arrow)}
+      .async{stroke:#1168bd;stroke-width:3;stroke-dasharray:10 7;fill:none;marker-end:url(#blueArrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#55758d"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+  </defs>
+  <rect width="1760" height="1200" class="bg"/>
+  <text x="58" y="65" class="eyebrow blue">CICLO IMPLEMENTADO · AWS NÃO APLICADA</text>
+  <text x="58" y="116" class="heading ink">Ciclo da reserva · decisão autoritativa</text>
+  <text x="58" y="154" class="sub muted">A fila entrega intenções; o PostgreSQL decide estado, prazo e estoque após bloquear a reserva</text>
+
+  <rect x="65" y="250" width="360" height="185" rx="18" class="state"/>
+  <text x="94" y="290" class="type blue">POST /events/{id}/reservations</text>
+  <text x="94" y="337" class="name ink">PENDING</text>
+  <text x="94" y="374" class="body muted">Estoque retido uma vez.</text>
+  <text x="94" y="402" class="body muted">Outbox: ReservationHeld.</text>
+
+  <rect x="695" y="250" width="360" height="185" rx="18" class="state"/>
+  <text x="725" y="290" class="type blue">RESOLUÇÃO COMPLETA ACEITA</text>
+  <text x="725" y="337" class="name ink">CONFIRMED</text>
+  <text x="725" y="374" class="body muted">Estoque segue comprometido.</text>
+  <text x="725" y="402" class="body muted">Outbox: ReservationConfirmed.</text>
+
+  <rect x="1320" y="250" width="385" height="185" rx="18" class="waiting"/>
+  <text x="1350" y="290" class="type muted">DELETE · RESPOSTA HTTP 202</text>
+  <text x="1350" y="337" class="name ink">CANCELLATION_PENDING</text>
+  <text x="1350" y="374" class="body muted">Estoque ainda comprometido.</text>
+  <text x="1350" y="402" class="body muted">Outbox: CancellationRequested.</text>
+
+  <rect x="65" y="660" width="360" height="180" rx="18" class="terminal"/>
+  <text x="94" y="701" class="type muted">PRAZO ALCANÇADO</text>
+  <text x="94" y="746" class="name ink">EXPIRED</text>
+  <text x="94" y="784" class="body muted">Libera estoque uma vez.</text>
+  <text x="94" y="813" class="small muted">ReservationHoldClosed(EXPIRED)</text>
+
+  <rect x="695" y="660" width="360" height="180" rx="18" class="terminal"/>
+  <text x="725" y="701" class="type muted">ENCERRAMENTO EFETIVO</text>
+  <text x="725" y="746" class="name ink">CANCELLED</text>
+  <text x="725" y="784" class="body muted">Libera estoque uma vez.</text>
+  <text x="725" y="807" class="small muted">Se veio de PENDING:</text>
+  <text x="725" y="828" class="small muted">ReservationHoldClosed(CANCELLED)</text>
+
+  <path d="M425 327 H695" class="path"/>
+  <text x="459" y="277" class="body ink">Inbox + lock; decisão</text>
+  <text x="476" y="302" class="body ink">antes de expiresAt</text>
+
+  <path d="M1055 327 H1320" class="path"/>
+  <text x="1114" y="290" class="body ink">DELETE de confirmado</text>
+
+  <path d="M245 435 V660" class="path"/>
+  <text x="266" y="526" class="body ink">Worker, reconciliador</text>
+  <text x="266" y="554" class="body ink">ou DELETE tardio</text>
+
+  <path d="M425 412 H575 V737 H695" class="path"/>
+  <text x="441" y="589" class="body ink">DELETE antes</text>
+  <text x="454" y="617" class="body ink">do prazo</text>
+
+  <path d="M1512 435 V570 H1100 V738 H1055" class="path"/>
+  <text x="1148" y="534" class="body ink">Somente sucesso da</text>
+  <text x="1148" y="560" class="body ink">reversão externa</text>
+
+  <rect x="58" y="874" width="1647" height="256" rx="18" class="note"/>
+  <text x="90" y="918" class="name ink">Corridas, duplicidade e resultado assíncrono</text>
+  <text x="90" y="960" class="body muted">• Se a mensagem chegar em/após expiresAt, PENDING passa a EXPIRED e a confirmação recebe ReservationConfirmationRejected.</text>
+  <text x="90" y="993" class="body muted">• Se expiração ou DELETE vencer o lock, a confirmação recebe rejeição; ReservationHoldClosed informa o fechamento externo.</text>
+  <text x="90" y="1026" class="body muted">• Mesmo resolutionId: inbox reproduz o resultado. Outra resolução não confirma novamente. Redelivery não repete efeitos.</text>
+  <text x="90" y="1059" class="body muted">• Falha/silêncio no cancelamento mantém CANCELLATION_PENDING. Não há retorno a CONFIRMED nem liberação antecipada.</text>
+  <text x="90" y="1101" class="small blue">Resultados externos saem por outbox → SQS; rejeição de confirmação exige compensação pelo módulo externo, sem acompanhamento aqui.</text>
+</svg>

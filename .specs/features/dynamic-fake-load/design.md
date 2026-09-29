@@ -191,7 +191,7 @@ The sampler uses short, read-only statements and never holds a transaction open 
 | --- | --- | --- |
 | Connections and waits | Count sessions and `wait_event_type = 'Lock'` for the application database. | Time series reveals pool pressure and lock contention; a final snapshot alone is insufficient. |
 | Transaction rate | Read deltas from `pg_stat_database`. | Correlates accepted commands with database work. |
-| Inventory audit | Assert `event.capacity - event.available = sum(reservation.quantity WHERE status = 'PENDING')` per event and non-negative availability. | Secondary audit of persisted invariants; it does not replace concurrency integration tests. |
+| Inventory audit | Assert `event.capacity - event.available = sum(reservation.quantity WHERE status IN ('PENDING','CONFIRMED','CANCELLATION_PENDING'))` per event and non-negative availability. | Secondary audit of persisted invariants across the full reservation lifecycle; load profiles themselves do not publish external resolutions or simulate the owner. |
 | Table growth | Count customer, reservation, idempotency and outbox rows at profile boundaries. | Distinguishes expected data accumulation from unexplained resource growth. |
 | CloudWatch correlation | Query one-minute API Gateway, ECS, RDS, Valkey and SQS series from five minutes before through ten minutes after an externally authorized AWS run. | Correlates client behavior to infrastructure; missing data is evidence incompleteness, not component health. |
 

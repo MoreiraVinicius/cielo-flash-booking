@@ -31,6 +31,7 @@ public class ReservationResolutionProcessor {
 
     @Transactional
     public ReservationResolutionOutcome process(ReservationResolutionMessage message, String payloadFingerprint) {
+        reservationWriter.lockReservationForResolution(message.reservationId());
         if (!inbox.tryBegin(message, payloadFingerprint)) {
             ReservationResolutionInbox.StoredResolution stored = inbox.find(message.source(), message.resolutionId())
                     .orElseThrow(() -> new IllegalStateException("inbox identity disappeared after conflict"));

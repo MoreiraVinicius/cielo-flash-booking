@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2350" viewBox="0 0 2000 2350" role="img" aria-labelledby="title desc">
-  <title id="title">Flash Booking — sequência de reserva, processamento e consulta</title>
-  <desc id="desc">Quatro capítulos mostram criação síncrona, outbox e notificação, expiração e consulta cache-aside da disponibilidade do evento, incluindo falhas e retries.</desc>
+  <title id="title">Flash Booking — sequência executável da reserva temporária</title>
+  <desc id="desc">Esta sequência detalha criação síncrona, outbox e notificação, expiração e consulta cache-aside da disponibilidade do evento, incluindo falhas e retries. O ciclo de confirmação externa implementado está na vista lifecycle separada; as filas AWS ainda não foram aplicadas.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#45637f"/></marker>
     <marker id="asyncArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#276fb8"/></marker>
@@ -10,7 +10,7 @@
   </defs>
   <rect width="2000" height="2350" class="bg"/>
   <text x="60" y="58" class="title">Flash Booking — Diagrama de sequência</text>
-  <text x="60" y="88" class="subtitle">Criação, outbox, notificação, expiração e leitura — com os caminhos de falha que protegem o sistema</text>
+  <text x="60" y="88" class="subtitle">Recorte do ciclo: criação, outbox, notificação, expiração e leitura; confirmação externa está em vista própria.</text>
 
   <!-- A: creation -->
   <rect x="40" y="120" width="1920" height="510" rx="8" class="panel"/>

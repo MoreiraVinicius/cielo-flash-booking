@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1740" viewBox="0 0 2200 1740" role="img" aria-labelledby="title desc">
-  <title id="title">Flash Booking — C4 Model da arquitetura Demo</title>
-  <desc id="desc">Diagrama C4 em azul e cinza do ambiente Demo, mostrando a pessoa cliente, o sistema Flash Booking, os containers query-api, command-api e worker, seus principais componentes Java, dependências externas, resiliência e observabilidade.</desc>
+  <title id="title">Flash Booking — C4 Model da demo de reserva temporária</title>
+  <desc id="desc">Diagrama C4 da topologia histórica da demo AWS, aplicada e destruída, com cliente, Flash Booking, query-api, command-api, worker, dependências, resiliência e observabilidade. Essa implantação antecede as filas de integração; o runtime local atual implementa confirmação externa.</desc>
 
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
@@ -60,7 +60,7 @@
 
   <rect width="2200" height="1740" class="canvas"/>
   <text x="60" y="58" class="page-title">Flash Booking — C4 Model · Ambiente Demo</text>
-  <text x="60" y="91" class="page-subtitle">Visão de containers e componentes: três runtimes Spring Boot do mesmo produto, coordenados por estado persistido, outbox e mensageria — sem chamadas diretas entre eles.</text>
+  <text x="60" y="91" class="page-subtitle">Topologia da demo AWS histórica: três runtimes Spring Boot; ciclo local atual inclui confirmação, mas as filas externas AWS não foram aplicadas.</text>
 
   <!-- Pessoa -->
   <rect x="45" y="220" width="225" height="140" rx="9" class="person"/>

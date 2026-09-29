@@ -9,6 +9,9 @@ import java.util.UUID;
 
 public interface ReservationWriter {
 
+    /** Locks an existing reservation before the inbox takes its foreign-key reference to that row. */
+    void lockReservationForResolution(UUID reservationId);
+
     Instant currentTime();
 
     boolean eventExists(UUID eventId);

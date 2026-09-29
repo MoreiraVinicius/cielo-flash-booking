@@ -5,6 +5,7 @@ import com.cielo.flashbooking.application.idempotency.IdempotencyResponse;
 import com.cielo.flashbooking.application.idempotency.IdempotencyResult;
 import com.cielo.flashbooking.application.idempotency.PersistentIdempotencyService;
 import com.cielo.flashbooking.controller.error.ProblemResponseFactory;
+import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import com.cielo.flashbooking.reservation.application.CancelReservationService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
@@ -47,8 +48,11 @@ class ReservationCancellationController {
         IdempotencyResult result = idempotencyService.execute(
                 IdempotencyCommand.from(
                         idempotencyKey, "DELETE", "/reservations/" + id, java.util.Map.of(), objectMapper),
-                () -> new IdempotencyResponse(
-                        200, ReservationDetailsResponse.from(cancelReservationService.cancel(id))),
+                () -> {
+                    var reservation = cancelReservationService.cancel(id);
+                    int responseStatus = reservation.status() == ReservationStatus.CANCELLATION_PENDING ? 202 : 200;
+                    return new IdempotencyResponse(responseStatus, ReservationDetailsResponse.from(reservation));
+                },
                 exception -> {
                     var problem = problemResponseFactory.expectedFailure(exception, servletRequest);
                     return new IdempotencyResponse(problem.getStatus(), problem);

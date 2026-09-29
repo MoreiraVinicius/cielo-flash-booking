@@ -2,17 +2,19 @@
 
 # Flash Booking
 
-Este é um case técnico independente da Cielo sobre reserva temporária de ingressos para flash sales. O domínio termina em `PENDING`, `CANCELLED` ou `EXPIRED`. Pagamento, compra confirmada e emissão de ingresso não fazem parte desta entrega.
+Este é um case técnico independente da Cielo sobre reserva temporária e confirmação de reservas para flash sales. O Flash Booking retém ingressos em `PENDING` e só os torna `CONFIRMED` depois de receber uma declaração assíncrona do único módulo externo responsável por resolver todas as pendências. O Flash Booking não processa pagamentos, não interpreta o estado financeiro e não emite ingressos.
 
 ## Fonte de verdade
 
-`.specs/` define o sistema atual. Ela concentra requisitos, arquitetura, decisões, tarefas e evidências de validação. Em caso de conflito, a especificação prevalece sobre qualquer outro documento.
+`.specs/` é a fonte autoritativa do sistema e concentra requisitos, arquitetura, decisões, tarefas e evidências de validação. Em caso de conflito, a especificação aplicável à versão descrita prevalece sobre qualquer outro documento.
 
 | Assunto | Fonte |
 | --- | --- |
 | Requisitos, design e validação da demo | [flash-booking-demo](.specs/features/flash-booking-demo/spec.md) · [design](.specs/features/flash-booking-demo/design.md) · [validation](.specs/features/flash-booking-demo/validation.md) |
 | Janela de flash sale atual | [flash-sale-window](.specs/features/flash-sale-window/spec.md) · [validation](.specs/features/flash-sale-window/validation.md) |
 | Evolução high-load não implementada | [spec](.specs/features/flash-booking-high-load/spec.md) · [design](.specs/features/flash-booking-high-load/design.md) · [tasks](.specs/features/flash-booking-high-load/tasks.md) |
+| Ciclo completo da reserva | [spec](.specs/features/reservation-confirmation/spec.md) · [decisões](.specs/features/reservation-confirmation/context.md) · [design](.specs/features/reservation-confirmation/design.md) |
+| Auditoria de documentação e desenhos | [inventário de artefatos e evidências](.specs/features/reservation-confirmation/documentation-audit.md) |
 | Runtime e observabilidade | [Spring Boot 4 / Jackson 3 / OTLP](.specs/features/spring-boot-4-observability/spec.md) · [plano AWS não aplicado](.specs/features/spring-boot-4-observability/aws-plan.md) |
 | Decisões globais e glossário | [STATE](.specs/STATE.md) · [glossário](.specs/CONTEXT.md) |
 | Enunciado original | [Case BackEnd 1.md](Case%20BackEnd%201.md) |
@@ -40,7 +42,56 @@ O runtime atual usa Java 21, Spring Boot 4.0.8, Maven e Jackson 3. O mesmo monó
 
 - A demo AWS está provisionada para a janela atual. O RDS aceita DataGrip local somente pela exceção temporária documentada em [Acesso temporário ao RDS pelo DataGrip](docs/acesso-rds-datagrip.md); desligue-a e destrua a demo ao final.
 - A arquitetura high-load é somente desenho de evolução. Não foi provisionada, submetida a carga remota ou validada quanto a failover.
-- A evidência atual da aplicação está nas validações em `.specs/`; a suíte completa de Boot 4/Jackson 3 mais recente aprovou 125 testes (56 unitários + 69 de integração), sem falhas.
+- O ciclo de confirmação externa está implementado no runtime local: schema, outbox/inbox, consumidores SQS, estados, contratos HTTP e testes com um responsável externo simulado. A infraestrutura AWS correspondente está declarada em Terraform, mas não foi aplicada nem integrada a um responsável externo real.
+- A suíte completa mais recente deve ser conferida pela validação desta mudança; ela cobre a confirmação, rejeição, expiração e cancelamento assíncronos sem implementar pagamentos.
+
+## Ciclo da reserva
+
+Os cinco endpoints do [case](Case%20BackEnd%201.md) continuam disponíveis. O `POST` retorna `201` depois de reter estoque e persistir `PENDING`; esse aceite não conclui a reserva. Um único módulo externo resolve todas as pendências e envia uma confirmação pela fila de entrada. O Flash Booking verifica o estado e o prazo após bloquear a reserva; se ainda elegível, persiste `CONFIRMED` e `confirmedAt` sem debitar estoque outra vez. A confirmação significa compromisso da reserva, não pagamento.
+
+| Operação atual | Resultado executável |
+| --- | --- |
+| `POST /events` | Cria evento. |
+| `GET /events/{id}` | Consulta disponibilidade eventualmente consistente; a escrita no PostgreSQL decide o estoque. |
+| `POST /events/{id}/reservations` | Cria retenção `PENDING` e agenda efeitos pela outbox. |
+| `GET /reservations/{id}` | Consulta estado, prazo e, após confirmação, `confirmedAt`. |
+| `DELETE /reservations/{id}` | Encerra `PENDING` imediatamente como `CANCELLED` ou `EXPIRED`; para `CONFIRMED`, registra `CANCELLATION_PENDING` e retorna `202`. |
+
+```text
+POST → PENDING ── confirmação externa aceita antes do prazo ──→ CONFIRMED
+             ├── cancelamento/expiração ──→ CANCELLED | EXPIRED
+             └── confirmação tardia ──→ rejeição correlacionada
+CONFIRMED ── DELETE/202 ──→ CANCELLATION_PENDING ── conclusão externa ──→ CANCELLED
+```
+
+### Confirmação externa sem módulo de pagamentos
+
+Um **único módulo externo** é responsável por resolver todas as pendências da reserva, inclusive pagamento se ele existir. Flash Booking não conhece os detalhes dessas pendências: ele decide prazo, estado e estoque. `CONFIRMED` significa que esse responsável declarou todas as pendências resolvidas **e** que os ingressos continuam comprometidos. Não há confirmação parcial.
+
+Ao criar `PENDING`, a mesma transação grava `ReservationHeld` na outbox. O worker o publica em uma SQS direta consumida pelas réplicas do único responsável. Esse módulo deduplica a operação externa por reserva e operação; a fila e a outbox podem entregar de novo. Quando tudo estiver resolvido, ele envia `ReservationConfirmationRequested` à SQS de entrada do Flash Booking. O worker usa inbox durável e o relógio PostgreSQL **após bloquear a reserva**. Se ainda estiver `PENDING` antes de `expiresAt`, passa a `CONFIRMED` sem debitar estoque outra vez e publica `ReservationConfirmed` pela outbox. Uma mensagem entregue tarde ou concorrente com o encerramento recebe `ReservationConfirmationRejected`; o módulo externo cuida da própria compensação. O Flash Booking não acompanha essa compensação.
+
+`DELETE` de `PENDING` é imediato e publica `ReservationHoldClosed(CANCELLED)` ou `ReservationHoldClosed(EXPIRED)` ao responsável externo na mesma transação do fechamento. `DELETE` de `CONFIRMED` passa a `CANCELLATION_PENDING`, retorna `202` e envia `ReservationCancellationRequested` pela outbox; o estoque só volta após resposta externa positiva e deduplicada. Falha ou silêncio externo mantêm o cancelamento pendente e os ingressos comprometidos. Uma vez solicitado, o cancelamento não volta a `CONFIRMED`.
+
+O Compose/LocalStack executa a integração com filas simuladas. Terraform declara as duas filas direcionais e permissões, mas a infraestrutura AWS não foi aplicada e nenhum responsável externo real está integrado.
+
+<details>
+<summary>Ver C4 Model e ciclo de confirmação</summary>
+
+#### C4 Model — contexto do sistema
+
+![C4 contexto: operador da API solicita reserva ao Flash Booking em nome de cliente; um único módulo externo resolve todas as pendências e troca mensagens de confirmação, rejeição e cancelamento](docs/images/flash-booking-confirmation-c4-context.svg)
+
+#### C4 Model — containers
+
+![C4 containers: Command API, Query API, Worker, PostgreSQL, SQS de saída ao responsável e SQS de entrada ao Flash Booking; outbox e inbox são dados dentro do PostgreSQL](docs/images/flash-booking-confirmation-c4-containers.svg)
+
+#### Estados e corridas
+
+![Estados e corridas: confirmação antes do prazo, rejeição tardia e duplicada, expiração concorrente e cancelamento de confirmado aguardando sucesso externo](docs/images/flash-booking-confirmation-lifecycle.svg)
+
+O [contrato e a análise de corridas](.specs/features/reservation-confirmation/design.md) detalham idempotência, ordenação de mensagens, decisão temporal e responsabilidade pela compensação.
+
+</details>
 
 ## E-mail de reserva temporária
 
@@ -64,15 +115,32 @@ Durante uma semeadura com dados fake, é possível pausar somente esse consumido
 
 ## Visões de estudo
 
-O modelo completo e os contratos de consistência permanecem nas [especificações da demo](.specs/features/flash-booking-demo/design.md). Estes diagramas oferecem uma leitura rápida da persistência e do fluxo assíncrono.
+O schema e os contratos de consistência permanecem nas [especificações da demo](.specs/features/flash-booking-demo/design.md). Os diagramas de dados e outbox mostram tabelas e eventos, enquanto o [design da confirmação](.specs/features/reservation-confirmation/design.md) detalha o contrato da inbox e as mensagens de integração.
 
-### Modelo de dados
+### Fronteiras e dados da confirmação
 
-![Diagrama do modelo de dados PostgreSQL: Event e Customer possuem reservas; idempotência e outbox apoiam o processamento transacional](docs/images/flash-booking-data-model.png)
+![Visão C4 com Flash Booking, PostgreSQL, worker, duas filas SQS e o responsável externo em caixa preta: ele resolve todas as pendências e solicita confirmação; inbox e relógio do banco sustentam a decisão, e a outbox publica o resultado](docs/images/flash-booking-data-model.svg)
+
+O desenho mostra apenas os dados que participam da decisão de confirmação. O [contrato completo do banco e das mensagens](.specs/features/reservation-confirmation/design.md) detalha os demais campos e fluxos.
 
 ### Transactional outbox sob pico de requisições
 
-![Diagrama: a reserva e o evento da outbox são gravados na mesma transação PostgreSQL; um worker publica depois e pode tentar novamente em caso de falha](docs/images/flash-booking-transactional-outbox.png)
+![Diagrama da outbox: reserva e evento são gravados na mesma transação e o worker publica após o commit; o mesmo padrão transporta eventos de reserva ao único responsável externo](docs/images/flash-booking-transactional-outbox.png)
+
+O diagrama da outbox mostra o exemplo de criação e notificação; resultados de confirmação, fechamento de retenção e pedido de cancelamento usam o mesmo mecanismo transacional e seguem pela fila direta do responsável externo.
+
+<details>
+<summary>Ver os demais diagramas da versão atual e do alvo high-load</summary>
+
+| Vista | Escopo |
+| --- | --- |
+| [C4 da demo](docs/images/flash-booking-c4-demo.svg) | Topologia da implantação AWS histórica, anterior às filas externas novas; essa implantação foi destruída. |
+| [Componentes](docs/images/flash-booking-c4-components.svg) | Perfis do runtime local, incluindo consumidor de confirmação; as novas filas AWS ainda não foram aplicadas. |
+| [Sequência](docs/images/flash-booking-sequence-reservation.svg) | Recorte de criação, notificação, expiração e consulta; a confirmação está na vista lifecycle acima. |
+| [Consistência eventual AWS](docs/images/flash-booking-aws-eventual-consistency.svg) · [topologia AWS da demo](docs/images/flash-booking-aws-demo.svg) | Fluxos e recursos da demo de retenção temporária; a vista AWS registra uma implantação histórica. |
+| [Evolução da topologia](docs/images/flash-booking-architecture-evolution.svg) · [C4 high-load](docs/images/flash-booking-c4-high-load.svg) · [AWS high-load](docs/images/flash-booking-aws-high-load.svg) | Alvo de escala não aplicado. As figuras específicas acima mostram a confirmação do runtime local. |
+
+</details>
 
 ## Material operacional e evidências complementares
 

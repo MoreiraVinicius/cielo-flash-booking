@@ -1,6 +1,6 @@
 # Confirmação externa da reserva — especificação
 
-**Status:** Aprovada; implementação em andamento.
+**Status:** Implementada no runtime local; integração externa real e implantação AWS não aplicadas.
 
 ## Problem Statement
 
@@ -8,11 +8,11 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 
 ## Goals
 
-- [ ] Permitir que uma decisão externa elegível torne uma reserva `CONFIRMED` antes do prazo.
-- [ ] Preservar o inventário sob concorrência entre confirmação, cancelamento e expiração.
-- [ ] Comunicar aceites e rejeições para que o módulo externo conclua ou compense seu próprio fluxo.
-- [ ] Permitir solicitação assíncrona de cancelamento de reserva confirmada, preservando o estoque até a conclusão externa.
-- [ ] Explicar no README o ciclo completo com vistas C4 e um fluxo temporal alinhado ao runtime.
+- [x] Permitir que uma decisão externa elegível torne uma reserva `CONFIRMED` antes do prazo.
+- [x] Preservar o inventário sob concorrência entre confirmação, cancelamento e expiração.
+- [x] Comunicar aceites e rejeições para que o módulo externo conclua ou compense seu próprio fluxo.
+- [x] Permitir solicitação assíncrona de cancelamento de reserva confirmada, preservando o estoque até a conclusão externa.
+- [x] Explicar no README o ciclo completo com vistas C4 e um fluxo temporal alinhado ao runtime.
 
 ## Out of Scope
 
@@ -95,6 +95,7 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 8. WHEN a outbox republicar `ReservationHeld` THEN o sistema SHALL conservar a identidade do evento e encaminhá-lo somente à fila do único responsável externo; o contrato desse responsável SHALL exigir deduplicação durável por reserva e operação, inclusive na sua chamada ao provedor de pagamento caso ela exista.
 9. WHEN a transição efetiva `PENDING → EXPIRED` devolver capacidade THEN o sistema SHALL registrar `ReservationHoldClosed` com motivo `EXPIRED` para o responsável externo na mesma transação e somente uma vez, independentemente de `DELETE`, consumidor ou reconciliador vencer.
 10. WHEN uma confirmação rejeitada ou um fechamento de hold exigir compensação externa THEN o Flash Booking SHALL entregar a mensagem recuperável sem registrar nem aguardar um estado de compensação financeira.
+11. IF resoluções com identidades distintas forem processadas simultaneamente para a mesma reserva THEN o sistema SHALL serializar a decisão antes de registrar sua referência na inbox, retornar um resultado para cada resolução e aplicar no máximo uma transição de estado e um efeito de estoque.
 
 **Independent Test:** Duplicar mensagem, interromper o consumidor entre commit e ack, e recuperar publicação de resultado sem efeito de inventário repetido.
 
@@ -125,31 +126,31 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 4. WHEN o README mostrar a dinâmica THEN um diagrama SHALL cobrir confirmação aceita, mensagem tardia, duplicidade, corrida com expiração e cancelamento pendente até conclusão externa.
 5. WHEN a validação documental rodar THEN os SVGs SHALL ser legíveis, acessíveis, vinculados no README e coerentes com os contratos e comportamento verificados, sem alegar compra paga ou implantação AWS.
 
-**Independent Test:** Inspecionar README e SVGs renderizados e executar o gate documental contra os contratos atuais e propostos.
+**Independent Test:** Inspecionar README e SVGs renderizados e executar o gate documental contra os contratos implementados e os limites de deployment.
 
 ## Edge Cases
 
 - IF um módulo externo concluir seu trabalho antes de receber `ReservationConfirmed` THEN sua própria compensação SHALL ser definida no contrato de integração; o Flash Booking não SHALL simular sucesso retroativo após o prazo.
-- IF duas mensagens distintas disputarem a mesma reserva THEN apenas uma SHALL conquistar `PENDING → CONFIRMED`; as demais SHALL receber desfecho estável e não alterar inventário.
-- IF `endsAt` do evento chegar depois da criação da reserva THEN ele SHALL bloquear novas reservas, mas não SHALL invalidar uma confirmação de reserva ainda dentro de `expiresAt`.
+- IF resoluções com identidades distintas disputarem simultaneamente a mesma reserva THEN o Flash Booking SHALL bloquear a reserva antes de registrar cada referência na inbox, evitando deadlock de upgrade de lock; apenas uma SHALL conquistar `PENDING → CONFIRMED`, as demais SHALL receber desfecho estável e nenhuma SHALL alterar inventário novamente.
+- IF `endsAt` do evento chegar depois da criação da reserva THEN ele SHALL bloquear novas reservas, mas não SHALL invalidar uma confirmação ainda dentro de `expiresAt`, inclusive quando o instante atual já passou `endsAt`.
 - IF a fila atrasar além de `expiresAt` THEN o resultado SHALL ser rejeição explícita, nunca confirmação baseada apenas no horário declarado pelo produtor.
 
 ## Requirement Traceability
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| CONFIRM-01 | Confirmar reserva elegível | Execute | In progress |
-| CONFIRM-02 | Preservar desfechos sob concorrência | Execute | In progress |
-| CONFIRM-03 | Entregar decisão confiável | Execute | In progress |
-| CONFIRM-04 | Mostrar ciclo e limites no README | Execute | In progress |
-| CONFIRM-05 | Concluir cancelamento de reserva confirmada | Execute | In progress |
+| CONFIRM-01 | Confirmar reserva elegível | Execute | Complete |
+| CONFIRM-02 | Preservar desfechos sob concorrência | Execute | Complete |
+| CONFIRM-03 | Entregar decisão confiável | Execute | Complete |
+| CONFIRM-04 | Mostrar ciclo e limites no README | Execute | Complete |
+| CONFIRM-05 | Concluir cancelamento de reserva confirmada | Execute | Complete |
 
-**Coverage:** 5 requisitos mapeados ao desenho, às tarefas e aos testes previstos. A implementação e reconciliação documental permanecem em andamento.
+**Coverage:** 5 requisitos rastreados ao desenho, às tarefas e às evidências de testes. O runtime local e sua documentação estão implementados; filas AWS declaradas ainda não foram aplicadas.
 
 ## Success Criteria
 
-- [ ] Uma reserva elegível pode terminar `CONFIRMED` sem conhecer pagamento.
-- [ ] Corridas e retries não geram oversell nem devolução de estoque confirmado.
-- [ ] O módulo externo distingue solicitação recebida de confirmação aceita.
-- [ ] Cancelamento de reserva confirmada não libera estoque antes do desfecho externo positivo.
-- [ ] O README explica o ciclo confirmado e seus limites com diagramas alinhados ao runtime.
+- [x] Uma reserva elegível pode terminar `CONFIRMED` sem conhecer pagamento.
+- [x] Corridas e retries não geram oversell nem devolução de estoque confirmado.
+- [x] O módulo externo distingue solicitação recebida de confirmação aceita.
+- [x] Cancelamento de reserva confirmada não libera estoque antes do desfecho externo positivo.
+- [x] O README explica o ciclo confirmado e seus limites com diagramas alinhados ao runtime.

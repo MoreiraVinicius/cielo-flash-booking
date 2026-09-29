@@ -12,6 +12,7 @@ public record ReservationDetails(
         int quantity,
         ReservationStatus status,
         Instant expiresAt,
+        Instant confirmedAt,
         ClosureReason closureReason) {
 
     public ReservationDetails {

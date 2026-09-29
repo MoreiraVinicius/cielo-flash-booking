@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="1120" viewBox="0 0 1840 1120" role="img" aria-labelledby="title desc">
+  <title id="title">C4 Container — integração de confirmação da reserva</title>
+  <desc id="desc">Runtime local implementado; infraestrutura AWS não aplicada. Dentro do Flash Booking estão Command API, Query API, Worker e PostgreSQL. Duas SQS direcionais de integração ficam fora do limite do software Flash Booking: a fila de saída pertence logicamente ao responsável externo e a fila de entrada ao Flash Booking. A outbox e a inbox são dados persistidos no PostgreSQL, não containers separados. O responsável externo resolve todas as pendências e compensa rejeições.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}.bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#526b80}.blue{fill:#1168bd}
+      .eyebrow{font-size:17px;font-weight:700;letter-spacing:2px}.heading{font-size:38px;font-weight:700}.sub{font-size:20px}
+      .boundary{fill:#fff;stroke:#6e879c;stroke-width:2;stroke-dasharray:11 7}
+      .app{fill:#e8f3fc;stroke:#1168bd;stroke-width:2.5}.store{fill:#eef3f7;stroke:#6d879a;stroke-width:2.5}
+      .queue{fill:#e5f4f2;stroke:#328a80;stroke-width:2.5}.external{fill:#edf2f6;stroke:#6e879c;stroke-width:2.5}
+      .person{fill:#e4edf5;stroke:#6d879a;stroke-width:2}.note{fill:#fff;stroke:#c5d4df;stroke-width:2}
+      .type{font-size:15px;font-weight:700;letter-spacing:1px}.name{font-size:23px;font-weight:700}
+      .body{font-size:17px}.small{font-size:15px}.line{stroke:#58758d;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .async{stroke:#1168bd;stroke-width:3;stroke-dasharray:10 7;fill:none;marker-end:url(#blueArrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#58758d"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+  </defs>
+  <rect width="1840" height="1120" class="bg"/>
+  <text x="55" y="63" class="eyebrow blue">RUNTIME LOCAL · AWS NÃO APLICADA</text>
+  <text x="55" y="112" class="heading ink">C4 Model · containers</text>
+  <text x="55" y="149" class="sub muted">Uma instância lógica por responsabilidade; réplicas compartilham filas e estado PostgreSQL</text>
+
+  <rect x="48" y="309" width="250" height="150" rx="15" class="person"/>
+  <text x="73" y="343" class="type muted">PESSOA</text>
+  <text x="73" y="380" class="name ink">Operador da API</text>
+  <text x="73" y="414" class="body muted">Usa os cinco endpoints</text>
+  <text x="73" y="439" class="body muted">HTTP do case</text>
+
+  <rect x="335" y="207" width="705" height="605" rx="20" class="boundary"/>
+  <text x="366" y="247" class="type muted">LIMITE DO SISTEMA · FLASH BOOKING</text>
+
+  <rect x="382" y="290" width="275" height="165" rx="14" class="app"/>
+  <text x="407" y="326" class="type blue">CONTAINER · SPRING BOOT</text>
+  <text x="407" y="364" class="name ink">Command API</text>
+  <text x="407" y="396" class="body muted">Cria retenção; recebe DELETE.</text>
+  <text x="407" y="426" class="small muted">PENDING / cancelamento</text>
+
+  <rect x="382" y="521" width="275" height="145" rx="14" class="app"/>
+  <text x="407" y="556" class="type blue">CONTAINER · SPRING BOOT</text>
+  <text x="407" y="593" class="name ink">Query API</text>
+  <text x="407" y="625" class="body muted">Lê reserva e evento.</text>
+
+  <rect x="737" y="290" width="278" height="197" rx="14" class="app"/>
+  <text x="762" y="326" class="type blue">CONTAINER · SPRING BOOT</text>
+  <text x="762" y="364" class="name ink">Worker</text>
+  <text x="762" y="398" class="body muted">Publica outbox; consome</text>
+  <text x="762" y="426" class="body muted">SQS de entrada; decide</text>
+  <text x="762" y="454" class="body muted">estado sob lock no banco.</text>
+
+  <rect x="737" y="577" width="278" height="216" rx="14" class="store"/>
+  <text x="762" y="614" class="type muted">CONTAINER · POSTGRESQL</text>
+  <text x="762" y="653" class="name ink">Fonte de verdade</text>
+  <text x="762" y="690" class="body muted">Reserva + estoque + prazo</text>
+  <text x="762" y="721" class="body muted">outbox + inbox + resultado</text>
+  <text x="762" y="756" class="small blue">Outbox e inbox são tabelas.</text>
+
+  <rect x="1062" y="290" width="270" height="164" rx="14" class="queue"/>
+  <text x="1087" y="326" class="type muted">SQS · DONO EXTERNO</text>
+  <text x="1087" y="364" class="name ink">Saída ao externo</text>
+  <text x="1087" y="397" class="body muted">Fatos, resultados e pedido</text>
+  <text x="1087" y="425" class="body muted">de cancelamento via outbox</text>
+
+  <rect x="1062" y="577" width="270" height="165" rx="14" class="queue"/>
+  <text x="1087" y="613" class="type muted">SQS · DONO FLASH BOOKING</text>
+  <text x="1087" y="651" class="name ink">Entrada ao Flash</text>
+  <text x="1087" y="684" class="body muted">Pedido de confirmação e</text>
+  <text x="1087" y="712" class="body muted">reversão concluída</text>
+
+  <rect x="1440" y="308" width="350" height="423" rx="18" class="external"/>
+  <text x="1471" y="347" class="type muted">SISTEMA EXTERNO</text>
+  <text x="1471" y="390" class="name ink">Único responsável</text>
+  <text x="1471" y="423" class="name ink">por todas as</text>
+  <text x="1471" y="456" class="name ink">pendências</text>
+  <text x="1471" y="505" class="body muted">Consome a mesma tarefa</text>
+  <text x="1471" y="533" class="body muted">em réplicas concorrentes;</text>
+  <text x="1471" y="561" class="body muted">deduplica por reserva/operação.</text>
+  <text x="1471" y="606" class="body muted">Resolve, reverte e compensa</text>
+  <text x="1471" y="634" class="body muted">suas operações externas.</text>
+
+  <path d="M298 357 H382" class="line"/>
+  <path d="M298 420 H330 V591 H382" class="line"/>
+  <path d="M657 396 H695 V672 H737" class="line"/>
+  <path d="M657 594 H737" class="line"/>
+  <path d="M876 487 V577" class="line"/>
+  <path d="M1015 365 H1062" class="async"/>
+  <path d="M1332 371 H1440" class="async"/>
+  <path d="M1440 666 H1332" class="async"/>
+  <path d="M1062 665 H1035 V454 H1015" class="async"/>
+
+  <rect x="335" y="834" width="997" height="88" rx="12" class="note"/>
+  <text x="363" y="867" class="body ink">Filas de expiração e notificação continuam separadas da confirmação.</text>
+  <text x="363" y="896" class="small muted">Duas SQS atendem a integração externa; nenhuma assinatura SNS. AWS ainda não aplicada.</text>
+
+  <rect x="48" y="981" width="1742" height="90" rx="14" class="note"/>
+  <text x="78" y="1017" class="body ink">Linha contínua: chamada ou acesso a dados. Linha tracejada: mensagem assíncrona com possível redelivery.</text>
+  <text x="78" y="1047" class="small muted">A resposta HTTP de criação não é confirmação final. A mensagem de saída é persistida junto da mudança de estado.</text>
+</svg>

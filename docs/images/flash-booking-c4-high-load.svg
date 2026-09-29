@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1700" viewBox="0 0 2200 1700" role="img" aria-labelledby="title desc">
-  <title id="title">Flash Booking — C4 Model high-load</title>
-  <desc id="desc">Diagrama C4 em azul e cinza com a pessoa Cliente, o sistema Flash Booking, os containers query-api, command-api e worker, componentes internos, sistemas externos, resiliência e observabilidade.</desc>
+  <title id="title">Flash Booking — C4 Model high-load da reserva temporária</title>
+  <desc id="desc">Alvo high-load ainda não aplicado. Esta vista C4 de infraestrutura não detalha as filas externas de confirmação, implementadas no runtime local e declaradas mas não aplicadas na AWS. Mostra Cliente, Flash Booking, containers query-api, command-api e worker, dependências, resiliência e observabilidade.</desc>
   <defs>
     <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
       <path d="M0 0 L10 5 L0 10 Z" fill="#49677f"/>
@@ -59,7 +59,7 @@
 
   <rect width="2200" height="1700" class="background"/>
   <text x="48" y="58" class="page-title">Flash Booking — C4 Model • High-load</text>
-  <text x="48" y="88" class="page-subtitle">Containers Java escalados de forma independente; leitura, escrita e trabalho assíncrono mantêm contratos e responsabilidades distintos.</text>
+  <text x="48" y="88" class="page-subtitle">Alvo high-load não aplicado; ciclo de confirmação está em vista própria. Containers Java escalam de forma independente.</text>
   <rect x="1835" y="27" width="315" height="58" rx="8" class="badge"/>
   <text x="1992" y="51" text-anchor="middle" class="component-title">Arquitetura-alvo</text>
   <text x="1992" y="72" text-anchor="middle" class="small">mínimo 2 tasks por serviço • Multi-AZ</text>

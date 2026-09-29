@@ -3,6 +3,10 @@ package com.cielo.flashbooking.reservation.confirm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cielo.flashbooking.adapter.out.messaging.publisher.OutboxSqsPublisher;
+import com.cielo.flashbooking.application.outbox.OutboxEventStore;
+import com.cielo.flashbooking.reservation.application.CancelReservationService;
+import com.cielo.flashbooking.reservation.application.CreateReservationService;
 import com.cielo.flashbooking.support.LocalIntegrationInfrastructure;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -52,9 +56,21 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
     @Autowired
     private ReservationResolutionProcessor processor;
 
+    @Autowired
+    private OutboxEventStore outboxEventStore;
+
+    @Autowired
+    private CreateReservationService createReservationService;
+
+    @Autowired
+    private CancelReservationService cancelReservationService;
+
     private SqsClient sqsClient;
     private String queueUrl;
     private String deadLetterQueueUrl;
+    private String ownerQueueUrl;
+    private String expirationQueueUrl;
+    private String notificationQueueUrl;
 
     @BeforeEach
     void setUp() {
@@ -72,6 +88,9 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
                 .build();
         deadLetterQueueUrl = createQueue("resolution-dlq-" + UUID.randomUUID(), Map.of());
         queueUrl = createQueue("resolution-" + UUID.randomUUID(), sourceQueueAttributes(5, 0));
+        ownerQueueUrl = createQueue("reservation-owner-" + UUID.randomUUID(), Map.of());
+        expirationQueueUrl = createQueue("reservation-expiration-" + UUID.randomUUID(), Map.of());
+        notificationQueueUrl = createQueue("reservation-notification-" + UUID.randomUUID(), Map.of());
     }
 
     private String lastCreatedQueueUrl;
@@ -84,6 +103,15 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
             }
             if (deadLetterQueueUrl != null) {
                 sqsClient.deleteQueue(request -> request.queueUrl(deadLetterQueueUrl));
+            }
+            if (ownerQueueUrl != null) {
+                sqsClient.deleteQueue(request -> request.queueUrl(ownerQueueUrl));
+            }
+            if (expirationQueueUrl != null) {
+                sqsClient.deleteQueue(request -> request.queueUrl(expirationQueueUrl));
+            }
+            if (notificationQueueUrl != null) {
+                sqsClient.deleteQueue(request -> request.queueUrl(notificationQueueUrl));
             }
             sqsClient.close();
         }
@@ -130,6 +158,74 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void process_whenDistinctResolutionsRaceForSameReservation_commitsCapacityOnlyOnce() throws Exception {
+        Fixture fixture = insertPendingReservation(10, 7, 3);
+        ReservationResolutionMessage firstMessage = ReservationResolutionMessage.parse(
+                confirmationBody(fixture.reservationId(), "resolution-distinct-1"), objectMapper);
+        ReservationResolutionMessage secondMessage = ReservationResolutionMessage.parse(
+                confirmationBody(fixture.reservationId(), "resolution-distinct-2"), objectMapper);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> processor.process(firstMessage, firstMessage.payloadFingerprint()));
+            var second = executor.submit(() -> processor.process(secondMessage, secondMessage.payloadFingerprint()));
+
+            assertThat(java.util.Set.of(
+                            first.get(5, java.util.concurrent.TimeUnit.SECONDS).code(),
+                            second.get(5, java.util.concurrent.TimeUnit.SECONDS).code()))
+                    .containsExactlyInAnyOrder("CONFIRMED", "ALREADY_CONFIRMED");
+            assertThat(reservationStatus(fixture.reservationId())).isEqualTo("CONFIRMED");
+            assertThat(available(fixture.eventId())).isEqualTo(7);
+            assertThat(inboxCount("reservation-owner", "resolution-distinct-1")).isEqualTo(1);
+            assertThat(inboxCount("reservation-owner", "resolution-distinct-2")).isEqualTo(1);
+            assertThat(outboxCount("ReservationConfirmed", fixture.reservationId()))
+                    .isEqualTo(2);
+            assertThat(outboxCount("ReservationConfirmationRejected", fixture.reservationId()))
+                    .isZero();
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void poll_whenCancellationWonBeforeConfirmation_rejectsWithoutReturningCapacityAgain() {
+        Fixture fixture = insertPendingReservation(10, 7, 3);
+        cancelReservationService.cancel(fixture.reservationId());
+        send(confirmationBody(fixture.reservationId(), "resolution-after-cancel"));
+
+        consumer().poll();
+
+        assertThat(reservationStatus(fixture.reservationId())).isEqualTo("CANCELLED");
+        assertThat(available(fixture.eventId())).isEqualTo(10);
+        assertThat(inboxOutcome("reservation-owner", "resolution-after-cancel")).isEqualTo("CANCELLED");
+        assertThat(outboxCount("ReservationConfirmationRejected", fixture.reservationId()))
+                .isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmed", fixture.reservationId())).isZero();
+        assertThat(outboxCount("ReservationHoldClosed", fixture.reservationId()))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void poll_whenEventSaleEndedButReservationDeadlineIsFuture_confirmsAndKeepsCapacityCommitted() {
+        Fixture fixture = insertPendingReservation(10, 7, 3);
+        jdbcTemplate.update(
+                "UPDATE event SET ends_at = clock_timestamp() - INTERVAL '30 seconds' WHERE id = ?", fixture.eventId());
+
+        send(confirmationBody(fixture.reservationId(), "resolution-after-event-end"));
+        consumer().poll();
+
+        assertThat(reservationStatus(fixture.reservationId())).isEqualTo("CONFIRMED");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT expires_at > clock_timestamp() FROM reservation WHERE id = ?",
+                        Boolean.class,
+                        fixture.reservationId()))
+                .isTrue();
+        assertThat(available(fixture.eventId())).isEqualTo(7);
+        assertThat(inboxOutcome("reservation-owner", "resolution-after-event-end"))
+                .isEqualTo("CONFIRMED");
+        assertThat(outboxCount("ReservationConfirmed", fixture.reservationId())).isEqualTo(1);
     }
 
     @Test
@@ -258,6 +354,51 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
     }
 
     @Test
+    void localOwnerSimulation_holdsConfirmsAndCompletesCancellationWithoutPaymentProcessing() throws Exception {
+        UUID eventId = insertEvent(10, 10);
+        var created = createReservationService.create(eventId, 4, "Simulation", "simulation@example.com");
+        UUID reservationId = created.reservation().id();
+        OutboxSqsPublisher publisher = new OutboxSqsPublisher(
+                outboxEventStore,
+                sqsClient,
+                expirationQueueUrl,
+                notificationQueueUrl,
+                ownerQueueUrl,
+                java.time.Clock.systemUTC(),
+                objectMapper);
+
+        publisher.publishPendingEvents();
+        var heldMessage = receiveOwnerEvent("ReservationHeld");
+        var held = objectMapper.readTree(heldMessage.body());
+        assertThat(held.get("reservationId").asString()).isEqualTo(reservationId.toString());
+        assertThat(held.get("quantity").asInt()).isEqualTo(4);
+        assertThat(held.has("customerId")).isFalse();
+        sqsClient.deleteMessage(request -> request.queueUrl(ownerQueueUrl).receiptHandle(heldMessage.receiptHandle()));
+
+        send(confirmationBody(reservationId, "simulation-confirmation"));
+        consumer().poll();
+        assertThat(reservationStatus(reservationId)).isEqualTo("CONFIRMED");
+        assertThat(available(eventId)).isEqualTo(6);
+
+        cancelReservationService.cancel(reservationId);
+        publisher.publishPendingEvents();
+        var cancellationMessage = receiveOwnerEvent("ReservationCancellationRequested");
+        UUID cancellationId = UUID.fromString(objectMapper
+                .readTree(cancellationMessage.body())
+                .get("cancellationId")
+                .asString());
+        sqsClient.deleteMessage(
+                request -> request.queueUrl(ownerQueueUrl).receiptHandle(cancellationMessage.receiptHandle()));
+
+        send(cancellationBody(reservationId, cancellationId, "simulation-cancellation-completed"));
+        consumer().poll();
+        assertThat(reservationStatus(reservationId)).isEqualTo("CANCELLED");
+        assertThat(available(eventId)).isEqualTo(10);
+        assertThat(outboxCount("ReservationCancellationRequested", reservationId))
+                .isEqualTo(1);
+    }
+
+    @Test
     void poll_whenEnvelopeIsMalformed_leavesTheMessageForRetry() {
         String body = "{\"version\":1}";
         send(body);
@@ -294,6 +435,26 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
                 .queueUrl();
         lastCreatedQueueUrl = url;
         return url;
+    }
+
+    private software.amazon.awssdk.services.sqs.model.Message receiveOwnerEvent(String type) {
+        var messages = sqsClient
+                .receiveMessage(request ->
+                        request.queueUrl(ownerQueueUrl).maxNumberOfMessages(10).waitTimeSeconds(1))
+                .messages();
+        return messages.stream()
+                .filter(message -> {
+                    try {
+                        return type.equals(objectMapper
+                                .readTree(message.body())
+                                .get("type")
+                                .asString());
+                    } catch (Exception exception) {
+                        return false;
+                    }
+                })
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing owner event: " + type));
     }
 
     private Map<QueueAttributeName, String> sourceQueueAttributes(int maxReceiveCount, int visibilityTimeout) {

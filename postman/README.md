@@ -7,6 +7,8 @@ O projeto possui **uma única coleção**: flash-booking-aws.postman_collection.
 
 As duas pastas cobrem os cinco endpoints do case. A pasta Local também demonstra idempotência, conflito de capacidade, cancelamento, retorno de capacidade, erro por falta de Idempotency-Key e reserva rejeitada antes da abertura de uma flash sale.
 
+Esta coleção executa os contratos HTTP do sistema, incluindo a consulta dos estados da reserva. Ela não publica diretamente nas filas SQS: o ciclo de confirmação e cancelamento externo é exercitado pela integração automatizada `SqsReservationConfirmationConsumerIT`, com um responsável simulado e sem pagamentos. `GET /reservations/{id}` retorna `confirmedAt` quando confirmado; `DELETE` de `CONFIRMED` aceita o cancelamento assíncrono com HTTP `202` e mantém o estoque até a conclusão correlacionada.
+
 ## Importar
 
 No Postman, importe:
@@ -110,7 +112,7 @@ Depois disso, envie a pasta **AWS | fronteira e fluxo do case** de 00 até 08, e
 
 ## O que esta coleção prova, e o que não prova
 
-Ela prova o contrato HTTP e torna visíveis as regras mais importantes do case. Ela não substitui os testes Java/Testcontainers que provam concorrência, relógio do PostgreSQL, constraints, outbox e mensagens duplicadas.
+Ela prova o contrato HTTP e torna visíveis as regras mais importantes do case. Ela não substitui os testes Java/Testcontainers que provam concorrência, relógio do PostgreSQL, constraints, outbox, estados confirmados e mensagens duplicadas. Para executar o cenário de responsável simulado localmente, use o comando registrado em [Rodar localmente](../docs/rodar-localmente.md).
 
 Também não afirma que a demo AWS continua ativa, que o throttling produz 429 determinístico ou que a arquitetura high-load foi provisionada. Esses limites e a evidência histórica estão no [README principal](../README.md).
 

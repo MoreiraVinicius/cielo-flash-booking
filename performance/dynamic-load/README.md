@@ -2,6 +2,8 @@
 
 Este harness responde como a aplicação se comporta em uma stack Docker Compose local, com dados sintéticos determinísticos. Ele não mede capacidade de produção, não gera carga em AWS e não demonstra failover, autoscaling ou vazamento de heap JVM.
 
+Os perfis de carga exercitam criação HTTP, portanto geram principalmente reservas `PENDING`; não produzem confirmações pela integração SQS nem são evidência de carga do módulo externo. A auditoria pós-execução considera `PENDING`, `CONFIRMED` e `CANCELLATION_PENDING` como estoque comprometido, conforme a [invariante atual](../../.specs/features/reservation-confirmation/spec.md). A integração é coberta por testes específicos, não por estes perfis de carga.
+
 ## Tipos de teste
 
 | Tipo | Decisão | Motivo |

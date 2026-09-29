@@ -12,6 +12,7 @@ record ReservationDetailsResponse(
         int quantity,
         ReservationStatus status,
         Instant expiresAt,
+        Instant confirmedAt,
         ClosureReasonResponse closureReason) {
 
     static ReservationDetailsResponse from(ReservationDetails reservation) {
@@ -25,6 +26,7 @@ record ReservationDetailsResponse(
                 reservation.quantity(),
                 reservation.status(),
                 reservation.expiresAt(),
+                reservation.confirmedAt(),
                 reservation.closureReason() == null
                         ? null
                         : new ClosureReasonResponse(

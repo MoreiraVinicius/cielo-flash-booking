@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
-  <title id="title">Comparação entre a arquitetura demo e a arquitetura-alvo high-load</title>
-  <desc id="desc">As duas topologias usam o mesmo core Java com Query API, Command API e Worker. A demo validada prioriza economia com banco Single-AZ e uma task por serviço. High-load é um alvo não provisionado com Multi-AZ, múltiplas tasks, autoscaling, Aurora, RDS Proxy e Valkey Multi-AZ.</desc>
+  <title id="title">Comparação das topologias da demo e do alvo high-load</title>
+  <desc id="desc">Esta comparação trata da topologia e do escalonamento, não detalha os fluxos da confirmação externa. O runtime local inclui a confirmação por filas; as filas externas não foram aplicadas na AWS. As duas topologias usam o mesmo core Java com Query API, Command API e Worker. A demo validada prioriza economia com banco Single-AZ e uma task por serviço. High-load é um alvo não provisionado com Multi-AZ, múltiplas tasks, autoscaling, Aurora, RDS Proxy e Valkey Multi-AZ.</desc>
   <defs>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
       <feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#102a43" flood-opacity="0.12"/>
@@ -24,8 +24,8 @@
   <rect width="1600" height="900" rx="30" fill="#f4f7fa"/>
   <g class="sans">
     <text x="64" y="58" class="eyebrow" fill="#1168bd">EVOLUÇÃO ARQUITETURAL</text>
-    <text x="64" y="108" class="title" fill="#17324d">O domínio não muda; a topologia evolui</text>
-    <text x="64" y="145" class="subtitle" fill="#557086">Separar consulta, comando e trabalho assíncrono permite escalar onde a métrica indicar.</text>
+    <text x="64" y="108" class="title" fill="#17324d">A topologia da reserva temporária evolui</text>
+    <text x="64" y="145" class="subtitle" fill="#557086">Comparação de topologia e escala; o ciclo de confirmação fica nas vistas próprias.</text>
   </g>
 
   <g class="sans" filter="url(#shadow)">
@@ -114,7 +114,7 @@
 
   <g class="sans">
     <rect x="64" y="844" width="1472" height="38" rx="19" fill="#dfe8ef"/>
-    <text x="94" y="869" class="small" fill="#17324d">Não muda: domínio, APIs, idempotência, outbox e migrations.</text>
+    <text x="94" y="869" class="small" fill="#17324d">Nesta comparação não mudam: domínio atual, APIs, idempotência e outbox.</text>
     <text x="720" y="869" class="small" fill="#17324d">Muda: AZs, capacidade, réplicas, proxy, autoscaling e operação.</text>
   </g>
 </svg>

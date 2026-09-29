@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1500" viewBox="0 0 2000 1500" role="img" aria-labelledby="title desc">
-  <title id="title">Flash Booking — C4 Model, nível de componentes</title>
-  <desc id="desc">Componentes reais dos perfis query-api, command-api e worker, integrações, padrões de resiliência e observabilidade.</desc>
+  <title id="title">Flash Booking — componentes do runtime local</title>
+  <desc id="desc">Componentes dos perfis query-api, command-api e worker no runtime local implementado, incluindo consumo da fila de confirmação externa. A implantação AWS histórica não incluiu as duas filas direcionais novas; elas estão declaradas em Terraform e ainda não aplicadas.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#45637f"/></marker>
     <marker id="arrowAsync" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#276fb8"/></marker>
@@ -10,7 +10,7 @@
   </defs>
   <rect width="2000" height="1500" class="bg"/>
   <text x="70" y="60" class="title">Flash Booking — C4 Model • Nível 3: Componentes</text>
-  <text x="70" y="91" class="subtitle">Três runtimes do mesmo código Java; não há chamada direta entre eles — a coordenação ocorre por PostgreSQL, outbox, SQS e cache compartilhado.</text>
+  <text x="70" y="91" class="subtitle">Runtime local: três perfis coordenados por PostgreSQL, outbox, SQS e cache; AWS ainda não tem as filas externas.</text>
 
   <rect x="760" y="125" width="480" height="72" rx="8" class="client"/>
   <text x="1000" y="154" text-anchor="middle" class="clientTitle">Cliente da API</text>
@@ -54,28 +54,28 @@
 
   <rect x="1340" y="250" width="610" height="650" rx="12" class="boundary"/>
   <rect x="1341" y="251" width="608" height="70" rx="11" class="boundaryHead"/>
-  <text x="1370" y="280" class="boundaryTitle">worker</text><text x="1370" y="304" class="boundarySub">Responsabilidade: publicação, expiração e notificação</text>
+  <text x="1370" y="280" class="boundaryTitle">worker</text><text x="1370" y="304" class="boundarySub">Responsabilidade: publicação, expiração, notificação e confirmação</text>
   <rect x="1370" y="350" width="550" height="82" rx="7" class="component"/>
-  <text x="1390" y="376" class="componentTitle">Entradas agendadas e SQS</text><text x="1390" y="399" class="componentText">OutboxSqsPublisher · SqsExpirationConsumer</text><text x="1390" y="418" class="componentText">SqsReservationCreatedConsumer</text>
+  <text x="1390" y="376" class="componentTitle">Entradas agendadas e SQS</text><text x="1390" y="399" class="componentText">OutboxSqsPublisher · SqsExpirationConsumer</text><text x="1390" y="418" class="componentText">CreatedConsumer · ReservationConfirmationConsumer</text>
   <rect x="1370" y="472" width="255" height="104" rx="7" class="component"/>
-  <text x="1390" y="501" class="componentTitle">Expiração</text><text x="1390" y="527" class="componentText">ExpireReservationService</text><text x="1390" y="551" class="componentText">ExpirationReconciler</text>
+  <text x="1390" y="501" class="componentTitle">Ciclo da reserva</text><text x="1390" y="527" class="componentText">Expira e reconcilia PENDING</text><text x="1390" y="551" class="componentText">Confirma e conclui cancelamento</text>
   <rect x="1665" y="472" width="255" height="104" rx="7" class="component"/>
   <text x="1685" y="501" class="componentTitle">Notificação</text><text x="1685" y="527" class="componentText">ReservationEmailService</text><text x="1685" y="551" class="componentText">NotificationDeliveryStore</text>
   <rect x="1370" y="625" width="170" height="150" rx="7" class="adapter"/>
   <text x="1388" y="654" class="adapterTitle">Persistência</text><text x="1388" y="680" class="adapterText">JdbcOutboxEventStore</text><text x="1388" y="702" class="adapterText">JdbcNotification-</text><text x="1388" y="721" class="adapterText">DeliveryStore</text><text x="1388" y="750" class="small">reservas e inventário</text>
   <rect x="1560" y="625" width="170" height="150" rx="7" class="adapter"/>
-  <text x="1578" y="654" class="adapterTitle">Mensageria</text><text x="1578" y="680" class="adapterText">SqsClient</text><text x="1578" y="704" class="adapterText">2 filas + 2 DLQs</text><text x="1578" y="735" class="small">publica e consome</text><text x="1578" y="754" class="small">at-least-once</text>
+  <text x="1578" y="654" class="adapterTitle">Mensageria</text><text x="1578" y="680" class="adapterText">SqsClient</text><text x="1578" y="704" class="adapterText">4 filas + 4 DLQs</text><text x="1578" y="735" class="small">publica e consome</text><text x="1578" y="754" class="small">at-least-once</text>
   <rect x="1750" y="625" width="170" height="150" rx="7" class="adapter"/>
   <text x="1768" y="654" class="adapterTitle">E-mail</text><text x="1768" y="680" class="adapterText">SesReservation-</text><text x="1768" y="699" class="adapterText">EmailSender</text><text x="1768" y="735" class="small">Amazon SES</text><text x="1768" y="754" class="small">timeout 3 s</text>
   <path d="M1645 432 V450 H1497 V472" class="flow"/><path d="M1645 450 H1792 V472" class="flow"/><circle cx="1645" cy="450" r="4" class="junction"/>
   <path d="M1497 576 V600 H1455 V625" class="flow"/><path d="M1497 600 H1645 V625" class="async"/>
   <path d="M1792 576 V600 H1835 V625" class="flow"/>
-  <rect x="1370" y="815" width="550" height="54" rx="6" class="external"/><text x="1645" y="838" text-anchor="middle" class="externalTitle">Dependências externas</text><text x="1645" y="859" text-anchor="middle" class="externalText">PostgreSQL + SQS Expiration/Notification + DLQs + Amazon SES</text>
+  <rect x="1370" y="815" width="550" height="54" rx="6" class="external"/><text x="1645" y="838" text-anchor="middle" class="externalTitle">Dependências externas</text><text x="1645" y="859" text-anchor="middle" class="externalText">PostgreSQL + SQS interna/integração + DLQs + Amazon SES</text>
   <path d="M1455 775 V815" class="flow"/><path d="M1645 775 V815" class="async"/><path d="M1835 775 V815" class="flow"/>
 
   <rect x="50" y="930" width="1900" height="88" rx="8" class="section"/>
   <text x="80" y="960" class="sectionHead">Contrato entre os três runtimes</text>
-  <text x="80" y="989" class="sectionText">command-api confirma a transação e grava o outbox; worker publica e consome eventos; query-api lê reservas no PostgreSQL e acelera disponibilidade via Valkey.</text>
+  <text x="80" y="989" class="sectionText">command-api grava estado e outbox; worker confirma via inbox sob lock; query-api lê reservas no PostgreSQL e acelera disponibilidade via Valkey.</text>
   <line x1="80" y1="1003" x2="130" y2="1003" class="flow"/><text x="142" y="1008" class="small">síncrono</text><line x1="255" y1="1003" x2="305" y2="1003" class="async"/><text x="317" y="1008" class="small">SQS / evento</text><line x1="460" y1="1003" x2="510" y2="1003" class="event"/><text x="522" y="1008" class="small">após commit</text>
 
   <rect x="50" y="1050" width="1900" height="205" rx="8" class="section"/>

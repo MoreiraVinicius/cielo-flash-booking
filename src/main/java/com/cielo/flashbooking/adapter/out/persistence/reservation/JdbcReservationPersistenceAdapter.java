@@ -31,6 +31,14 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     }
 
     @Override
+    public void lockReservationForResolution(UUID reservationId) {
+        jdbcTemplate.query(
+                "SELECT id FROM reservation WHERE id = ? FOR UPDATE",
+                (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class),
+                reservationId);
+    }
+
+    @Override
     public Instant currentTime() {
         return jdbcTemplate
                 .queryForObject("SELECT clock_timestamp()", Timestamp.class)
@@ -47,7 +55,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
     public Optional<ReservationDetails> findById(UUID id) {
         return jdbcTemplate.query(
                 """
-                SELECT r.id AS reservation_id, r.quantity, r.status, r.expires_at,
+                SELECT r.id AS reservation_id, r.quantity, r.status, r.expires_at, r.confirmed_at,
                        r.closure_reason_code, r.closure_reason_description,
                        e.id AS event_id, e.name AS event_name,
                        c.id AS customer_id, c.name AS customer_name, c.email AS customer_email
@@ -460,6 +468,9 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 resultSet.getInt("quantity"),
                 com.cielo.flashbooking.domain.reservation.ReservationStatus.valueOf(resultSet.getString("status")),
                 resultSet.getTimestamp("expires_at").toInstant(),
+                resultSet.getTimestamp("confirmed_at") == null
+                        ? null
+                        : resultSet.getTimestamp("confirmed_at").toInstant(),
                 closureReason);
     }
 

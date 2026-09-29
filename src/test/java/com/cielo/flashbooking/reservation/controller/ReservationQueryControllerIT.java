@@ -75,6 +75,42 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
+    void get_whenReservationIsConfirmed_exposesTheConfirmationTimestamp() throws Exception {
+        UUID reservationId = insertReservation("CONFIRMED");
+
+        mockMvc.perform(get("/reservations/{id}", reservationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.confirmedAt").isNotEmpty());
+    }
+
+    @Test
+    void cancel_whenReservationIsConfirmed_returnsAcceptedAndRetainsStockUntilExternalCompletion() throws Exception {
+        UUID reservationId = insertReservation("CONFIRMED");
+        UUID eventId =
+                jdbcTemplate.queryForObject("SELECT event_id FROM reservation WHERE id = ?", UUID.class, reservationId);
+
+        mockMvc.perform(delete("/reservations/{id}", reservationId)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("CANCELLATION_PENDING"))
+                .andExpect(jsonPath("$.confirmedAt").isNotEmpty());
+
+        mockMvc.perform(delete("/reservations/{id}", reservationId)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("CANCELLATION_PENDING"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
+                .isEqualTo(7);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationCancellationRequested'",
+                        Integer.class,
+                        reservationId))
+                .isEqualTo(1);
+    }
+
+    @Test
     void get_whenTerminalReservationExists_returnsStoredClosureReason() throws Exception {
         UUID reservationId = insertReservation("CANCELLED");
 
@@ -198,6 +234,18 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
                     "Reserva cancelada por solicitação",
                     java.sql.Timestamp.from(createdAt),
                     java.sql.Timestamp.from(createdAt));
+        } else if ("CONFIRMED".equals(status)) {
+            jdbcTemplate.update(
+                    "INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    reservationId,
+                    eventId,
+                    customerId,
+                    3,
+                    status,
+                    java.sql.Timestamp.from(createdAt.plus(Duration.ofMinutes(10))),
+                    java.sql.Timestamp.from(createdAt.plusSeconds(1)),
+                    java.sql.Timestamp.from(createdAt),
+                    java.sql.Timestamp.from(createdAt.plusSeconds(1)));
         } else {
             jdbcTemplate.update(
                     """

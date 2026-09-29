@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" role="img" aria-labelledby="title desc">
+  <title id="title">C4 System Context — confirmação externa da reserva</title>
+  <desc id="desc">Runtime local implementado; infraestrutura AWS não aplicada. Operador da API usa Flash Booking para reservar em nome de um cliente, consultar e solicitar cancelamento. Um único módulo externo resolve todas as pendências e troca mensagens assíncronas com Flash Booking. Flash Booking decide prazo e estoque; o módulo externo executa e compensa suas operações.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}
+      .bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#526b80}.blue{fill:#1168bd}.white{fill:#fff}
+      .eyebrow{font-size:17px;font-weight:700;letter-spacing:2px}.heading{font-size:38px;font-weight:700}
+      .sub{font-size:20px}.type{font-size:16px;font-weight:700;letter-spacing:1px}
+      .name{font-size:27px;font-weight:700}.body{font-size:18px}.small{font-size:16px}
+      .person{fill:#e4edf5;stroke:#6b89a1;stroke-width:2}.system{fill:#e8f3fc;stroke:#1168bd;stroke-width:3}
+      .external{fill:#edf2f6;stroke:#6c8294;stroke-width:2}.note{fill:#fff;stroke:#c4d3df;stroke-width:2}
+      .line{stroke:#55758e;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .async{stroke:#1168bd;stroke-width:3;stroke-dasharray:10 7;fill:none;marker-end:url(#blueArrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#55758e"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+  </defs>
+  <rect width="1600" height="920" class="bg"/>
+  <text x="65" y="68" class="eyebrow blue">RUNTIME LOCAL · AWS NÃO APLICADA</text>
+  <text x="65" y="119" class="heading ink">C4 Model · contexto do sistema</text>
+  <text x="65" y="155" class="sub muted">Quem retém os ingressos, quem resolve as pendências e quem decide o desfecho</text>
+
+  <rect x="60" y="265" width="320" height="255" rx="18" class="person"/>
+  <text x="90" y="307" class="type muted">PESSOA</text>
+  <text x="90" y="353" class="name ink">Operador da API</text>
+  <text x="90" y="396" class="body muted">Solicita reserva para cliente,</text>
+  <text x="90" y="423" class="body muted">consulta estado e pode pedir</text>
+  <text x="90" y="450" class="body muted">cancelamento.</text>
+
+  <rect x="510" y="235" width="520" height="315" rx="20" class="system"/>
+  <text x="548" y="279" class="type blue">SISTEMA EM FOCO</text>
+  <text x="548" y="326" class="name ink">Flash Booking</text>
+  <text x="548" y="371" class="body muted">Retém e libera estoque no PostgreSQL.</text>
+  <text x="548" y="402" class="body muted">Decide prazo e estados da reserva.</text>
+  <text x="548" y="433" class="body muted">Confirma somente após declaração externa</text>
+  <text x="548" y="464" class="body muted">de todas as pendências resolvidas.</text>
+  <text x="548" y="508" class="small blue">Não executa nem interpreta pagamentos.</text>
+
+  <rect x="1160" y="235" width="380" height="315" rx="20" class="external"/>
+  <text x="1194" y="279" class="type muted">SISTEMA EXTERNO · ÚNICO DONO</text>
+  <text x="1194" y="326" class="name ink">Responsável por</text>
+  <text x="1194" y="361" class="name ink">todas as pendências</text>
+  <text x="1194" y="405" class="body muted">Executa suas operações uma vez</text>
+  <text x="1194" y="434" class="body muted">por reserva e operação.</text>
+  <text x="1194" y="463" class="body muted">Compensa rejeição; conclui a</text>
+  <text x="1194" y="492" class="body muted">reversão antes do cancelamento.</text>
+
+  <path d="M380 350 H510" class="line"/>
+  <text x="419" y="337" class="small ink">HTTP</text>
+  <path d="M1030 326 H1160" class="async"/>
+  <text x="1053" y="301" class="small blue">SQS direta</text>
+  <path d="M1160 470 H1030" class="async"/>
+  <text x="1053" y="505" class="small blue">SQS direta</text>
+
+  <rect x="60" y="620" width="1480" height="235" rx="18" class="note"/>
+  <text x="94" y="665" class="name ink">Contrato de ponta a ponta</text>
+  <text x="94" y="710" class="body muted">1. Reserva PENDING retém capacidade; ReservationHeld inicia o trabalho externo por uma SQS direta.</text>
+  <text x="94" y="744" class="body muted">2. O responsável envia resolução completa; Flash Booking confirma antes do prazo ou rejeita e responde assincronamente.</text>
+  <text x="94" y="778" class="body muted">3. Cancelamento de CONFIRMED aguarda reversão externa; capacidade continua comprometida até sucesso.</text>
+  <text x="94" y="826" class="small blue">Linhas tracejadas = mensagens com entrega pelo menos uma vez; idempotência é persistida pelos dois sistemas.</text>
+</svg>

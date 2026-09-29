@@ -2,6 +2,8 @@
 
 Este guia executa a aplicacao sem AWS. O Docker Compose fornece PostgreSQL, Valkey, LocalStack (SQS) e Mailpit; a aplicacao pode rodar inteira no Compose ou ter seus tres modos Java depurados pelo IntelliJ.
 
+O Compose executa o ciclo de reserva e confirmação externa: `PENDING`, `CONFIRMED`, `CANCELLATION_PENDING`, `CANCELLED` e `EXPIRED`. O responsável externo não faz parte da aplicação; as filas locais no LocalStack permitem testar o contrato e os testes de integração simulam esse responsável sem implementar pagamentos. As filas AWS estão declaradas em Terraform, mas ainda não foram aplicadas.
+
 ## Pre-requisitos
 
 - Docker Desktop iniciado e com `docker version` exibindo as secoes **Client** e **Server**.
@@ -34,7 +36,13 @@ Depois que os tres processos estiverem saudaveis, execute o smoke end-to-end:
 .\scripts\compose-smoke.ps1
 ```
 
-O smoke cria um evento, cria uma reserva, consulta os dois pela Query API e confirma que o Worker enviou o e-mail para o Mailpit.
+O smoke cria um evento, cria uma reserva, consulta os dois pela Query API e confirma que o Worker enviou o e-mail para o Mailpit. Para reproduzir a integração com o único responsável externo simulado, rode o teste completo específico:
+
+```powershell
+.\mvnw.cmd --batch-mode -Pintegration "-Dit.test=SqsReservationConfirmationConsumerIT" verify
+```
+
+O teste publica `ReservationHeld`, simula o responsável enviando a confirmação pela fila de entrada, verifica `CONFIRMED` e então simula o pedido e a conclusão correlacionada do cancelamento. Nenhum pagamento é executado.
 
 Para encerrar os containers sem apagar os dados locais:
 
@@ -69,10 +77,10 @@ Para interromper, pare as tres sessoes no IntelliJ. As dependencias podem contin
 | --- | --- | --- |
 | Query API | `http://localhost:8081` | `GET /events/{id}` e `GET /reservations/{id}` |
 | Command API | `http://localhost:8082` | `POST /events`, reservas e cancelamento |
-| Worker | `http://localhost:8080/actuator/health` | Usado para outbox, expiracao e notificacao |
+| Worker | `http://localhost:8080/actuator/health` | Outbox, expiração, notificação e confirmação externa |
 | PostgreSQL | `localhost:15432/flash_booking` | Usuario e senha: `flash_booking` |
 | Valkey | `localhost:16379` | Cache de disponibilidade |
-| LocalStack | `http://localhost:14566` | Filas SQS locais |
+| LocalStack | `http://localhost:14566` | Filas SQS locais, inclusive `reservation-to-owner` e `reservation-from-owner` |
 | Mailpit | `http://localhost:8025` | Caixa de entrada dos e-mails locais |
 | SMTP Mailpit | `localhost:11025` | Configurado no Worker do IntelliJ |
 

@@ -83,6 +83,7 @@ class CancelReservationServiceTest {
                 3,
                 ReservationStatus.CANCELLATION_PENDING,
                 Instant.parse("2026-09-09T12:10:00Z"),
+                Instant.parse("2026-09-09T12:00:00Z"),
                 null);
         ReservationWriter.CancellationRequest request =
                 new ReservationWriter.CancellationRequest(reservationId, eventId, 3, UUID.randomUUID());
@@ -129,6 +130,7 @@ class CancelReservationServiceTest {
                 3,
                 ReservationStatus.CANCELLED,
                 Instant.parse("2026-09-09T12:10:00Z"),
+                null,
                 new ReservationDetails.ClosureReason("CANCELLED_BY_REQUEST", "Reserva cancelada por solicitação"));
     }
 }

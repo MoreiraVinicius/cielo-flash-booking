@@ -71,7 +71,8 @@ class JdbcEventSummaryFactsReader implements EventSummaryFactsReader {
                 FROM event
                 WHERE id = ? AND ends_at IS NOT NULL
             ), accepted AS (
-                SELECT r.id, r.quantity, r.created_at, r.expires_at, r.status, r.updated_at, w.sale_starts_at, w.ends_at
+                SELECT r.id, r.quantity, r.created_at, r.expires_at, r.status, r.confirmed_at, r.updated_at,
+                       w.sale_starts_at, w.ends_at
                 FROM reservation r
                 JOIN event_window w ON w.id = r.event_id
                 WHERE r.created_at >= w.sale_starts_at AND r.created_at < w.ends_at
@@ -79,13 +80,24 @@ class JdbcEventSummaryFactsReader implements EventSummaryFactsReader {
                 SELECT count(*)::bigint AS accepted_reservations,
                        COALESCE(sum(quantity), 0)::bigint AS accepted_tickets,
                        COALESCE(sum(quantity) FILTER (
-                           WHERE expires_at > ends_at AND (status = 'PENDING' OR updated_at > ends_at)
+                           WHERE (
+                               status IN ('CONFIRMED', 'CANCELLATION_PENDING') AND confirmed_at <= ends_at
+                           ) OR (
+                               status = 'CANCELLED' AND confirmed_at IS NOT NULL
+                               AND confirmed_at <= ends_at AND updated_at > ends_at
+                           ) OR (
+                               expires_at > ends_at AND (
+                                   status = 'PENDING'
+                                   OR (updated_at > ends_at AND status IN ('CANCELLED', 'EXPIRED'))
+                                   OR (confirmed_at > ends_at AND status IN ('CONFIRMED', 'CANCELLATION_PENDING'))
+                               )
+                           )
                        ), 0)::bigint AS valid_tickets_at_close,
                        COALESCE(sum(quantity) FILTER (
                            WHERE status = 'CANCELLED' AND updated_at <= ends_at
                        ), 0)::bigint AS cancelled_tickets_at_close,
                        COALESCE(sum(quantity) FILTER (
-                           WHERE expires_at <= ends_at AND (status <> 'CANCELLED' OR updated_at > ends_at)
+                           WHERE expires_at <= ends_at AND status IN ('PENDING', 'EXPIRED')
                        ), 0)::bigint AS expired_tickets_at_close,
                        COALESCE(sum(quantity) FILTER (
                            WHERE created_at < sale_starts_at + interval '5 minutes'

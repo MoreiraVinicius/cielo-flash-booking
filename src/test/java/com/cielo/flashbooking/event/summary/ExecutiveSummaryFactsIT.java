@@ -41,17 +41,44 @@ class ExecutiveSummaryFactsIT extends LocalIntegrationInfrastructure {
                 eventId, startsAt.plusSeconds(300), startsAt.plusSeconds(3600), 4, "CANCELLED", endsAt.plusSeconds(60));
         insertReservation(
                 eventId, startsAt.plusSeconds(310), endsAt.plusSeconds(600), 6, "PENDING", startsAt.plusSeconds(310));
+        insertReservation(
+                eventId,
+                startsAt.plusSeconds(320),
+                startsAt.plusSeconds(900),
+                2,
+                "CONFIRMED",
+                startsAt.plusSeconds(320),
+                startsAt.plusSeconds(320),
+                null);
+        insertReservation(
+                eventId,
+                startsAt.plusSeconds(330),
+                startsAt.plusSeconds(900),
+                1,
+                "CANCELLATION_PENDING",
+                startsAt.plusSeconds(340),
+                startsAt.plusSeconds(325),
+                UUID.randomUUID());
+        insertReservation(
+                eventId,
+                startsAt.plusSeconds(340),
+                startsAt.plusSeconds(900),
+                2,
+                "CANCELLED",
+                endsAt.plusSeconds(60),
+                startsAt.plusSeconds(335),
+                UUID.randomUUID());
 
         EventSummaryFacts facts = factsReader.read(eventId).orElseThrow();
 
         assertThat(facts.complete()).isTrue();
-        assertThat(facts.acceptedReservations()).isEqualTo(4);
-        assertThat(facts.acceptedTickets()).isEqualTo(15);
-        assertThat(facts.validTicketsAtClose()).isEqualTo(10);
+        assertThat(facts.acceptedReservations()).isEqualTo(7);
+        assertThat(facts.acceptedTickets()).isEqualTo(20);
+        assertThat(facts.validTicketsAtClose()).isEqualTo(15);
         assertThat(facts.cancelledTicketsAtClose()).isEqualTo(2);
         assertThat(facts.expiredTicketsAtClose()).isEqualTo(3);
         assertThat(facts.peakMinute()).isEqualTo(startsAt.plusSeconds(300));
-        assertThat(facts.peakTickets()).isEqualTo(10);
+        assertThat(facts.peakTickets()).isEqualTo(15);
         assertThat(facts.firstFiveMinuteTickets()).isEqualTo(5);
         assertThat(facts.saleStartsAt()).isEqualTo(startsAt);
         assertThat(facts.endsAt()).isEqualTo(endsAt);
@@ -147,13 +174,25 @@ class ExecutiveSummaryFactsIT extends LocalIntegrationInfrastructure {
 
     private void insertReservation(
             UUID eventId, Instant createdAt, Instant expiresAt, int quantity, String status, Instant updatedAt) {
+        insertReservation(eventId, createdAt, expiresAt, quantity, status, updatedAt, null, null);
+    }
+
+    private void insertReservation(
+            UUID eventId,
+            Instant createdAt,
+            Instant expiresAt,
+            int quantity,
+            String status,
+            Instant updatedAt,
+            Instant confirmedAt,
+            UUID cancellationId) {
         UUID customerId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO customer (id, name, email) VALUES (?, 'Test Buyer', ?)",
                 customerId,
                 customerId + "@example.com");
         jdbcTemplate.update(
-                "INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at, closure_reason_code, closure_reason_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, created_at, updated_at, confirmed_at, cancellation_id, closure_reason_code, closure_reason_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 UUID.randomUUID(),
                 eventId,
                 customerId,
@@ -162,6 +201,8 @@ class ExecutiveSummaryFactsIT extends LocalIntegrationInfrastructure {
                 Timestamp.from(expiresAt),
                 Timestamp.from(createdAt),
                 Timestamp.from(updatedAt),
+                confirmedAt == null ? null : Timestamp.from(confirmedAt),
+                cancellationId,
                 "CANCELLED".equals(status)
                         ? "CANCELLED_BY_REQUEST"
                         : "EXPIRED".equals(status) ? "RESERVATION_DEADLINE_REACHED" : null,
