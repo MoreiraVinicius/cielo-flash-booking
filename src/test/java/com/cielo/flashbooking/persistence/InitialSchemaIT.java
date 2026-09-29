@@ -42,6 +42,7 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
                             "customer",
                             "event",
                             "reservation",
+                            "confirmation_inbox",
                             "idempotency_record",
                             "outbox_event",
                             "notification_delivery");
@@ -83,6 +84,170 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
                 VALUES ('%s', '%s', '%s', 1, 'CANCELLED', now() + interval '10 minutes')
                 """.formatted(UUID.randomUUID(), eventId, customerId)))
                 .isInstanceOf(SQLException.class);
+    }
+
+    @Test
+    void enforcesCoherentConfirmationAndCancellationLifecycleMetadata() throws SQLException {
+        var eventId = insertEvent();
+        var customerId = UUID.randomUUID();
+        insertCustomer(customerId, "lifecycle@example.com");
+
+        var confirmedId = UUID.randomUUID();
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at)
+                VALUES ('%s', '%s', '%s', 1, 'CONFIRMED', now() + interval '10 minutes', clock_timestamp())
+                """.formatted(confirmedId, eventId, customerId));
+
+        var cancellationId = UUID.randomUUID();
+        var cancellationPendingId = UUID.randomUUID();
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at, cancellation_id)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLATION_PENDING', now() + interval '10 minutes', clock_timestamp(), '%s')
+                """.formatted(cancellationPendingId, eventId, customerId, cancellationId));
+
+        var cancelledAfterConfirmationId = UUID.randomUUID();
+        execute("""
+                INSERT INTO reservation (
+                    id, event_id, customer_id, quantity, status, expires_at, confirmed_at, cancellation_id,
+                    closure_reason_code, closure_reason_description
+                )
+                VALUES (
+                    '%s', '%s', '%s', 1, 'CANCELLED', now() + interval '10 minutes', clock_timestamp(), '%s',
+                    'CANCELLED_BY_REQUEST', 'Reserva cancelada por solicitação'
+                )
+                """.formatted(cancelledAfterConfirmationId, eventId, customerId, UUID.randomUUID()));
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at)
+                VALUES ('%s', '%s', '%s', 1, 'CONFIRMED', now() + interval '10 minutes')
+                """.formatted(UUID.randomUUID(), eventId, customerId)))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at)
+                VALUES ('%s', '%s', '%s', 1, 'PENDING', now() + interval '10 minutes', clock_timestamp())
+                """.formatted(UUID.randomUUID(), eventId, customerId)))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLATION_PENDING', now() + interval '10 minutes', clock_timestamp())
+                """.formatted(UUID.randomUUID(), eventId, customerId)))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, cancellation_id)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLATION_PENDING', now() + interval '10 minutes', '%s')
+                """.formatted(UUID.randomUUID(), eventId, customerId, UUID.randomUUID())))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLED', now() + interval '10 minutes', clock_timestamp())
+                """.formatted(UUID.randomUUID(), eventId, customerId)))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at, cancellation_id)
+                VALUES ('%s', '%s', '%s', 1, 'EXPIRED', now() + interval '10 minutes', clock_timestamp(), '%s')
+                """.formatted(UUID.randomUUID(), eventId, customerId, UUID.randomUUID())))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, confirmed_at, cancellation_id)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLATION_PENDING', now() + interval '10 minutes', clock_timestamp(), '%s')
+                """.formatted(UUID.randomUUID(), eventId, customerId, cancellationId)))
+                .isInstanceOf(SQLException.class);
+    }
+
+    @Test
+    void storesInboxResolutionsWithStableBusinessIdentityAndAllowsUnknownReservation() throws SQLException {
+        var source = "reservation-owner";
+        var resolutionId = "resolution-" + UUID.randomUUID();
+        var fingerprint = "a".repeat(64);
+        execute("""
+                INSERT INTO confirmation_inbox (
+                    source, resolution_id, reservation_id, message_type, payload_fingerprint, outcome
+                ) VALUES ('%s', '%s', NULL, 'ReservationConfirmationRequested', '%s', '{"status":"NOT_FOUND"}'::jsonb)
+                """.formatted(source, resolutionId, fingerprint));
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO confirmation_inbox (
+                    source, resolution_id, reservation_id, message_type, payload_fingerprint, outcome
+                ) VALUES ('%s', '%s', NULL, 'ReservationConfirmationRequested', '%s', '{"status":"NOT_FOUND"}'::jsonb)
+                """.formatted(source, resolutionId, "b".repeat(64))))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO confirmation_inbox (
+                    source, resolution_id, message_type, payload_fingerprint, outcome
+                ) VALUES ('%s', '%s', 'ReservationCancellationCompleted', '%s', '{"status":"COMPLETED"}'::jsonb)
+                """.formatted(source, "cancellation-" + UUID.randomUUID(), fingerprint)))
+                .isInstanceOf(SQLException.class);
+
+        assertThatThrownBy(() -> execute("""
+                INSERT INTO confirmation_inbox (
+                    source, resolution_id, message_type, payload_fingerprint, outcome
+                ) VALUES ('%s', '%s', 'UnknownMessage', '%s', '{}'::jsonb)
+                """.formatted(source, "unknown-" + UUID.randomUUID(), fingerprint)))
+                .isInstanceOf(SQLException.class);
+
+        var eventId = insertEvent();
+        var customerId = UUID.randomUUID();
+        var reservationId = UUID.randomUUID();
+        insertCustomer(customerId, "inbox-retention@example.com");
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at)
+                VALUES ('%s', '%s', '%s', 1, 'PENDING', now() + interval '10 minutes')
+                """.formatted(reservationId, eventId, customerId));
+        execute("""
+                INSERT INTO confirmation_inbox (
+                    source, resolution_id, reservation_id, message_type, payload_fingerprint, outcome
+                ) VALUES ('%s', '%s', '%s', 'ReservationConfirmationRequested', '%s', '{"status":"PENDING"}'::jsonb)
+                """.formatted(source, "reservation-retention-" + UUID.randomUUID(), reservationId, fingerprint));
+
+        assertThatThrownBy(() -> execute("DELETE FROM reservation WHERE id = '%s'".formatted(reservationId)))
+                .isInstanceOf(SQLException.class);
+    }
+
+    @Test
+    void migratesExistingVersionFiveReservationRowsWithoutChangingTheirLifecycle() throws SQLException {
+        flyway.clean();
+        var versionFive = Flyway.configure()
+                .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
+                .target("5")
+                .load();
+        assertThatCode(versionFive::migrate).doesNotThrowAnyException();
+
+        var eventId = insertEvent();
+        var customerId = UUID.randomUUID();
+        insertCustomer(customerId, "legacy@example.com");
+        var pendingId = UUID.randomUUID();
+        var cancelledId = UUID.randomUUID();
+        var expiredId = UUID.randomUUID();
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at)
+                VALUES ('%s', '%s', '%s', 1, 'PENDING', now() + interval '10 minutes')
+                """.formatted(pendingId, eventId, customerId));
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, closure_reason_code, closure_reason_description)
+                VALUES ('%s', '%s', '%s', 1, 'CANCELLED', now() + interval '10 minutes', 'CANCELLED_BY_REQUEST', 'Reserva cancelada por solicitação')
+                """.formatted(cancelledId, eventId, customerId));
+        execute("""
+                INSERT INTO reservation (id, event_id, customer_id, quantity, status, expires_at, closure_reason_code, closure_reason_description)
+                VALUES ('%s', '%s', '%s', 1, 'EXPIRED', now() + interval '10 minutes', 'RESERVATION_DEADLINE_REACHED', 'Prazo da reserva encerrado')
+                """.formatted(expiredId, eventId, customerId));
+
+        var latest = Flyway.configure()
+                .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
+                .load();
+        assertThatCode(latest::migrate).doesNotThrowAnyException();
+        assertThat(queryStatus(pendingId)).isEqualTo("PENDING");
+        assertThat(queryStatus(cancelledId)).isEqualTo("CANCELLED");
+        assertThat(queryStatus(expiredId)).isEqualTo("EXPIRED");
+        assertThat(hasConfirmedAt(pendingId)).isFalse();
+        assertThat(hasConfirmedAt(cancelledId)).isFalse();
+        assertThat(hasConfirmedAt(expiredId)).isFalse();
     }
 
     @Test
@@ -156,6 +321,37 @@ class InitialSchemaIT extends LocalIntegrationInfrastructure {
                 INSERT INTO idempotency_record (id, idempotency_key, operation, normalized_target, payload_hash, response_status, response_body, expires_at)
                 VALUES ('%s', '%s', 'POST', '/events', 'payload-hash', 201, '{}'::jsonb, now() + interval '24 hours')
                 """.formatted(UUID.randomUUID(), key));
+    }
+
+    private String queryStatus(UUID reservationId) {
+        try (var connection = connection();
+                var statement = connection.prepareStatement("SELECT status FROM reservation WHERE id = ?")) {
+            statement.setObject(1, reservationId);
+            try (var resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new IllegalStateException("Expected migrated reservation to exist");
+                }
+                return resultSet.getString(1);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Could not query migrated reservation status", exception);
+        }
+    }
+
+    private boolean hasConfirmedAt(UUID reservationId) {
+        try (var connection = connection();
+                var statement =
+                        connection.prepareStatement("SELECT confirmed_at IS NOT NULL FROM reservation WHERE id = ?")) {
+            statement.setObject(1, reservationId);
+            try (var resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new IllegalStateException("Expected migrated reservation to exist");
+                }
+                return resultSet.getBoolean(1);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Could not query migrated reservation confirmation state", exception);
+        }
     }
 
     private void execute(String sql) throws SQLException {

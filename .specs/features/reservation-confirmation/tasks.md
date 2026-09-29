@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T01 está em andamento; T08–T10 reconciliam os desenhos existentes com o runtime depois de T07.
+**Status:** Execução aprovada. T02 está concluída; T03 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
 
 ## Execution Protocol
 
@@ -67,9 +67,11 @@ T08 → T09 → T10
 **Where:** `src/main/resources/db/migration/`
 **Depends on:** T01
 **Requirement:** CONFIRM-01, CONFIRM-03, CONFIRM-05
-**Done when:** Migrations aceitam estados coerentes, rejeitam combinações inválidas e registram duplicata sem nova decisão; testes de migration passam.
+**Done when:** V6 acrescenta estados e metadados coerentes, inbox com chave estável/fingerprint/resultado e preserva reservas legadas V5; PostgreSQL aceita combinações válidas, rejeita inválidas e impede resolução ou cancellationId repetidos.
 **Tests:** integration de schema e constraints, incluídos na tarefa.
 **Gate:** Java.
+
+**Status:** Complete; V6 e oito casos de integração PostgreSQL cobrem os estados, a inbox, unicidade, retenção e migração dos três estados legados.
 
 ### T03: Implementar a decisão autoritativa
 
