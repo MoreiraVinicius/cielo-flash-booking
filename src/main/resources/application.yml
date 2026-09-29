@@ -73,3 +73,9 @@ operational-data:
     retention: 7d
     fixed-delay: 1h
     initial-delay: 1h
+
+executive-summary:
+  bedrock:
+    region: ${AWS_REGION:sa-east-1}
+    model-id: ${EXECUTIVE_SUMMARY_MODEL_ID:amazon.nova-micro-v1:0}
+    api-timeout: 25s

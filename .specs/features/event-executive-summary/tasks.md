@@ -144,7 +144,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T05: Renderizar template e leitura opcional
 
-**Status:** Planned
+**Status:** Complete
 **What:** Implementar o template deterministico em pt-BR, leitura curta Bedrock e consulta limitada de sinais CloudWatch.
 **Where:** renderer e adapters AWS de analytics, com testes unitarios
 **Depends on:** T04
@@ -153,6 +153,23 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 **Tests:** unit com payloads explicitamente verificados, sucesso, vazio, falha, limite e fallback.
 **Gate:** Quick
 **Commit:** `feat(summary): add bounded narrative and alert context`
+
+**Gate result:** Focused `test -Dtest=ExecutiveSummaryRendererTest,BedrockExecutiveNarrativeTest,CloudWatchOperationalSignalsReaderTest,ExecutiveSummaryPropertiesTest` passed (11 tests, 0 failures/errors/skips).
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| Deterministic output contains closing result, tempo, caveat and pt-BR timestamps | `ExecutiveSummaryRendererTest.java:14-36` - exact capacity, accepted/valid volume, first zero, peak share, caveat, Sao Paulo time | The report is understandable without reading internal statuses | Yes |
+| No transitions omits operation; partial history explains the limitation | `ExecutiveSummaryRendererTest.java:38-50` - `EMPTY` omits section and `PARTIAL` includes fixed note | Silence means no transition observed; partial query is not presented as no alarm | Yes |
+| Inconsistent facts omit numbers; operation displays at most two friendly labels | `ExecutiveSummaryRendererTest.java:53-72` - third signal omitted and incomplete facts omit metrics/narrative | No invented conclusion or raw alarm details | Yes |
+| Bedrock receives only permitted aggregates and one bounded low-randomness request | `BedrockExecutiveNarrativeTest.java:33-54` - model id, 120 token cap, temperature, prompt byte limit and PII/name/log exclusions asserted | One short optional interpretation; no PII, alarms or logs in prompt | Yes |
+| Invalid or unsafe Bedrock text is discarded; zero activity skips inference | `BedrockExecutiveNarrativeTest.java:56-79` - digits, purchase, causality, alarm/failure language, 3 sentences and 121 output tokens rejected; empty/incomplete facts not sent | Bedrock cannot override numbers or add unsupported claims | Yes |
+| CloudWatch queries are bounded and only ALARM transitions become friendly signals | `CloudWatchOperationalSignalsReaderTest.java:29-53` - `STATE_UPDATE`, 10 record bound, interval, friendly label, OK omitted | Only configured transition labels and times reach the report | Yes |
+| Empty, paginated/partial, malformed and unavailable histories remain distinguishable | `CloudWatchOperationalSignalsReaderTest.java:55-88` - status `EMPTY/PARTIAL/UNAVAILABLE` asserted | Missing coverage is never reported as no alerts | Yes |
+| Model, timeout and alarm allowlist bind with validation | `ExecutiveSummaryPropertiesTest.java:17-45` - model, 12-second override, alarm label; zero and 61-second timeout fail | Configuration is typed, externally overridable and bounded | Yes |
+
+*Check C - Necessary:* all eight evidence groups map to T05 `Done when` and EXECSUM-19/20/21/22/23/25/30/36; no unclaimed tests added.
 
 ### T06: Gerar automaticamente no fechamento
 
