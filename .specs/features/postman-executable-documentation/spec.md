@@ -119,6 +119,8 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 2. WHEN an active `Idempotency-Key` is reused with a changed payload or normalized target THEN the collection SHALL assert `409`, `resource-conflict` and `application/problem+json` in both Local and signed AWS flows. <!-- event-driven -->
 3. IF a mutable request omits `Idempotency-Key` or sends a key longer than 128 characters THEN the collection SHALL assert `400`, `invalid-request` and `application/problem+json` in both Local and signed AWS flows. <!-- unwanted-behavior -->
 4. WHEN a capacity rejection is replayed with its original key and payload THEN the collection SHALL assert the persisted `409 resource-conflict` response in both Local and signed AWS flows. <!-- event-driven -->
+5. WHEN the Local folder repeats a cancellation with its original key THEN the collection SHALL assert `200`, the original reservation ID, terminal `CANCELLED`, and unchanged event availability after the replay. <!-- event-driven -->
+6. WHEN the Local folder repeats a reservation request for a nonexistent event with its original key THEN the collection SHALL assert the final `404 resource-not-found` response as `application/problem+json` in both attempts. <!-- event-driven -->
 
 **Independent Test**: No Postman, iniciar Compose, selecionar **Flash Booking Local**, clicar em Run no folder Local e observar as requests de idempotência verdes; em uma demo AWS autorizada, preencher o ambiente e executar o folder AWS para observar os mesmos assertions assinados.
 
@@ -147,8 +149,10 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 | POSTMAN-11 | P1: Executar a bateria de idempotência | Execute | Verified |
 | POSTMAN-12 | P1: Executar a bateria de idempotência | Execute | Verified |
 | POSTMAN-13 | P1: Executar a bateria de idempotência | Execute | Verified |
+| POSTMAN-14 | P1: Executar a bateria de idempotência | Execute | Verified |
+| POSTMAN-15 | P1: Executar a bateria de idempotência | Execute | Verified |
 
-**Coverage:** 13 total, 0 mapped to tasks, 13 unmapped.
+**Coverage:** 15 total, 0 mapped to tasks, 15 unmapped.
 
 ## Success Criteria
 
@@ -156,4 +160,4 @@ A coleção Postman atual valida apenas uma demo AWS específica. Ela contém va
 - [ ] Um operador AWS tem instruções e ambiente seguro para SigV4 sem valores temporários no Git.
 - [ ] O repositório rejeita estruturalmente uma coleção ou ambiente incompletos.
 - [ ] Um apresentador encontra os Bodies de criação e explica o caminho `response.id` → variável → próximo request sem edição manual.
-- [ ] Um apresentador executa Local ou AWS no Collection Runner e mostra os quatro resultados de idempotência esperados.
+- [ ] Um apresentador executa Local ou AWS no Collection Runner e mostra os quatro resultados de idempotência esperados; a pasta Local também mostra replay de cancelamento e de `404`.

@@ -102,7 +102,11 @@ $expectedLocalRequests = @(
     '12 | Rejeitar mesma chave com payload diferente',
     '13 | Rejeitar mesma chave em outro endpoint',
     '14 | Repetir conflito de capacidade com a mesma chave',
-    '15 | Rejeitar Idempotency-Key maior que 128 caracteres'
+    '15 | Rejeitar Idempotency-Key maior que 128 caracteres',
+    '16 | Repetir cancelamento com a mesma chave',
+    '17 | Confirmar estoque após os replays',
+    '18 | Registrar 404 de evento inexistente',
+    '19 | Repetir 404 com a mesma chave'
 )
 
 $expectedAwsRequests = @(
@@ -140,6 +144,10 @@ Assert-RequestTests -Folder $localFolder -ExpectedScripts @{
     '13 | Rejeitar mesma chave em outro endpoint' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
     '14 | Repetir conflito de capacidade com a mesma chave' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
     '15 | Rejeitar Idempotency-Key maior que 128 caracteres' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
+    '16 | Repetir cancelamento com a mesma chave' = @('pm.response.to.have.status(200)', "pm.collectionVariables.get('reservationId')", "'CANCELLED'")
+    '17 | Confirmar estoque após os replays' = @('pm.response.to.have.status(200)', 'event.available).to.eql(2)')
+    '18 | Registrar 404 de evento inexistente' = @('pm.response.to.have.status(404)', "'resource-not-found'", 'application/problem+json')
+    '19 | Repetir 404 com a mesma chave' = @('pm.response.to.have.status(404)', "'resource-not-found'", 'application/problem+json')
 }
 
 Assert-RequestTests -Folder $awsFolder -ExpectedScripts @{
@@ -150,6 +158,17 @@ Assert-RequestTests -Folder $awsFolder -ExpectedScripts @{
     '12 | Repetir conflito de capacidade AWS' = @('pm.response.to.have.status(409)', "'resource-conflict'", 'application/problem+json')
     '13 | Rejeitar Idempotency-Key AWS maior que 128 caracteres' = @('pm.response.to.have.status(400)', "'invalid-request'", 'application/problem+json')
 }
+
+$cancelOriginal = Find-Request -Folder $localFolder -Name '07 | Cancelar reserva antes do prazo'
+$cancelReplay = Find-Request -Folder $localFolder -Name '16 | Repetir cancelamento com a mesma chave'
+Assert-Condition ($cancelOriginal.request.url -eq $cancelReplay.request.url) 'Cancellation replay must target the original reservation.'
+Assert-Condition ((@($cancelOriginal.request.header | Where-Object { $_.key -eq 'Idempotency-Key' })[0].value) -eq (@($cancelReplay.request.header | Where-Object { $_.key -eq 'Idempotency-Key' })[0].value)) 'Cancellation replay must reuse the original key.'
+
+$missingOriginal = Find-Request -Folder $localFolder -Name '18 | Registrar 404 de evento inexistente'
+$missingReplay = Find-Request -Folder $localFolder -Name '19 | Repetir 404 com a mesma chave'
+Assert-Condition ($missingOriginal.request.url -eq $missingReplay.request.url) '404 replay must target the same missing event.'
+Assert-Condition ($missingOriginal.request.body.raw -eq $missingReplay.request.body.raw) '404 replay must reuse the original payload.'
+Assert-Condition ((@($missingOriginal.request.header | Where-Object { $_.key -eq 'Idempotency-Key' })[0].value) -eq (@($missingReplay.request.header | Where-Object { $_.key -eq 'Idempotency-Key' })[0].value)) '404 replay must reuse the original key.'
 
 $unsignedBoundary = @($awsFolder.item | Where-Object { $_.name -eq '00 | Rejeitar chamada sem SigV4' })[0]
 Assert-Condition ($unsignedBoundary.request.auth.type -eq 'noauth') 'The AWS unsigned boundary request must use noauth.'

@@ -70,14 +70,18 @@ O fluxo cobre:
 | 09 | 400 application/problem+json sem Idempotency-Key. |
 | 10–11 | Venda futura criada e reserva antes de startsAt rejeitada com 409 application/problem+json. |
 | 12–15 | Bateria Local: payload e endpoint incompatíveis retornam 409, conflito de capacidade é reproduzido, e chave com 129 caracteres retorna 400. |
+| 16–17 | O mesmo DELETE retorna a reserva CANCELLED e os replays não reduzem nem aumentam o estoque. |
+| 18–19 | Um 404 por evento inexistente é registrado e reproduzido com a mesma chave. |
 
 ## Rodar a bateria de idempotência
 
 O **Run** do Postman é o folder selecionado no Collection Runner; o histórico de uma execução não é versionado. Para a apresentação, use a sequência já versionada:
 
 1. Com **Flash Booking Local** selecionado, abra o folder **Local | fluxo completo do case** e clique em **Run**.
-2. Execute os requests 01–15 em ordem. Os requests 12–15 são a bateria de idempotência.
-3. Mostre os resultados: replay idêntico retorna `201`; Body ou endpoint incompatível retorna `409 resource-conflict`; chave ausente ou longa retorna `400 invalid-request`; o conflito de capacidade reaparece como o `409` persistido.
+2. Execute os requests 01–19 em ordem. Os requests 12–19 ampliam a bateria de idempotência.
+3. Mostre os resultados: replay idêntico retorna `201`; Body ou endpoint incompatível retorna `409 resource-conflict`; chave ausente ou longa retorna `400 invalid-request`; o conflito de capacidade reaparece como o `409` persistido depois da devolução de capacidade; o DELETE repetido continua `200` e deixa o estoque em 2; o `404` de evento inexistente também é reproduzido.
+
+O Runner é sequencial. Ele demonstra o contrato HTTP e a ausência de efeito observável nesses retries; não reproduz uma corrida simultânea, rollback de uma falha inesperada nem o vencimento de 24 horas sem controlar o relógio ou o banco. Para esses casos, use os relatórios XML dos testes de integração de `IdempotencyControllerIT`, `PersistentIdempotencyIT` e `ReservationConcurrencyIT` em `target/failsafe-reports/`. A execução local do Postman deve ser refeita no ambiente de quem avalia; o histórico visual do Runner não está versionado.
 
 Na AWS autorizada, preencha o ambiente, abra **AWS | fronteira e fluxo do case** e clique em **Run**. Execute 00–13: os requests 09–13 aplicam os mesmos erros e replay com AWS Signature v4. O request 00 permanece sem assinatura de propósito e deve retornar `403`.
 

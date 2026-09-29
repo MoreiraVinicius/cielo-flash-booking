@@ -1,0 +1,257 @@
+{
+  "generatedAtUtc": "2026-09-29T14:55:37+00:00",
+  "postman": {
+    "source": "artefatos/idempotencia-postman-run.json",
+    "startedAtUtc": "2026-09-29T14:55:25+00:00",
+    "requests": 19,
+    "assertions": 50,
+    "failedRequests": 0,
+    "failedAssertions": 0,
+    "cases": [
+      {
+        "name": "01 | Criar evento imediato",
+        "httpStatus": 201,
+        "assertions": 4,
+        "failedAssertions": 0
+      },
+      {
+        "name": "02 | Consultar disponibilidade",
+        "httpStatus": 200,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "03 | Criar reserva",
+        "httpStatus": 201,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "04 | Repetir reserva com a mesma chave",
+        "httpStatus": 201,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "05 | Consultar reserva",
+        "httpStatus": 200,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "06 | Rejeitar capacidade insuficiente",
+        "httpStatus": 409,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "07 | Cancelar reserva antes do prazo",
+        "httpStatus": 200,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "08 | Confirmar capacidade devolvida",
+        "httpStatus": 200,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "09 | Rejeitar comando sem Idempotency-Key",
+        "httpStatus": 400,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "10 | Criar venda futura",
+        "httpStatus": 201,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "11 | Rejeitar reserva antes da abertura",
+        "httpStatus": 409,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "12 | Rejeitar mesma chave com payload diferente",
+        "httpStatus": 409,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "13 | Rejeitar mesma chave em outro endpoint",
+        "httpStatus": 409,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "14 | Repetir conflito de capacidade com a mesma chave",
+        "httpStatus": 409,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "15 | Rejeitar Idempotency-Key maior que 128 caracteres",
+        "httpStatus": 400,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "16 | Repetir cancelamento com a mesma chave",
+        "httpStatus": 200,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "17 | Confirmar estoque após os replays",
+        "httpStatus": 200,
+        "assertions": 2,
+        "failedAssertions": 0
+      },
+      {
+        "name": "18 | Registrar 404 de evento inexistente",
+        "httpStatus": 404,
+        "assertions": 3,
+        "failedAssertions": 0
+      },
+      {
+        "name": "19 | Repetir 404 com a mesma chave",
+        "httpStatus": 404,
+        "assertions": 3,
+        "failedAssertions": 0
+      }
+    ],
+    "runtime": "Docker Compose local: postgres, valkey, command-api, query-api; image built from current Dockerfile"
+  },
+  "integration": {
+    "source": "target/failsafe-reports/TEST-*.xml",
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "suite": "IdempotencyControllerIT",
+        "source": "target/failsafe-reports/TEST-com.cielo.flashbooking.application.idempotency.IdempotencyControllerIT.xml",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "createReservation_whenKeyExpires_allowsOneNewEffectAcrossParallelRetries",
+            "result": "PASS"
+          },
+          {
+            "name": "mutableCommand_whenIdempotencyKeyIsMissing_returnsBadRequestWithoutEffect",
+            "result": "PASS"
+          },
+          {
+            "name": "createReservation_whenCapacityIsInsufficient_recordsAndRepeatsTheFinalConflictResponse",
+            "result": "PASS"
+          },
+          {
+            "name": "createEvent_whenRequestRepeats_returnsTheStoredResponseAndDoesNotCreateAnotherEvent",
+            "result": "PASS"
+          },
+          {
+            "name": "cancel_whenIdempotencyKeyIsMissing_returnsBadRequestWithoutChangingTheReservation",
+            "result": "PASS"
+          },
+          {
+            "name": "mutableCommand_whenIdempotencyKeyExceedsLimit_returnsBadRequestWithoutEffect",
+            "result": "PASS"
+          },
+          {
+            "name": "createReservation_whenIdempotencyKeyIsMissing_returnsBadRequestWithoutInventoryEffect",
+            "result": "PASS"
+          },
+          {
+            "name": "createEvent_whenKeyIsReusedWithDifferentPayload_returnsConflict",
+            "result": "PASS"
+          },
+          {
+            "name": "createReservation_whenEventIsMissing_recordsTheFinalNotFoundResponse",
+            "result": "PASS"
+          },
+          {
+            "name": "cancel_whenRequestRepeats_returnsTheStoredTerminalResponseWithoutASecondCapacityReturn",
+            "result": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "PersistentIdempotencyIT",
+        "source": "target/failsafe-reports/TEST-com.cielo.flashbooking.application.idempotency.PersistentIdempotencyIT.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "execute_whenUnexpectedFailureOccurs_rollsBackTheClaim",
+            "result": "PASS"
+          },
+          {
+            "name": "cleanupExpiredRecords_deletesOnlyExpiredRowsInBoundedBatches",
+            "result": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "InventoryConcurrencyIT",
+        "source": "target/failsafe-reports/TEST-com.cielo.flashbooking.adapter.out.persistence.inventory.InventoryConcurrencyIT.xml",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "decrementsOnlyWhenCapacityIsSufficient",
+            "result": "PASS"
+          },
+          {
+            "name": "incrementsWithoutExceedingTotalCapacity",
+            "result": "PASS"
+          },
+          {
+            "name": "recordsFirstZeroOnlyWhileGloballyEnabledAndDoesNotReplaceItAfterRestock",
+            "result": "PASS"
+          },
+          {
+            "name": "refusesDecrementBeforeStartAndAtOrAfterEnd",
+            "result": "PASS"
+          },
+          {
+            "name": "neverOversellsUnderConcurrentDecrements",
+            "result": "PASS"
+          },
+          {
+            "name": "returnsDatabaseAcceptanceTimeAfterWaitingForEventRowLock",
+            "result": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "ReservationConcurrencyIT",
+        "source": "target/failsafe-reports/TEST-com.cielo.flashbooking.reservation.controller.ReservationConcurrencyIT.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "cancel_whenConcurrentRequestsTargetTheSameReservation_returnsCapacityOnlyOnce",
+            "result": "PASS"
+          },
+          {
+            "name": "create_whenConcurrentRequestsExceedCapacity_neverOversellsAndWritesOnlyAcceptedReservations",
+            "result": "PASS"
+          }
+        ]
+      }
+    ]
+  }
+}

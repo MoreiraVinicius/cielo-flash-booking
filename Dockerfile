@@ -7,6 +7,7 @@ COPY mvnw pom.xml ./
 RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
 
 COPY src src
+RUN find src -type f -name '*.java' -exec sed -i 's/\r$//' {} +
 RUN ./mvnw -q package
 
 FROM eclipse-temurin:21-jre-jammy

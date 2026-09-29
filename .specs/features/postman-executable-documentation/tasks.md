@@ -144,6 +144,18 @@ Phase 4: T08
 **Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`
 **Commit:** `test(postman): harden idempotency runner assertions`
 
+### T10: Prove additional idempotency replays in the Local Runner
+
+**Status:** Complete
+
+**What:** Add sequential replay checks for DELETE and 404, verify unchanged availability, preserve identical key/target/payload in the static gate, and make Compose builds tolerate Windows CRLF Java checkout files without editing source code.
+**Where:** `postman/flash-booking-aws.postman_collection.json`, `scripts/validate-postman.ps1`, `postman/README.md`, `Dockerfile`, `.specs/features/postman-executable-documentation/spec.md`, `.specs/features/postman-executable-documentation/tasks.md`, `.specs/features/postman-executable-documentation/validation.md`
+**Depends on:** T09
+**Requirement:** POSTMAN-14, POSTMAN-15
+**Tests:** static collection validation, local Newman Runner, Docker image build
+**Gate:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-postman.ps1`; Newman Local folder: 19 requests and 50 assertions with zero failures; `docker compose build command-api`
+**Commit:** `test(postman): prove cancellation and not-found replays`
+
 ## Phase Execution Map
 
 ```text
@@ -152,6 +164,7 @@ Phase 2: T04 -> T05 -> T06
 Phase 3: T06 -> T07
 Phase 4: T07 -> T08
 Phase 5: T08 -> T09
+Phase 6: T09 -> T10
 ```
 
 ## Diagram-Definition Cross-Check
@@ -167,6 +180,7 @@ Phase 5: T08 -> T09
 | T07 | T06 | T06 -> T07 | ✅ Match |
 | T08 | T07 | T07 -> T08 | ✅ Match |
 | T09 | T08 | T08 -> T09 | ✅ Match |
+| T10 | T09 | T09 -> T10 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -181,3 +195,4 @@ Phase 5: T08 -> T09
 | T07 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |
 | T08 | Collection, guide and validator | static contract validation | static contract validation | ✅ OK |
 | T09 | Collection and validator | static contract validation | static contract validation | ✅ OK |
+| T10 | Collection, validator, guide and Dockerfile | static validation and local runtime | static validation, Newman and Docker build | ✅ OK |

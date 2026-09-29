@@ -39,6 +39,7 @@
     { "key": "cancelReservationKey", "value": "", "type": "string" },
     { "key": "futureEventKey", "value": "", "type": "string" },
     { "key": "beforeStartKey", "value": "", "type": "string" },
+    { "key": "missingEventKey", "value": "", "type": "string" },
     { "key": "saleStartsAt", "value": "", "type": "string" },
     { "key": "saleEndsAt", "value": "", "type": "string" }
   ],
@@ -50,7 +51,7 @@
     },
     {
       "name": "Local | fluxo completo do case",
-      "description": "Command API: {{commandBaseUrl}}. Query API: {{queryBaseUrl}}. Esta pasta usa noauth porque Docker Compose não possui API Gateway/IAM. No Collection Runner, execute os requests 01 a 15 em ordem: 12 a 15 formam a bateria de erros e replay de idempotência.",
+      "description": "Command API: {{commandBaseUrl}}. Query API: {{queryBaseUrl}}. Esta pasta usa noauth porque Docker Compose não possui API Gateway/IAM. No Collection Runner, execute os requests 01 a 19 em ordem: 12 a 19 ampliam a bateria de erros e replay de idempotência.",
       "auth": { "type": "noauth" },
       "item": [
         {
@@ -81,8 +82,9 @@
                   "pm.collectionVariables.set('insufficientCapacityKey', `postman-${runId}-insufficient`);",
                   "pm.collectionVariables.set('cancelReservationKey', `postman-${runId}-cancel`);",
                   "pm.collectionVariables.set('futureEventKey', `postman-${runId}-future-event`);",
-                  "pm.collectionVariables.set('beforeStartKey', `postman-${runId}-before-start`);"
-                  ,"pm.collectionVariables.set('tooLongIdempotencyKey', 'x'.repeat(129));"
+                  "pm.collectionVariables.set('beforeStartKey', `postman-${runId}-before-start`);",
+                  "pm.collectionVariables.set('missingEventKey', `postman-${runId}-missing-event`);",
+                  "pm.collectionVariables.set('tooLongIdempotencyKey', 'x'.repeat(129));"
                 ]
               }
             },
@@ -382,6 +384,69 @@
             "pm.test('chave longa retorna 400', () => pm.response.to.have.status(400));",
             "pm.test('chave longa retorna invalid-request', () => pm.expect(pm.response.json().code).to.eql('invalid-request'));",
             "pm.test('chave longa usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "16 | Repetir cancelamento com a mesma chave",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Idempotency-Key", "value": "{{cancelReservationKey}}", "type": "text" }],
+            "url": "{{commandBaseUrl}}/reservations/{{reservationId}}",
+            "description": "Reenvia o DELETE do request 07. A resposta deve manter o mesmo ID e estado terminal, sem devolver estoque novamente."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('replay do DELETE retorna 200', () => pm.response.to.have.status(200));",
+            "pm.test('replay do DELETE mantém a reserva original', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('reservationId')));",
+            "pm.test('replay do DELETE mantém CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+          ] } }]
+        },
+        {
+          "name": "17 | Confirmar estoque após os replays",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{queryBaseUrl}}/events/{{eventId}}",
+            "description": "Depois do replay do 409 e do DELETE, a disponibilidade deve continuar igual à capacidade original."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('consulta final retorna 200', () => pm.response.to.have.status(200));",
+            "pm.test('replays não alteram estoque', () => { const event = pm.response.json(); pm.expect(event.capacity).to.eql(2); pm.expect(event.available).to.eql(2); });"
+          ] } }]
+        },
+        {
+          "name": "18 | Registrar 404 de evento inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{missingEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Evento Ausente\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/00000000-0000-0000-0000-000000000000/reservations",
+            "description": "Uma reserva para evento inexistente retorna 404 e grava esse resultado final para a chave."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('evento ausente retorna 404', () => pm.response.to.have.status(404));",
+            "pm.test('evento ausente retorna resource-not-found', () => pm.expect(pm.response.json().code).to.eql('resource-not-found'));",
+            "pm.test('404 usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
+          ] } }]
+        },
+        {
+          "name": "19 | Repetir 404 com a mesma chave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{missingEventKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 1,\n  \"customer\": { \"name\": \"Evento Ausente\", \"email\": \"{{customerEmail}}\" }\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{commandBaseUrl}}/events/00000000-0000-0000-0000-000000000000/reservations",
+            "description": "Repete exatamente a intenção do request 18 e comprova que o resultado de negócio continua 404."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('replay do 404 retorna 404', () => pm.response.to.have.status(404));",
+            "pm.test('replay do 404 mantém resource-not-found', () => pm.expect(pm.response.json().code).to.eql('resource-not-found'));",
+            "pm.test('replay do 404 usa Problem Details', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json'));"
           ] } }]
         }
       ]
