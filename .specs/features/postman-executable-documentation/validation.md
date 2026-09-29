@@ -2,7 +2,7 @@
 
 **Date**: 2026-09-29
 **Spec**: `.specs/features/postman-executable-documentation/spec.md`
-**Diff range**: `64d4c9b..HEAD` (Postman replay extension); previous coverage remains in Git history.
+**Diff range**: `64d4c9b..050ec59` (Postman replay extension); previous coverage remains in Git history.
 **Verifier**: independent sub-agent (author != verifier)
 
 ## Verdict
@@ -51,6 +51,7 @@
 | Mutation | File:line | Detector | Result |
 | --- | --- | --- | --- |
 | Changed the Local 404 replay assertion from `404` to `418` in `.tmp/postman-idempotency/sensor/`, leaving the real collection intact. | `postman/flash-booking-aws.postman_collection.json:447` | `scripts/validate-postman.ps1:150` | Killed — the scratch validator exited `1` and identified request 19 as missing the required `404` assertion. |
+| Changed request 17's final `event.available` assertion from `2` to `1` in `.tmp/postman-verifier-050ec59/mutant-stock-targeted/`. | `postman/flash-booking-aws.postman_collection.json:413` | `scripts/validate-postman.ps1:148` | Killed — the scratch validator exited `1` and identified request 17 as missing the required stock assertion. |
 
 The scratch copy is confined to `.tmp/`. The real collection and validator passed again after this sensor.
 
