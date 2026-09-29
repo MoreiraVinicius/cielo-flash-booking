@@ -165,6 +165,16 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
 
   assert {
     condition = (
+      contains([for metric in one([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if try(widget.properties.title, "") == "SQS backlog and DLQs"]).properties.metrics : metric[3]], "${var.name}-reservation-to-owner") &&
+      contains([for metric in one([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if try(widget.properties.title, "") == "SQS backlog and DLQs"]).properties.metrics : metric[3]], "${var.name}-reservation-from-owner") &&
+      contains([for metric in one([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if try(widget.properties.title, "") == "SQS oldest message age"]).properties.metrics : metric[3]], "${var.name}-reservation-to-owner") &&
+      contains([for metric in one([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if try(widget.properties.title, "") == "SQS oldest message age"]).properties.metrics : metric[3]], "${var.name}-reservation-from-owner")
+    )
+    error_message = "The operational dashboard must chart both reservation integration queues and their age."
+  }
+
+  assert {
+    condition = (
       length(jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets) == 19 &&
       length([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if widget.type == "text"]) == 4 &&
       length([for widget in jsondecode(aws_cloudwatch_dashboard.demo.dashboard_body).widgets : widget if widget.type == "metric"]) == 13 &&

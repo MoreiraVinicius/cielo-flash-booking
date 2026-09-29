@@ -33,6 +33,14 @@ O único responsável externo trata todas as pendências e solicita a confirmaç
 
 Há um único módulo externo responsável por **todas** as pendências. Suas réplicas competem por uma fila de trabalho; uma mensagem vai a uma réplica de cada vez, embora redelivery seja possível e exija idempotência no processamento externo. A criação já grava `ReservationCreated` e `ReservationExpirationScheduled` na outbox da mesma transação e publica cada tipo em uma SQS específica; por isso, um `ReservationHeld` com payload mínimo na outbox e uma SQS direta para o único responsável é mais coeso que exigir que o cliente repasse `reservationId` após o HTTP `201`. A proposta mantém o consumidor de e-mail atual: `ReservationCreated` continua interno, enquanto `ReservationHeld` é contrato da integração externa. Não há SNS Fan-Out.
 
+### Filas e permissões provisionadas
+
+Terraform e Compose declaram duas filas SQS Standard direcionais, cada uma com criptografia gerenciada pelo SQS, long polling de 20 segundos, visibility timeout configurável (60 segundos por padrão) e DLQ própria. `reservation-to-owner` carrega `ReservationHeld`, resultados e solicitações de cancelamento para o módulo externo; `reservation-from-owner` recebe confirmação e conclusão correlacionada de cancelamento. As filas existentes de notificação e expiração mantêm suas finalidades.
+
+No worker, a role da task publica somente em `reservation-to-owner` e consome somente `reservation-from-owner`, além das permissões atuais das filas internas. A variável opcional `reservation_owner_role_arn` instala uma resource policy que permite à role configurada consumir a fila de saída e publicar na fila de entrada. Ausência da configuração não concede acesso externo; outputs expõem ambas as URLs ao responsável. Para integração cross-account, a role externa também precisa de uma identity policy correspondente na própria conta. Os alarmes e dashboard da demo incluem backlog, idade e mensagens em DLQs dessas duas filas.
+
+O ambiente local cria as mesmas quatro filas com LocalStack e fornece as URLs ao worker. O simulador do responsável externo que as usa pertence à tarefa T07; não existe implementação de compra ou pagamento.
+
 ## Filas de trabalho e fan-out
 
 | Papel | SQS direta | SNS com assinaturas SQS | Recomendação |

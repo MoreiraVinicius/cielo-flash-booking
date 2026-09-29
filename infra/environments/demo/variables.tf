@@ -36,6 +36,18 @@ variable "notification_consumer_enabled" {
   default     = true
 }
 
+variable "reservation_owner_role_arn" {
+  description = "Optional IAM role ARN of the single external module authorized to exchange reservation messages."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.reservation_owner_role_arn == null || can(regex("^arn:[^:]+:iam::[0-9]{12}:role/.+$", var.reservation_owner_role_arn))
+    error_message = "reservation_owner_role_arn must be null or an IAM role ARN."
+  }
+}
+
 variable "discord_webhook_secret_arn" {
   description = "Optional ARN of the AWS Secrets Manager secret containing the Discord Incoming Webhook URL as SecretString."
   type        = string

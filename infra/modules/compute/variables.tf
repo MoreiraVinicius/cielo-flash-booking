@@ -30,6 +30,10 @@ variable "expiration_queue_arn" { type = string }
 variable "expiration_queue_url" { type = string }
 variable "notification_queue_arn" { type = string }
 variable "notification_queue_url" { type = string }
+variable "reservation_to_owner_queue_arn" { type = string }
+variable "reservation_to_owner_queue_url" { type = string }
+variable "reservation_from_owner_queue_arn" { type = string }
+variable "reservation_from_owner_queue_url" { type = string }
 variable "notification_consumer_enabled" {
   description = "Whether the worker consumes reservation-notification messages and invokes the configured email provider."
   type        = bool

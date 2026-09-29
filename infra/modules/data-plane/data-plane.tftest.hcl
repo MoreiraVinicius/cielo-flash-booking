@@ -33,6 +33,23 @@ run "keeps_data_private_encrypted_and_message_paths_isolated" {
     error_message = "Worker queues must use SQS-managed server-side encryption."
   }
 
+  assert {
+    condition = (
+      jsondecode(aws_sqs_queue.reservation_to_owner.redrive_policy).deadLetterTargetArn == aws_sqs_queue.reservation_to_owner_dlq.arn &&
+      jsondecode(aws_sqs_queue.reservation_from_owner.redrive_policy).deadLetterTargetArn == aws_sqs_queue.reservation_from_owner_dlq.arn &&
+      aws_sqs_queue.reservation_to_owner.sqs_managed_sse_enabled &&
+      aws_sqs_queue.reservation_from_owner.sqs_managed_sse_enabled &&
+      aws_sqs_queue.reservation_to_owner.receive_wait_time_seconds == 20 &&
+      aws_sqs_queue.reservation_from_owner.receive_wait_time_seconds == 20
+    )
+    error_message = "Confirmation directions must have separate encrypted DLQs and enable long polling."
+  }
+
+  assert {
+    condition     = length(aws_sqs_queue_policy.reservation_to_owner) == 0 && length(aws_sqs_queue_policy.reservation_from_owner) == 0
+    error_message = "The external owner must have no queue access until its exact role ARN is configured."
+  }
+
 
   assert {
     condition     = contains(aws_cloudwatch_metric_alarm.database_cpu.alarm_actions, var.alarm_topic_arn) && alltrue([for alarm in aws_cloudwatch_metric_alarm.queue_age : contains(alarm.alarm_actions, var.alarm_topic_arn)]) && alltrue([for alarm in aws_cloudwatch_metric_alarm.dead_letter_messages : contains(alarm.alarm_actions, var.alarm_topic_arn)])
@@ -57,6 +74,30 @@ run "exposes_rds_only_for_explicit_administrative_access" {
   assert {
     condition     = aws_db_instance.postgres.publicly_accessible && aws_db_instance.postgres.db_subnet_group_name == aws_db_subnet_group.postgres.name && toset(aws_db_subnet_group.postgres.subnet_ids) == toset(["subnet-data-a", "subnet-data-b"])
     error_message = "Public administrative access must retain the existing RDS subnet group."
+  }
+}
+
+run "limits_confirmation_queues_to_the_configured_owner" {
+  command = apply
+
+  variables {
+    name                       = "flash-booking-demo"
+    vpc_id                     = "vpc-123"
+    isolated_data_subnet_ids   = ["subnet-data-a", "subnet-data-b"]
+    rds_security_group_id      = "sg-rds"
+    valkey_security_group_id   = "sg-valkey"
+    ses_sender_email           = "demo@example.com"
+    reservation_owner_role_arn = "arn:aws:iam::123456789012:role/reservation-owner"
+  }
+
+  assert {
+    condition = (
+      jsondecode(aws_sqs_queue_policy.reservation_to_owner[0].policy).Statement[0].Principal.AWS == var.reservation_owner_role_arn &&
+      toset(jsondecode(aws_sqs_queue_policy.reservation_to_owner[0].policy).Statement[0].Action) == toset(["sqs:ChangeMessageVisibility", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]) &&
+      jsondecode(aws_sqs_queue_policy.reservation_from_owner[0].policy).Statement[0].Principal.AWS == var.reservation_owner_role_arn &&
+      jsondecode(aws_sqs_queue_policy.reservation_from_owner[0].policy).Statement[0].Action == ["sqs:SendMessage"]
+    )
+    error_message = "Only the configured external role may consume owner messages or publish reservation outcomes."
   }
 }
 

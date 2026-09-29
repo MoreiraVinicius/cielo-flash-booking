@@ -4,6 +4,10 @@ This composition creates the full demo topology from the network, data-plane, co
 
 Copy `demo.tfvars.example` to an ignored `demo.tfvars`, replace every placeholder, and run `terraform init -backend=false` plus `terraform validate` without credentials. An actual `plan` or `apply` requires temporary AWS credentials and explicit deployment authorization.
 
+## Integração externa de reservas
+
+As filas `reservation-to-owner` e `reservation-from-owner` transportam, respectivamente, mensagens do Flash Booking ao único responsável externo e as confirmações/desfechos desse responsável ao Flash Booking. Configure `reservation_owner_role_arn` em `demo.tfvars` com o ARN exato da role externa; vazio (`null`) mantém as filas sem acesso externo. Terraform mostra as URLs nos outputs `reservation_to_owner_queue_url` e `reservation_from_owner_queue_url`. Para role em outra conta, seu administrador também precisa conceder as permissões de identidade correspondentes. Nenhum pagamento ou compra é executado por esta infraestrutura.
+
 ## Resumo executivo do evento
 
 O resumo e opcional e usa uma unica chave global, desligada por padrao. A geracao e automatica: quando um evento elegivel atinge `endsAt`, o worker salva o apurado e, se configurado, publica o Markdown no Discord na proxima varredura (intervalo default de 30 segundos). Nao existe comando manual por evento. Mantenha a chave ligada ate os eventos da apresentacao terminarem e a publicacao concluir; uma ativacao nova nao recupera eventos iniciados antes dela.

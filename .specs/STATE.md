@@ -231,7 +231,7 @@
 ### AD-031 - Confirmação externa de reservas
 
 - **Status:** active; runtime implementation in progress.
-- **Decision:** `CONFIRMED` significa compromisso definitivo de todos os ingressos depois que um único módulo externo declarar resolvidas todas as pendências; Flash Booking não processa pagamento. A confirmação é integral, assíncrona e decidida pelo relógio PostgreSQL após o lock. `ReservationHeld` segue pela outbox para uma SQS direta do único responsável; não há SNS Fan-Out. `DELETE` de `PENDING` continua imediato e notifica `ReservationHoldClosed(CANCELLED)`; a transição efetiva para `EXPIRED` notifica `ReservationHoldClosed(EXPIRED)`. `DELETE` de `CONFIRMED` cria `CANCELLATION_PENDING`, notifica o responsável externo e mantém o estoque comprometido até uma resposta correlacionada de conclusão. O pedido não pode ser desfeito nem voltar a `CONFIRMED`. `ReservationConfirmationRejected` informa uma rejeição para compensação externa; Flash Booking não acompanha a compensação.
+- **Decision:** `CONFIRMED` significa compromisso definitivo de todos os ingressos depois que um único módulo externo declarar resolvidas todas as pendências; Flash Booking não processa pagamento. A confirmação é integral, assíncrona e decidida pelo relógio PostgreSQL após o lock. `ReservationHeld` segue pela outbox para a SQS direta `reservation-to-owner`; `reservation-from-owner` recebe confirmações e desfechos de cancelamento. Não há SNS Fan-Out. Ambas têm DLQ própria, e as filas antigas de expiração e notificação conservam seu propósito. O worker publica somente na fila de saída e consome somente a de entrada; `reservation_owner_role_arn` autoriza a role externa exata a consumir a saída e publicar na entrada, sem conceder acesso externo quando nulo. `DELETE` de `PENDING` continua imediato e notifica `ReservationHoldClosed(CANCELLED)`; a transição efetiva para `EXPIRED` notifica `ReservationHoldClosed(EXPIRED)`. `DELETE` de `CONFIRMED` cria `CANCELLATION_PENDING`, notifica o responsável externo e mantém o estoque comprometido até uma resposta correlacionada de conclusão. O pedido não pode ser desfeito nem voltar a `CONFIRMED`. `ReservationConfirmationRejected` informa uma rejeição para compensação externa; Flash Booking não acompanha a compensação.
 - **Reason:** O case cobre o núcleo de reserva temporária, mas um sistema maior precisa de um desfecho de reserva que não dependa de implementar pagamentos neste serviço.
 - **Trade-off:** Uma solicitação assíncrona pode chegar depois do prazo e ser rejeitada mesmo se publicada antes; o produtor externo precisa aguardar o resultado e tratar a rejeição. Uma fila distribui trabalho entre réplicas, mas a outbox e a SQS podem redeliver; o responsável externo precisa deduplicar sua operação de negócio de forma durável. Cancelamento de confirmado pode reter estoque por tempo indefinido se a reversão externa falhar; retry, DLQ e alerta operacional são necessários, sem desfazer o pedido nem afirmar sucesso.
 - **Scope:** Ciclo de reserva, inbox/outbox, integração SQS, contratos HTTP, documentação e testes locais em `.specs/features/reservation-confirmation/`. A implementação do módulo externo, pagamentos e implantação AWS permanecem fora do escopo.
@@ -239,10 +239,10 @@
 ## Handoff
 
 - **Feature**: `reservation-confirmation`
-- **Phase / Task**: Execute / T03 concluída.
-- **Completed**: T01 consolidou AD-031 e specs vigentes. T02 acrescentou a V6 e oito testes de schema. T03 implementou decisão pós-lock com horário PostgreSQL, transições concorrentes e retenção de estoque em `CANCELLATION_PENDING`; passaram oito testes unitários e oito integrações.
+- **Phase / Task**: Execute / T04 concluída.
+- **Completed**: T01 consolidou AD-031 e specs vigentes. T02 acrescentou a V6 e oito testes de schema. T03 implementou decisão pós-lock com horário PostgreSQL, transições concorrentes e retenção de estoque em `CANCELLATION_PENDING`; passaram oito testes unitários e oito integrações. T04 preparou filas direcionais, DLQs e IAM restrito, atualizou LocalStack/Terraform e observabilidade; 7 testes de módulo, validação Terraform e smoke local passaram.
 - **In-progress**: Nenhum.
-- **Next step**: Preparar as duas filas direcionais e permissões de integração na T04.
+- **Next step**: Implementar o consumidor idempotente da fila de entrada e sua inbox na T05.
 - **Blockers**: Nenhum.
 - **Uncommitted files**: Preservar mudanças paralelas preexistentes fora do escopo desta feature.
 - **Branch**: `main`

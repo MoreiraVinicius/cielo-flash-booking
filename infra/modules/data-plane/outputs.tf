@@ -46,6 +46,26 @@ output "notification_queue_url" {
   value       = aws_sqs_queue.notification.url
 }
 
+output "reservation_to_owner_queue_arn" {
+  description = "ARN of the queue that carries reservation messages to the single external owner."
+  value       = aws_sqs_queue.reservation_to_owner.arn
+}
+
+output "reservation_to_owner_queue_url" {
+  description = "URL of the queue that carries reservation messages to the single external owner."
+  value       = aws_sqs_queue.reservation_to_owner.url
+}
+
+output "reservation_from_owner_queue_arn" {
+  description = "ARN of the queue that receives confirmation and cancellation outcomes from the single external owner."
+  value       = aws_sqs_queue.reservation_from_owner.arn
+}
+
+output "reservation_from_owner_queue_url" {
+  description = "URL of the queue that receives confirmation and cancellation outcomes from the single external owner."
+  value       = aws_sqs_queue.reservation_from_owner.url
+}
+
 output "ses_sender_email" {
   description = "SES sender identity that the worker may use."
   value       = aws_sesv2_email_identity.sender.email_identity

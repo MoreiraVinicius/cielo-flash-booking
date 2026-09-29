@@ -158,6 +158,18 @@ resource "aws_iam_role_policy" "worker_messaging" {
         Resource = [var.expiration_queue_arn, var.notification_queue_arn]
       },
       {
+        Sid      = "PublishReservationMessagesToOwner"
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
+        Resource = [var.reservation_to_owner_queue_arn]
+      },
+      {
+        Sid      = "ConsumeReservationResolutionsFromOwner"
+        Effect   = "Allow"
+        Action   = ["sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]
+        Resource = [var.reservation_from_owner_queue_arn]
+      },
+      {
         Sid      = "SendReservationEmail"
         Effect   = "Allow"
         Action   = ["ses:SendEmail"]
@@ -338,9 +350,11 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "OUTBOX_PUBLISHER_ENABLED", value = "true" },
       { name = "OUTBOX_PUBLISHER_EXPIRATION_QUEUE_URL", value = var.expiration_queue_url },
       { name = "OUTBOX_PUBLISHER_NOTIFICATION_QUEUE_URL", value = var.notification_queue_url },
+      { name = "OUTBOX_PUBLISHER_OWNER_QUEUE_URL", value = var.reservation_to_owner_queue_url },
       { name = "OUTBOX_PUBLISHER_REGION", value = var.aws_region },
       { name = "EXPIRATION_CONSUMER_ENABLED", value = "true" },
       { name = "EXPIRATION_CONSUMER_QUEUE_URL", value = var.expiration_queue_url },
+      { name = "CONFIRMATION_CONSUMER_QUEUE_URL", value = var.reservation_from_owner_queue_url },
       { name = "NOTIFICATION_CONSUMER_ENABLED", value = tostring(var.notification_consumer_enabled) },
       { name = "NOTIFICATION_CONSUMER_QUEUE_URL", value = var.notification_queue_url },
       { name = "NOTIFICATION_EMAIL_PROVIDER", value = "ses" },

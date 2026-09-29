@@ -34,36 +34,41 @@ module "network" {
 }
 
 module "data_plane" {
-  source                   = "../../modules/data-plane"
-  name                     = var.name
-  vpc_id                   = module.network.vpc_id
-  isolated_data_subnet_ids = module.network.isolated_data_subnet_ids
-  public_access_enabled    = var.database_administrative_access_enabled
-  rds_security_group_id    = module.network.rds_security_group_id
-  valkey_security_group_id = module.network.valkey_security_group_id
-  ses_sender_email         = var.ses_sender_email
-  alarm_topic_arn          = aws_sns_topic.operational_alerts.arn
+  source                     = "../../modules/data-plane"
+  name                       = var.name
+  vpc_id                     = module.network.vpc_id
+  isolated_data_subnet_ids   = module.network.isolated_data_subnet_ids
+  public_access_enabled      = var.database_administrative_access_enabled
+  rds_security_group_id      = module.network.rds_security_group_id
+  valkey_security_group_id   = module.network.valkey_security_group_id
+  ses_sender_email           = var.ses_sender_email
+  reservation_owner_role_arn = var.reservation_owner_role_arn
+  alarm_topic_arn            = aws_sns_topic.operational_alerts.arn
 }
 
 module "compute" {
-  source                        = "../../modules/compute"
-  name                          = var.name
-  aws_region                    = var.aws_region
-  vpc_id                        = module.network.vpc_id
-  private_app_subnet_ids        = module.network.private_app_subnet_ids
-  ecs_tasks_security_group_id   = module.network.ecs_tasks_security_group_id
-  image_tag                     = var.image_tag
-  database_host                 = module.data_plane.database_host
-  database_port                 = module.data_plane.database_port
-  database_secret_arn           = module.data_plane.database_secret_arn
-  valkey_primary_endpoint       = module.data_plane.valkey_primary_endpoint
-  valkey_port                   = module.data_plane.valkey_port
-  expiration_queue_arn          = module.data_plane.expiration_queue_arn
-  expiration_queue_url          = module.data_plane.expiration_queue_url
-  notification_queue_arn        = module.data_plane.notification_queue_arn
-  notification_queue_url        = module.data_plane.notification_queue_url
-  notification_consumer_enabled = var.notification_consumer_enabled
-  discord_webhook_secret_arn    = var.discord_webhook_secret_arn
+  source                           = "../../modules/compute"
+  name                             = var.name
+  aws_region                       = var.aws_region
+  vpc_id                           = module.network.vpc_id
+  private_app_subnet_ids           = module.network.private_app_subnet_ids
+  ecs_tasks_security_group_id      = module.network.ecs_tasks_security_group_id
+  image_tag                        = var.image_tag
+  database_host                    = module.data_plane.database_host
+  database_port                    = module.data_plane.database_port
+  database_secret_arn              = module.data_plane.database_secret_arn
+  valkey_primary_endpoint          = module.data_plane.valkey_primary_endpoint
+  valkey_port                      = module.data_plane.valkey_port
+  expiration_queue_arn             = module.data_plane.expiration_queue_arn
+  expiration_queue_url             = module.data_plane.expiration_queue_url
+  notification_queue_arn           = module.data_plane.notification_queue_arn
+  notification_queue_url           = module.data_plane.notification_queue_url
+  reservation_to_owner_queue_arn   = module.data_plane.reservation_to_owner_queue_arn
+  reservation_to_owner_queue_url   = module.data_plane.reservation_to_owner_queue_url
+  reservation_from_owner_queue_arn = module.data_plane.reservation_from_owner_queue_arn
+  reservation_from_owner_queue_url = module.data_plane.reservation_from_owner_queue_url
+  notification_consumer_enabled    = var.notification_consumer_enabled
+  discord_webhook_secret_arn       = var.discord_webhook_secret_arn
   executive_summary_operational_alarms = [{
     name  = "${var.name}-worker-running-tasks"
     label = "Worker sem tarefas ativas"

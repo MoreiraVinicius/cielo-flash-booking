@@ -16,21 +16,25 @@ run "uses_one_image_with_separate_least_privilege_services" {
   command = apply
 
   variables {
-    name                        = "flash-booking-demo"
-    aws_region                  = "sa-east-1"
-    vpc_id                      = "vpc-123"
-    private_app_subnet_ids      = ["subnet-app-a", "subnet-app-b"]
-    ecs_tasks_security_group_id = "sg-ecs"
-    database_host               = "database.internal"
-    database_port               = 5432
-    database_secret_arn         = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:database"
-    valkey_primary_endpoint     = "valkey.internal"
-    valkey_port                 = 6379
-    expiration_queue_arn        = "arn:aws:sqs:sa-east-1:123456789012:expiration"
-    expiration_queue_url        = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
-    notification_queue_arn      = "arn:aws:sqs:sa-east-1:123456789012:notification"
-    notification_queue_url      = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
-    discord_webhook_secret_arn  = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:discord-webhook"
+    name                             = "flash-booking-demo"
+    aws_region                       = "sa-east-1"
+    vpc_id                           = "vpc-123"
+    private_app_subnet_ids           = ["subnet-app-a", "subnet-app-b"]
+    ecs_tasks_security_group_id      = "sg-ecs"
+    database_host                    = "database.internal"
+    database_port                    = 5432
+    database_secret_arn              = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:database"
+    valkey_primary_endpoint          = "valkey.internal"
+    valkey_port                      = 6379
+    expiration_queue_arn             = "arn:aws:sqs:sa-east-1:123456789012:expiration"
+    expiration_queue_url             = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
+    notification_queue_arn           = "arn:aws:sqs:sa-east-1:123456789012:notification"
+    notification_queue_url           = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
+    reservation_to_owner_queue_arn   = "arn:aws:sqs:sa-east-1:123456789012:reservation-to-owner"
+    reservation_to_owner_queue_url   = "https://sqs.sa-east-1.amazonaws.com/123456789012/reservation-to-owner"
+    reservation_from_owner_queue_arn = "arn:aws:sqs:sa-east-1:123456789012:reservation-from-owner"
+    reservation_from_owner_queue_url = "https://sqs.sa-east-1.amazonaws.com/123456789012/reservation-from-owner"
+    discord_webhook_secret_arn       = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:discord-webhook"
     executive_summary_operational_alarms = [{
       name  = "flash-booking-demo-worker-running-tasks"
       label = "Worker sem tarefas ativas"
@@ -90,8 +94,18 @@ run "uses_one_image_with_separate_least_privilege_services" {
   }
 
   assert {
-    condition     = !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[0].Action, "secretsmanager:GetSecretValue") && contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ReceiveMessage") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[1].Action, "sqs:ChangeMessageVisibility") && !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[2].Action, "ses:SendRawEmail")
+    condition     = !contains(jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement[0].Action, "secretsmanager:GetSecretValue") && contains(one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Action if statement.Sid == "ConsumeWorkerQueues"]), "sqs:ReceiveMessage") && !contains(one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Action if statement.Sid == "ConsumeWorkerQueues"]), "sqs:ChangeMessageVisibility") && !contains(one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Action if statement.Sid == "SendReservationEmail"]), "ses:SendRawEmail")
     error_message = "Only the execution role reads the database secret, while the worker receives queue messages."
+  }
+
+  assert {
+    condition = (
+      one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Resource if statement.Sid == "PublishReservationMessagesToOwner"]) == [var.reservation_to_owner_queue_arn] &&
+      one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Resource if statement.Sid == "ConsumeReservationResolutionsFromOwner"]) == [var.reservation_from_owner_queue_arn] &&
+      one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "OUTBOX_PUBLISHER_OWNER_QUEUE_URL"]) == var.reservation_to_owner_queue_url &&
+      one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "CONFIRMATION_CONSUMER_QUEUE_URL"]) == var.reservation_from_owner_queue_url
+    )
+    error_message = "The worker may publish to the owner queue and consume resolutions only from the inbound queue."
   }
 
   assert {
@@ -109,24 +123,28 @@ run "pauses_only_notification_consumer" {
   command = plan
 
   variables {
-    name                          = "flash-booking-demo"
-    aws_region                    = "sa-east-1"
-    vpc_id                        = "vpc-123"
-    private_app_subnet_ids        = ["subnet-app-a", "subnet-app-b"]
-    ecs_tasks_security_group_id   = "sg-ecs"
-    database_host                 = "database.internal"
-    database_port                 = 5432
-    database_secret_arn           = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:database"
-    valkey_primary_endpoint       = "valkey.internal"
-    valkey_port                   = 6379
-    expiration_queue_arn          = "arn:aws:sqs:sa-east-1:123456789012:expiration"
-    expiration_queue_url          = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
-    notification_queue_arn        = "arn:aws:sqs:sa-east-1:123456789012:notification"
-    notification_queue_url        = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
-    notification_consumer_enabled = false
-    discord_webhook_secret_arn    = ""
-    ses_sender_email              = "demo@example.com"
-    alarm_topic_arn               = "arn:aws:sns:sa-east-1:123456789012:alerts"
+    name                             = "flash-booking-demo"
+    aws_region                       = "sa-east-1"
+    vpc_id                           = "vpc-123"
+    private_app_subnet_ids           = ["subnet-app-a", "subnet-app-b"]
+    ecs_tasks_security_group_id      = "sg-ecs"
+    database_host                    = "database.internal"
+    database_port                    = 5432
+    database_secret_arn              = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:database"
+    valkey_primary_endpoint          = "valkey.internal"
+    valkey_port                      = 6379
+    expiration_queue_arn             = "arn:aws:sqs:sa-east-1:123456789012:expiration"
+    expiration_queue_url             = "https://sqs.sa-east-1.amazonaws.com/123456789012/expiration"
+    notification_queue_arn           = "arn:aws:sqs:sa-east-1:123456789012:notification"
+    notification_queue_url           = "https://sqs.sa-east-1.amazonaws.com/123456789012/notification"
+    reservation_to_owner_queue_arn   = "arn:aws:sqs:sa-east-1:123456789012:reservation-to-owner"
+    reservation_to_owner_queue_url   = "https://sqs.sa-east-1.amazonaws.com/123456789012/reservation-to-owner"
+    reservation_from_owner_queue_arn = "arn:aws:sqs:sa-east-1:123456789012:reservation-from-owner"
+    reservation_from_owner_queue_url = "https://sqs.sa-east-1.amazonaws.com/123456789012/reservation-from-owner"
+    notification_consumer_enabled    = false
+    discord_webhook_secret_arn       = ""
+    ses_sender_email                 = "demo@example.com"
+    alarm_topic_arn                  = "arn:aws:sns:sa-east-1:123456789012:alerts"
   }
 
   assert {

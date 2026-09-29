@@ -101,10 +101,12 @@ services:
       OUTBOX_PUBLISHER_ENABLED: "true"
       OUTBOX_PUBLISHER_EXPIRATION_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-expiration
       OUTBOX_PUBLISHER_NOTIFICATION_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-notification
+      OUTBOX_PUBLISHER_OWNER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-reservation-to-owner
       OUTBOX_PUBLISHER_REGION: us-east-1
       OUTBOX_PUBLISHER_ENDPOINT: http://localstack:4566
       EXPIRATION_CONSUMER_ENABLED: "true"
       EXPIRATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-expiration
+      CONFIRMATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-reservation-from-owner
       NOTIFICATION_CONSUMER_ENABLED: "true"
       NOTIFICATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-notification
       NOTIFICATION_EMAIL_PROVIDER: smtp

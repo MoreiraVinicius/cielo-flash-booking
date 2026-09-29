@@ -1011,6 +1011,10 @@ resource "aws_cloudwatch_dashboard" "demo" {
             [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-notification", { label = "notification", color = "#2ca02c" }],
             [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-expiration-dlq", { label = "expiration DLQ", color = "#d62728" }],
             [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-notification-dlq", { label = "notification DLQ", color = "#ff9896" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-reservation-to-owner", { label = "reservation to owner", color = "#9467bd" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-reservation-from-owner", { label = "reservation from owner", color = "#8c564b" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-reservation-to-owner-dlq", { label = "reservation to owner DLQ", color = "#e377c2" }],
+            [".", "ApproximateNumberOfMessagesVisible", ".", "${var.name}-reservation-from-owner-dlq", { label = "reservation from owner DLQ", color = "#7f7f7f" }],
           ]
         }
       },
@@ -1029,6 +1033,8 @@ resource "aws_cloudwatch_dashboard" "demo" {
           metrics = [
             ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "${var.name}-expiration", { label = "expiration", color = "#1f77b4" }],
             [".", "ApproximateAgeOfOldestMessage", ".", "${var.name}-notification", { label = "notification", color = "#2ca02c" }],
+            [".", "ApproximateAgeOfOldestMessage", ".", "${var.name}-reservation-to-owner", { label = "reservation to owner", color = "#9467bd" }],
+            [".", "ApproximateAgeOfOldestMessage", ".", "${var.name}-reservation-from-owner", { label = "reservation from owner", color = "#8c564b" }],
           ]
           yAxis = {
             left = { min = 0, label = "Seconds" }

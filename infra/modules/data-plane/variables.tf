@@ -67,6 +67,18 @@ variable "queue_visibility_timeout_seconds" {
   }
 }
 
+variable "reservation_owner_role_arn" {
+  description = "Optional IAM role ARN of the single external reservation owner. When omitted, external queue access is not granted."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.reservation_owner_role_arn == null || can(regex("^arn:[^:]+:iam::[0-9]{12}:role/.+$", var.reservation_owner_role_arn))
+    error_message = "reservation_owner_role_arn must be null or an IAM role ARN."
+  }
+}
+
 variable "alarm_topic_arn" {
   description = "SNS topic that receives operational alarms."
   type        = string

@@ -118,6 +118,78 @@ resource "aws_sqs_queue" "notification" {
   tags = merge(local.tags, { Name = "${var.name}-notification" })
 }
 
+resource "aws_sqs_queue" "reservation_to_owner_dlq" {
+  name                      = "${var.name}-reservation-to-owner-dlq"
+  sqs_managed_sse_enabled   = true
+  message_retention_seconds = 1209600
+
+  tags = merge(local.tags, { Name = "${var.name}-reservation-to-owner-dlq" })
+}
+
+resource "aws_sqs_queue" "reservation_from_owner_dlq" {
+  name                      = "${var.name}-reservation-from-owner-dlq"
+  sqs_managed_sse_enabled   = true
+  message_retention_seconds = 1209600
+
+  tags = merge(local.tags, { Name = "${var.name}-reservation-from-owner-dlq" })
+}
+
+resource "aws_sqs_queue" "reservation_to_owner" {
+  name                       = "${var.name}-reservation-to-owner"
+  sqs_managed_sse_enabled    = true
+  receive_wait_time_seconds  = 20
+  visibility_timeout_seconds = var.queue_visibility_timeout_seconds
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.reservation_to_owner_dlq.arn
+    maxReceiveCount     = 5
+  })
+
+  tags = merge(local.tags, { Name = "${var.name}-reservation-to-owner" })
+}
+
+resource "aws_sqs_queue" "reservation_from_owner" {
+  name                       = "${var.name}-reservation-from-owner"
+  sqs_managed_sse_enabled    = true
+  receive_wait_time_seconds  = 20
+  visibility_timeout_seconds = var.queue_visibility_timeout_seconds
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.reservation_from_owner_dlq.arn
+    maxReceiveCount     = 5
+  })
+
+  tags = merge(local.tags, { Name = "${var.name}-reservation-from-owner" })
+}
+
+resource "aws_sqs_queue_policy" "reservation_to_owner" {
+  count     = var.reservation_owner_role_arn == null ? 0 : 1
+  queue_url = aws_sqs_queue.reservation_to_owner.url
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "SingleOwnerConsumesReservationMessages"
+      Effect    = "Allow"
+      Principal = { AWS = var.reservation_owner_role_arn }
+      Action    = ["sqs:ChangeMessageVisibility", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]
+      Resource  = aws_sqs_queue.reservation_to_owner.arn
+    }]
+  })
+}
+
+resource "aws_sqs_queue_policy" "reservation_from_owner" {
+  count     = var.reservation_owner_role_arn == null ? 0 : 1
+  queue_url = aws_sqs_queue.reservation_from_owner.url
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "SingleOwnerPublishesReservationResolution"
+      Effect    = "Allow"
+      Principal = { AWS = var.reservation_owner_role_arn }
+      Action    = ["sqs:SendMessage"]
+      Resource  = aws_sqs_queue.reservation_from_owner.arn
+    }]
+  })
+}
+
 resource "aws_sesv2_email_identity" "sender" {
   email_identity = var.ses_sender_email
 
@@ -142,8 +214,10 @@ resource "aws_cloudwatch_metric_alarm" "database_cpu" {
 
 resource "aws_cloudwatch_metric_alarm" "queue_age" {
   for_each = {
-    expiration   = aws_sqs_queue.expiration.name
-    notification = aws_sqs_queue.notification.name
+    expiration             = aws_sqs_queue.expiration.name
+    notification           = aws_sqs_queue.notification.name
+    reservation_from_owner = aws_sqs_queue.reservation_from_owner.name
+    reservation_to_owner   = aws_sqs_queue.reservation_to_owner.name
   }
 
   alarm_name          = "${var.name}-${each.key}-queue-age"
@@ -163,8 +237,10 @@ resource "aws_cloudwatch_metric_alarm" "queue_age" {
 
 resource "aws_cloudwatch_metric_alarm" "dead_letter_messages" {
   for_each = {
-    expiration   = aws_sqs_queue.expiration_dlq.name
-    notification = aws_sqs_queue.notification_dlq.name
+    expiration             = aws_sqs_queue.expiration_dlq.name
+    notification           = aws_sqs_queue.notification_dlq.name
+    reservation_from_owner = aws_sqs_queue.reservation_from_owner_dlq.name
+    reservation_to_owner   = aws_sqs_queue.reservation_to_owner_dlq.name
   }
 
   alarm_name          = "${var.name}-${each.key}-dlq-messages"

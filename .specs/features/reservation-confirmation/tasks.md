@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T03 está concluída; T04 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
+**Status:** Execução aprovada. T01–T04 estão concluídas; T05 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
 
 ## Execution Protocol
 
@@ -12,7 +12,7 @@ Seguir `tlc-spec-driven`: atualizar spec/context/design e decisões antes de alt
 | Camada | Teste exigido | Resultado observado |
 | --- | --- | --- |
 | Estado e transições | unit + PostgreSQL integration | `PENDING → CONFIRMED`, cancelamento pendente sem retorno a `CONFIRMED`, corridas, prazo pós-lock e invariante por evento. |
-| Infraestrutura de integração | Terraform/static + Compose smoke | Filas com dono lógico definido, DLQ, permissões do produtor/worker e ambiente local; sem SNS sem assinantes. |
+| Infraestrutura de integração | Terraform/static + Compose smoke | T04: 7 testes Terraform passaram nos módulos data-plane, compute e edge-observability; `terraform validate` passou na composição demo; LocalStack saudável criou as 4 filas novas, cada qual com DLQ própria, long polling de 20s e visibility timeout de 60s. |
 | Inbox, outbox, SQS | integration | `ReservationHeld` a um único dono lógico, fechamento por `CANCELLED`/`EXPIRED` só na transição vencedora, duplicata, mudança de `messageId` com mesmo `resolutionId`, replay após janela de dedup da fila, ordem invertida de hold/fechamento, retry, queda entre commit e ack, DLQ e resultado ao produtor. |
 | HTTP | integration | `GET` confirmado/em cancelamento e `DELETE` confirmado assíncrono; cinco rotas do case preservadas. |
 | Specs e diagramas | validation + inspeção visual | Links, SVG acessível, distinção atual/proposto e contratos verdadeiros. |
@@ -91,9 +91,11 @@ T08 → T09 → T10
 **Where:** `infra/modules/`
 **Depends on:** T03
 **Requirement:** CONFIRM-03, CONFIRM-05
-**Done when:** Terraform/module tests e Compose representam canais isolados; somente roles IAM autorizadas enviam solicitações e o worker as consome; nenhuma fila atual muda de finalidade.
+**Done when:** Terraform provisiona duas filas direcionais com DLQs distintas, long polling, criptografia SQS e alarmes; a role externa exata pode consumir a saída e publicar a entrada, enquanto a role do worker publica na saída e consome a entrada; Compose/LocalStack representa os mesmos canais; nenhuma fila atual muda de finalidade.
 **Tests:** Terraform static/module + Compose smoke, incluídos na tarefa.
 **Gate:** `terraform test` nos módulos alterados, Compose smoke e Diff.
+
+**Status:** Complete; 4 testes data-plane, 2 compute, 1 edge-observability e `terraform validate` passaram. O smoke Compose iniciou LocalStack, verificou as oito filas existentes/novas e confirmou redrive para DLQ, long polling de 20s e visibility timeout de 60s nas duas filas de integração. Nenhum recurso AWS foi aplicado.
 
 ### T05: Consumir solicitações externas com deduplicação
 
