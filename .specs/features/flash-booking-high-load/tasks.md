@@ -214,11 +214,11 @@ T20 -> T21
 
 ### T13: Escalar workers por backlog
 
-**What:** Configurar scaling por backlog por task e idade da mensagem mais antiga, com métricas separadas para expiração e notificação.
+**What:** Configurar scaling por backlog por task e idade da mensagem mais antiga, com métricas separadas para expiração, notificação e entrada de confirmação.
 **Where:** `infra/modules/compute/worker-scaling.tf`
 **Depends on:** T12
 **Requirement:** SCALE-02, SCALE-06
-**Done when:** Backlog aumenta workers somente depois do claim/lease estar validado; DLQ, idade excessiva de cada fila e claims vencidos disparam sinais separados; a configuração não exige nova alteração Java e não permite que notificação bloqueie expiração.
+**Done when:** Backlog aumenta workers somente depois do claim/lease estar validado; DLQ, idade excessiva de cada fila e claims vencidos disparam sinais separados; a fila de confirmação pode escalar seu consumidor sem bloquear expiração ou notificação.
 **Tests:** terraform test, incluído
 **Gate:** Infra
 **Commit:** `infra: autoscale expiration workers`

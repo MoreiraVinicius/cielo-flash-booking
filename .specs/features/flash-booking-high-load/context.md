@@ -6,6 +6,8 @@
 
 Descrever a evolução futura da demo validada para uma topologia Multi-AZ. A evolução preserva domínio, contratos HTTP, autenticação e semântica de notificação. Adaptadores e migrations operacionais podem evoluir no schema compartilhado quando a nova topologia exigir coordenação distribuída.
 
+Aqui “confirmação assíncrona” pode significar duas coisas distintas: a criação inicial ainda é síncrona e retorna `201`; a confirmação posterior `PENDING → CONFIRMED` é assíncrona pela integração definida em [reservation-confirmation](../reservation-confirmation/context.md). A topologia de alta carga não altera esses contratos nem implementa o módulo externo.
+
 ## Decisões de implementação
 
 ### Evolução independente

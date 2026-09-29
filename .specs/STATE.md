@@ -42,8 +42,8 @@
 
 ### AD-007 - Reserva temporária e encerramento auditável
 
-- **Status:** active
-- **Decision:** Manter PENDING, CANCELLED e EXPIRED, sem confirmação definitiva de compra; antes de `expiresAt`, `DELETE` encerra uma reserva pendente como CANCELLED, enquanto em `expiresAt` ou depois o prazo prevalece e o encerramento é EXPIRED; persistir código e descrição do motivo nos estados terminais.
+- **Status:** superseded by AD-031
+- **Decision:** Preservar as transições `PENDING → CANCELLED | EXPIRED`, a decisão de prazo pelo relógio PostgreSQL após o lock e os motivos terminais persistidos. AD-031 acrescenta confirmação integral e cancelamento assíncrono de reservas confirmadas.
 - **Reason:** Preservar o escopo de reserva temporária e explicar seus encerramentos.
 - **Scope:** Domínio compartilhado pelas duas arquiteturas.
 
@@ -228,13 +228,21 @@
 - **Trade-off:** Jackson 3 exigiu mudança de imports e APIs. O perfil de observabilidade requer collector configurado e pode introduzir custo/overhead quando ativado; a continuidade de traces através de mensagens não é prometida.
 - **Scope:** Runtime Java/Spring, serialização JSON, exportação de telemetria HTTP e documentação da arquitetura atual.
 
+### AD-031 - Confirmação externa de reservas
+
+- **Status:** active; runtime implementation in progress.
+- **Decision:** `CONFIRMED` significa compromisso definitivo de todos os ingressos depois que um único módulo externo declarar resolvidas todas as pendências; Flash Booking não processa pagamento. A confirmação é integral, assíncrona e decidida pelo relógio PostgreSQL após o lock. `ReservationHeld` segue pela outbox para uma SQS direta do único responsável; não há SNS Fan-Out. `DELETE` de `PENDING` continua imediato e notifica `ReservationHoldClosed(CANCELLED)`; a transição efetiva para `EXPIRED` notifica `ReservationHoldClosed(EXPIRED)`. `DELETE` de `CONFIRMED` cria `CANCELLATION_PENDING`, notifica o responsável externo e mantém o estoque comprometido até uma resposta correlacionada de conclusão. O pedido não pode ser desfeito nem voltar a `CONFIRMED`. `ReservationConfirmationRejected` informa uma rejeição para compensação externa; Flash Booking não acompanha a compensação.
+- **Reason:** O case cobre o núcleo de reserva temporária, mas um sistema maior precisa de um desfecho de reserva que não dependa de implementar pagamentos neste serviço.
+- **Trade-off:** Uma solicitação assíncrona pode chegar depois do prazo e ser rejeitada mesmo se publicada antes; o produtor externo precisa aguardar o resultado e tratar a rejeição. Uma fila distribui trabalho entre réplicas, mas a outbox e a SQS podem redeliver; o responsável externo precisa deduplicar sua operação de negócio de forma durável. Cancelamento de confirmado pode reter estoque por tempo indefinido se a reversão externa falhar; retry, DLQ e alerta operacional são necessários, sem desfazer o pedido nem afirmar sucesso.
+- **Scope:** Ciclo de reserva, inbox/outbox, integração SQS, contratos HTTP, documentação e testes locais em `.specs/features/reservation-confirmation/`. A implementação do módulo externo, pagamentos e implantação AWS permanecem fora do escopo.
+
 ## Handoff
 
-- **Feature**: `flash-booking-demo`
-- **Phase / Task**: Execute / DEMO-12 concluída e validada.
-- **Completed**: DEMO-11, desenho de Budget→SNS→Lambda, AD-026 e T33/T35 foram aplicados. O plano inicial criou 8 recursos e atualizou 1; a correção direcionada atualizou somente a Lambda para separar ARN e nome do cluster. A verificação independente aprovou 7/7 critérios, os testes unitários, `terraform test`, `terraform validate`, validadores das specs, leitura remota e sensor de discriminação (1/1 mutação eliminada).
+- **Feature**: `reservation-confirmation`
+- **Phase / Task**: Execute / T01 concluída.
+- **Completed**: Decisões do usuário consolidadas; AD-031 ativa; specs de reserva, alta carga, mensageria, resumo e README reconciliadas; validadores de specs e tarefas aprovados.
 - **In-progress**: Nenhum.
-- **Next step**: Configurar o DataGrip com o endpoint e a senha recuperada do Secrets Manager; revogar a flag ao encerrar a demo.
+- **Next step**: Evoluir reservation e inbox no schema PostgreSQL na T02.
 - **Blockers**: Nenhum.
-- **Uncommitted files**: Alterações locais preexistentes fora do escopo permanecem preservadas e não serão incluídas na entrega.
+- **Uncommitted files**: Preservar mudanças paralelas preexistentes fora do escopo desta feature.
 - **Branch**: `main`

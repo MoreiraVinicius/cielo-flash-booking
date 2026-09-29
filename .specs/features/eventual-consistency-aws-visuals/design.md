@@ -5,14 +5,17 @@
 
 ## Architecture Overview
 
-As novas vistas explicam a mesma versão 1 por três ângulos. O diagrama de consistência mostra semântica e tempo. A topologia demo mostra os recursos realmente provisionados. A topologia high-load mostra somente a evolução planejada.
+As vistas explicam o sistema por três ângulos. O diagrama de consistência mostra semântica e tempo. A topologia demo mostra os recursos definidos no Terraform e distingue a última implantação, já destruída, dos novos recursos ainda não aplicados. A topologia high-load mostra somente a evolução planejada.
 
 ```mermaid
 flowchart LR
     Case[Case: disponibilidade eventual] --> Truth[PostgreSQL autoritativo]
     Truth --> Read[Valkey: projeção de leitura]
     Truth --> Outbox[Outbox: efeitos após commit]
-    Outbox --> SQS[SQS: expiração e notificação]
+    Outbox --> SQS[SQS: expiração, notificação e eventos externos]
+    External[Responsável pelas pendências] --> Inbound[SQS de entrada: confirmação e conclusão do cancelamento]
+    Inbound --> Worker[Worker: inbox e decisão PostgreSQL]
+    Worker --> Outbox
     Demo[Terraform demo] --> DemoView[Topologia AWS validada]
     Target[AD-006] --> TargetView[Topologia high-load planejada]
     Read --> ConsistencyView[Visual de consistência]
@@ -27,7 +30,7 @@ flowchart LR
 | Contrato da demo | `.specs/features/flash-booking-demo/spec.md` | Define TTL, prazos, filas, DLQs e limites de evidência. |
 | Transação de reserva | `CreateReservationService` e `JdbcReservationPersistenceAdapter` | Mostra inventário, reserva e dois eventos no mesmo commit. |
 | Cache-aside | `GetEventService` e `EventAvailabilityInvalidationListener` | Mostra hit/miss, fallback, invalidação AFTER_COMMIT e TTL. |
-| Publicação | `OutboxSqsPublisher` | Mostra polling, duas filas e permanência do evento em falha. |
+| Publicação | `OutboxSqsPublisher` | Mostra polling, filas direcionadas e permanência do evento em falha. |
 | Infraestrutura demo | `infra/modules/*` | Lista somente recursos presentes no Terraform. |
 | Decisões | `.specs/STATE.md` | Mantém high-load como alvo não provisionado. |
 
@@ -48,9 +51,9 @@ flowchart LR
 
 Três faixas horizontais:
 
-1. **Comando forte:** cliente, API Gateway, Command API, transação PostgreSQL e resposta `201 PENDING`.
+1. **Comando forte:** cliente, API Gateway, Command API, transação PostgreSQL com inventário/reserva/outbox e resposta `201 PENDING`; `ReservationHeld` inicia o responsável externo após o commit.
 2. **Disponibilidade eventual:** Query API, Valkey e PostgreSQL; hit pode refletir estado por até um segundo, miss consulta a fonte de verdade, reserva não passa pelo cache.
-3. **Efeitos após commit:** outbox, publisher, filas de expiração/notificação, consumidores, DLQs, SES e reconciliador.
+3. **Efeitos após commit:** outbox, publisher, filas de expiração/notificação e responsável externo, fila de entrada, inbox, consumidor de confirmação, DLQs, SES e reconciliador. Confirmação não altera disponibilidade; cancelamento confirmado só libera após conclusão correlacionada.
 
 Uma coluna lateral resume os prazos observáveis: cache `≤ 1s`, expiração `expiresAt + 5s` saudável e solicitação SES `≤ 30s` saudável.
 
@@ -60,7 +63,7 @@ Quatro colunas sem cruzamento:
 
 - **Edge:** cliente, WAF + API Gateway REST, VPC Link v2, ALB interno.
 - **Compute:** Query API, Command API e worker, uma task ECS por serviço.
-- **Data/async:** Valkey single-node, RDS PostgreSQL Single-AZ, SQS + DLQs e SES.
+- **Data/async:** Valkey single-node, RDS PostgreSQL Single-AZ, filas SQS + DLQs para expiração/notificação, entrada de confirmação e mensagens ao responsável externo, além de SES. Esta configuração de confirmação ainda não foi aplicada na AWS.
 - **Operations:** Secrets Manager, CloudWatch e AWS Budgets.
 
 O cabeçalho mostra VPC em duas AZs, workloads privados, um NAT Gateway e o status `APLICADA · VALIDADA · DESTRUÍDA`.

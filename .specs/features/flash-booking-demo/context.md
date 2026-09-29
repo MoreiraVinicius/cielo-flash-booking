@@ -2,6 +2,8 @@
 
 **Estado:** Validated
 
+Este contexto fixa o ciclo da demo: retenção temporária, confirmação integral pelo único responsável externo e cancelamento assíncrono depois da confirmação. A [spec de confirmação externa](../reservation-confirmation/context.md) define as filas e transições desse ciclo.
+
 ## Limite da feature
 
 Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente por Docker Compose e publicáveis em uma arquitetura AWS econômica por Terraform. A reserva inclui o cliente e gera notificação de reserva temporária por e-mail.
@@ -20,13 +22,16 @@ Entregar os cinco endpoints do case em Java/Spring Boot, executáveis localmente
 - PostgreSQL será a fonte de verdade.
 - RDS PostgreSQL 16 Single-AZ será a infraestrutura autoritativa da demo.
 - Por até dois dias de demo, o operador pode habilitar acesso direto do DataGrip ao RDS a partir de um único IPv4 `/32`; isso torna a rota dos subnets de dados internet-routable e não é reutilizável na arquitetura high-load.
-- A reserva será aceita de forma síncrona como bloqueio temporário PENDING, sem confirmação de compra.
+- A criação da reserva continua síncrona e inicia em `PENDING`; a confirmação posterior chega por fila assíncrona e não declara pagamento ou compra.
 - A disponibilidade nunca será usada para autorizar a reserva; a transação de reserva decide.
 - Evento pode receber `startsAt` e `endsAt` opcionais. Sem início, a venda é imediata; sem fim, permanece elegível enquanto houver capacidade. O PostgreSQL decide a criação e a janela no mesmo decremento de inventário. Início informado é posterior ao instante de criação; fim com início é posterior ao início; fim sem início é no mínimo 10 minutos posterior à criação.
 - Reservas pendentes expiram em 10 minutos, valor configurável.
 - Com banco e processamento saudáveis, a devolução de capacidade deve concluir até expiresAt + 5 segundos, sem estender a validade.
 - Antes de `expiresAt`, `DELETE /reservations/{id}` encerra uma reserva pendente como `CANCELLED`. Em `expiresAt` ou depois, o prazo prevalece e a mesma chamada materializa `EXPIRED`; o PostgreSQL decide após conquistar o lock da reserva.
-- CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP definido em [STATE.md](../../STATE.md).
+- Confirmação mantém os ingressos já retidos; `CONFIRMED` e `CANCELLATION_PENDING` não expiram pelo prazo original nem alteram disponibilidade.
+- `DELETE` sobre `CONFIRMED` registra `CANCELLATION_PENDING`, responde `202` e envia uma única solicitação ao responsável externo. Só `ReservationCancellationCompleted` com o `cancellationId` correspondente conclui `CANCELLED` e libera capacidade.
+- `ReservationHeld` inicia o trabalho do responsável externo; fechamento de uma reserva pendente publica `ReservationHoldClosed(CANCELLED|EXPIRED)` para o mesmo responsável.
+- CANCELLED e EXPIRED persistem código e descrição do motivo conforme o catálogo e formato HTTP definido em [STATE.md](../../STATE.md); `CONFIRMED` preserva `confirmedAt` mesmo após o cancelamento concluído.
 - Idempotência dos comandos usa uma janela de 24 horas no PostgreSQL: a validade é decidida atomicamente pelo relógio do banco e o worker remove registros vencidos em lotes.
 - A elegibilidade de expiração usa o relógio do PostgreSQL.
 - `GET /events/{id}` usa ElastiCache for Valkey compartilhado, com TTL máximo de um segundo, e retorna também a janela persistida. `GET /reservations/{id}` consulta PostgreSQL e retorna somente `{id, name}` como referência do evento. O cache não autoriza reservas.

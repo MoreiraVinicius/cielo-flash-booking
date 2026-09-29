@@ -16,7 +16,7 @@ Ao terminar a janela comercial de um evento, a demonstracao nao mostra em lingua
 
 | Item | Motivo |
 | --- | --- |
-| Compra confirmada, pagamento, receita e conversao | O contrato executavel registra reservas temporarias; AD-031 ainda e proposta. |
+| Compra, pagamento, receita e conversao | `CONFIRMED` representa compromisso integral dos ingressos apos declaracao do responsavel externo; nao comprova pagamento ou compra. |
 | Demanda total ou vendas perdidas | Tentativas rejeitadas nao sao persistidas por evento. |
 | Diagnostico ou causa-raiz de incidentes | Alarmes do ambiente nao provam impacto causal no evento. |
 | Resumo consolidado de varios eventos | Exigiria uma unidade de agregacao e um encerramento proprios. |
@@ -78,14 +78,14 @@ Ao terminar a janela comercial de um evento, a demonstracao nao mostra em lingua
 **Acceptance Criteria**:
 
 1. WHEN o relatorio for criado THEN o sistema SHALL exibir inicio (`startsAt`, ou `createdAt` quando nao houver inicio programado), fim (`endsAt`) e horario da apuracao em `America/Sao_Paulo`.
-2. WHEN as reservas forem agregadas THEN o sistema SHALL mostrar a capacidade, `COUNT(*)` de reservas aceitas e `SUM(quantity)` de ingressos que passaram por reservas aceitas no evento.
-3. WHEN o fechamento for apurado THEN o sistema SHALL mostrar a soma de ingressos em reservas ainda validas em `endsAt`, excluindo reservas canceladas ate esse instante e reservas cujo `expiresAt <= endsAt`.
+2. WHEN as reservas forem agregadas THEN o sistema SHALL mostrar a capacidade, `COUNT(*)` de reservas aceitas e `SUM(quantity)` de ingressos que passaram por reservas aceitas no evento; estes numeros SHALL representar reservas e compromissos de estoque, nao compras.
+3. WHEN o fechamento for apurado THEN o sistema SHALL mostrar a soma de ingressos cujo estoque continuava comprometido em `endsAt`: reservas `PENDING` ainda no prazo, `CONFIRMED`, `CANCELLATION_PENDING` e reservas encerradas somente depois de `endsAt`.
 4. WHEN o inventario chegar pela primeira vez a `available=0` durante a janela THEN o sistema SHALL registrar esse instante na mesma transacao do decremento e exibir o tempo desde o inicio comercial como "primeira vez sem ingressos disponiveis"; IF isso nao ocorrer THEN o relatorio SHALL dizer "a disponibilidade nao chegou a zero".
 5. WHEN houver reservas aceitas THEN o sistema SHALL mostrar o minuto de maior quantidade de ingressos reservados.
 6. WHERE a janela durar pelo menos 10 minutos e houver reservas aceitas, o sistema SHALL mostrar a parcela de ingressos reservados nos primeiros 5 minutos.
 7. IF nenhuma reserva tiver sido aceita THEN o sistema SHALL mostrar zero e omitir indicadores de ritmo, sem inferir ausencia de interesse.
 8. WHEN houver cancelamentos ou vencimentos ate `endsAt` THEN o sistema SHALL mostrar em uma linha as respectivas quantidades de ingressos, sem usar estados internos como `PENDING` ou `EXPIRED` no texto para o publico.
-9. The report SHALL distinguir volume acumulado de reservas e reservas validas no fechamento, mesmo quando o primeiro superar a capacidade, e SHALL incluir a nota fixa "Reservas sao temporarias; compras concluidas nao sao verificadas aqui."
+9. The report SHALL distinguir volume acumulado de reservas e compromissos de estoque no fechamento, mesmo quando o primeiro superar a capacidade, e SHALL incluir a nota fixa "Este relatorio mede reservas e compromissos de estoque; nao verifica pagamentos ou compras."
 
 **Independent Test**: eventos concorrentes, quantidades maiores que um, primeira lotacao seguida de devolucao, nenhum esgotamento, janela curta, cancelamento antes/depois do fim e expiracao antes/depois do fim produzem numeros e frases exatos.
 

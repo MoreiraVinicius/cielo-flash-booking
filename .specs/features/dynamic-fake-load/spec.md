@@ -1,5 +1,7 @@
 # Especificação de carga com dados fake dinâmicos
 
+Os cenários de carga auditam o inventário com a invariante `capacity - available = SUM(quantity)` para reservas em `PENDING`, `CONFIRMED` e `CANCELLATION_PENDING`. Quando exercitarem o ciclo externo, também deverão medir confirmação, rejeição tardia e corridas de cancelamento sem introduzir o módulo de pagamentos.
+
 ## Problem Statement
 
 O baseline atual usa poucos dados previsíveis, dura 15 segundos e não encontra o limite sustentável da aplicação. A equipe precisa de uma suíte local reproduzível que gere eventos, clientes, chaves idempotentes e reservas dinâmicos, diferencie rejeição de negócio de falha técnica e produza evidência suficiente para decidir quando a arquitetura deve evoluir.
@@ -161,7 +163,7 @@ O baseline atual usa poucos dados previsíveis, dura 15 segundos e não encontra
 2. WHEN uma execução terminar or fail THEN o runner SHALL stop the ephemeral Compose stack and preserve the partial evidence.
 3. WHEN resultados forem gravados THEN a evidência SHALL incluir commit, dirty flag, seed, runId, profile, workload, rates, durations, versions, hardware, container count, thresholds and timestamps.
 4. WHEN respostas HTTP forem classificadas THEN a suíte SHALL separate technical failures from expected business rejections such as sold-out, closed sale or idempotency conflict.
-5. WHEN o audit local pós-execução rodar THEN ele SHALL confirmar `event.available >= 0`, nenhuma reserva com quantidade não positiva e `event.capacity - event.available = sum(reservation.quantity WHERE reservation.status = 'PENDING')` por evento.
+5. WHEN o audit local pós-execução rodar THEN ele SHALL confirmar `event.available >= 0`, nenhuma reserva com quantidade não positiva e `event.capacity - event.available = sum(reservation.quantity WHERE reservation.status IN ('PENDING','CONFIRMED','CANCELLATION_PENDING'))` por evento.
 6. WHERE uma execução AWS tiver sido autorizada e seus instantes UTC forem fornecidos THEN o coletor SHALL ler do CloudWatch, sem enviar requisições à API, `Count`, `4XXError`, `5XXError`, `Latency` e `IntegrationLatency` por rota do API Gateway, CPU/memória por serviço ECS, CPU e `DatabaseConnections` do RDS, sinais de Valkey e backlog/idade/DLQ do SQS.
 7. IF uma série CloudWatch estiver ausente, atrasada ou sem a dimensão esperada THEN o relatório SHALL marcar a correlação como incompleta e SHALL not infer a health do componente ausente.
 

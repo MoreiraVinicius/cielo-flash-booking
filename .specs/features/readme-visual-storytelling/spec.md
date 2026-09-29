@@ -1,5 +1,7 @@
 # README Visual Storytelling Specification
 
+Esta especificação registra a narrativa da demo de reservas e confirmação externa. O README explica que `CONFIRMED` significa compromisso de estoque após todas as pendências externas serem resolvidas; pagamento, compra e emissão de ingresso continuam fora do Flash Booking.
+
 ## Problem Statement
 
 O repositório já contém uma implementação validada, decisões arquiteturais e evidências de execução, mas o README ainda apresenta a solução como trabalho futuro e empilha diagramas extensos antes de explicar o produto. Um avaliador precisa distinguir rapidamente o que foi construído, o que foi medido e o que permanece como arquitetura-alvo.
@@ -45,7 +47,7 @@ O repositório já contém uma implementação validada, decisões arquiteturais
 
 **Acceptance Criteria:**
 
-1. WHEN a reviewer opens `README.md` THEN the repository SHALL identify Flash Booking as an independent Cielo backend case for temporary ticket reservations and SHALL state that payment and purchase confirmation are outside the implemented domain.
+1. WHEN a reviewer opens `README.md` THEN the repository SHALL identify Flash Booking as an independent Cielo backend case for temporary ticket reservations, SHALL explain `CONFIRMED` as an external-resolution and inventory state, and SHALL state that payment, purchase verification and ticket issuance are outside the implemented domain.
 2. WHEN a reviewer looks for the public contract THEN `README.md` SHALL list exactly the five case endpoints with their purpose and SHALL provide a local quick-start path for Docker Compose.
 3. WHEN a reviewer follows the primary narrative THEN the README SHALL present compact product and architecture visuals before placing the detailed C4 and sequence diagrams inside optional deep-dive sections.
 

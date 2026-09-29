@@ -1,5 +1,7 @@
 # AWS Eventual Consistency Visuals Specification
 
+Estas vistas registram a arquitetura do ciclo de reserva e da topologia high-load correspondente. Além das filas de expiração e e-mail, o ciclo usa uma fila de entrada para confirmações e cancelamentos externos e uma fila dirigida ao único responsável pelas pendências. A [spec de confirmação externa](../reservation-confirmation/design.md) detalha esse contrato e seus estados.
+
 ## Problem Statement
 
 O case original exige consistência eventual para disponibilidade. O README precisa separar visualmente a consistência forte do inventário, a projeção de leitura em cache e os efeitos assíncronos. As vistas AWS devem manter nomes, rotas e fronteiras de rede precisos, com texto nativo legível e somente assets utilizados.
@@ -15,7 +17,7 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 | Item | Motivo |
 | --- | --- |
-| Alterar comportamento Java, banco ou infraestrutura | A feature documenta a versão 1 já implementada. |
+| Alterar o comportamento de reserva ou a infraestrutura de mensageria | A feature mantém diagramas alinhados ao contrato e ao Terraform definidos pelas respectivas specs. |
 | Reaplicar a demo AWS | A execução remota anterior já foi validada e destruída. |
 | Implementar a arquitetura high-load | AD-006 mantém essa topologia como alvo não provisionado. |
 | Prometer entrega exatamente uma vez | SQS entrega ao menos uma vez; consumidores precisam ser idempotentes. |
@@ -28,7 +30,7 @@ O case original exige consistência eventual para disponibilidade. O README prec
 | Fonte funcional | Case, spec da demo, código Java e Terraform atual | A imagem deve explicar a implementação, não uma arquitetura imaginada. | yes |
 | Disponibilidade eventual | Somente `GET /events/{id}` usa Valkey | A consulta de reserva lê PostgreSQL diretamente. | yes |
 | Limite do cache | Invalidação pós-commit best effort e TTL máximo de 1 segundo | Falha de invalidação não autoriza estoque e converge pelo TTL. | yes |
-| Efeitos assíncronos | Outbox, SQS, consumidores e SES depois do commit | A resposta `201` não depende de mensageria ou e-mail. | yes |
+| Efeitos assíncronos | Outbox, filas SQS, consumidores e SES depois do commit | A resposta `201` não depende de mensageria ou e-mail; a confirmação posterior chega pela fila de entrada. | yes |
 | Formato | SVG autossuficiente com texto nativo e setas ortogonais | Evita distorção e permite revisão do conteúdo. | yes |
 | Limpeza | Excluir apenas quatro assets marcados como obsoletos pelo gate atual | Todos têm zero uso no README e permanecem recuperáveis pelo Git. | yes |
 
@@ -54,11 +56,11 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 **Acceptance Criteria:**
 
-1. WHEN a committed outbox event is pending THEN the worker SHALL be shown polling PostgreSQL and publishing `ReservationExpirationScheduled` or `ReservationCreated` to separate SQS queues; the worker consumers SHALL perform expiration or request SES delivery, rather than SQS directly invoking SES.
+1. WHEN a committed outbox event is pending THEN the worker SHALL be shown polling PostgreSQL and publishing `ReservationExpirationScheduled`, `ReservationCreated` or `ReservationHeld` to their directed SQS queues; separate consumers SHALL process expiration, email, confirmation outcomes and cancellation messages, rather than SQS directly invoking SES.
 2. WHEN SQS redelivers or processing fails THEN the visual SHALL show idempotent or conditional consumers, bounded redrive with `maxReceiveCount = 5`, and a DLQ for each flow.
 3. WHEN the system is healthy THEN the visual SHALL distinguish expiration convergence by `expiresAt + 5s` from SES delivery request within 30 seconds; asynchronous failure SHALL NOT be shown rolling back the persisted reservation or its HTTP response.
 
-**Teste independente:** Seguir os dois eventos desde a transação até SQS, SES, expiração e DLQ.
+**Teste independente:** Seguir os outbox events e as duas filas direcionais da integração desde a transação até expiração, SES, decisão de reserva e DLQ.
 
 ### P1: Comparar as escolhas AWS
 
@@ -66,7 +68,7 @@ O case original exige consistência eventual para disponibilidade. O README prec
 
 **Acceptance Criteria:**
 
-1. WHEN the demo topology is shown THEN it SHALL include API Gateway REST, WAF, VPC Link v2, internal ALB, three ECS Fargate services, RDS PostgreSQL Single-AZ, single-node Valkey, two SQS queues with DLQs, SES, CloudWatch, Secrets Manager, one NAT Gateway, and the status applied, validated, and destroyed; regional managed services SHALL NOT be presented as resources inside the VPC.
+1. WHEN the demo topology is shown THEN it SHALL include API Gateway REST, WAF, VPC Link v2, internal ALB, three ECS Fargate services, RDS PostgreSQL Single-AZ, single-node Valkey, all SQS queues and DLQs declared in current Terraform, SES, CloudWatch, Secrets Manager, and one NAT Gateway; it SHALL label the earlier deployment as destroyed and current confirmation resources as not applied; regional managed services SHALL NOT be presented as resources inside the VPC.
 2. WHEN the high-load topology is shown THEN it SHALL label the view as planned and not provisioned, preserve the three Java modes, and show Multi-AZ ECS, Aurora PostgreSQL with RDS Proxy, Multi-AZ Valkey, independent scaling, and separate asynchronous queues without claiming measured capacity or failover.
 3. WHEN the README is validated THEN all three new SVGs SHALL exist, parse as standalone XML, contain non-empty accessible descriptions, render without clipped text, and use routed arrows that do not cross labels or nodes.
 4. WHEN unused image cleanup completes THEN `flash-booking-aws-demo-v4.png`, `flash-booking-aws-demo-v5.png`, `flash-booking-aws-high-load-v1.png`, and `flash-booking-aws-high-load-v2.svg` SHALL be absent while every remaining file in `docs/images` is referenced by repository documentation.

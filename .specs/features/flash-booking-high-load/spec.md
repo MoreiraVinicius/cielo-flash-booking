@@ -1,5 +1,7 @@
 # Especificação da arquitetura de alta carga
 
+Esta topologia ainda não aplicada escala o ciclo de reserva descrito na [spec da demo](../flash-booking-demo/spec.md), incluindo retenção, confirmação externa e cancelamento assíncrono. A infraestrutura não implementa pendências externas nem pagamento; preserva a decisão autoritativa de estoque do PostgreSQL.
+
 ## Problem Statement
 
 A demo funcional não deve receber toda a complexidade de produção antecipadamente. A evolução precisa absorver picos voláteis de consultas, reservas e trabalho assíncrono por mecanismos independentes, mantendo ausência de oversell, as mesmas regras de negócio e operação observável.
@@ -20,7 +22,7 @@ O código herda da demo a semântica de reserva e seus motivos, além do prazo d
 | --- | --- |
 | EKS | Só se justifica com plataforma Kubernetes dedicada. |
 | Modelo de escrita DynamoDB | Só será considerado se a linha quente violar o SLO e uma nova decisão em STATE.md autorizar mudança de código. |
-| Reserva assíncrona | Altera o contrato de produto. |
+| Tornar assíncrona a criação inicial da reserva com HTTP `202` | Altera o contrato do case; a confirmação posterior de uma reserva existente já usa uma fila dedicada. |
 | Multi-region active-active | Complexidade sem requisito de RTO/RPO correspondente. |
 | CI/CD | Não será avaliada. |
 

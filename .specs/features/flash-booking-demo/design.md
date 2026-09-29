@@ -3,6 +3,8 @@
 **Especificação:** `.specs/features/flash-booking-demo/spec.md`
 **Estado:** Validated
 
+O modelo de reserva inclui `PENDING`, `CONFIRMED`, `CANCELLATION_PENDING`, `CANCELLED` e `EXPIRED`. A [confirmação externa](../reservation-confirmation/design.md) detalha a inbox, a outbox e as duas filas direcionais; o módulo responsável por pendências continua externo.
+
 ## Visão geral da arquitetura
 
 ```mermaid
@@ -76,7 +78,7 @@ A aplicação será um monólito modular empacotado uma vez. A mesma imagem inic
 
 ### Integração de e-mail
 
-- **Responsabilidade:** Consumir `ReservationCreated` e enviar confirmação de reserva temporária.
+- **Responsabilidade:** Consumir `ReservationCreated` para e-mail de retenção temporária; consumir mensagens de confirmação e cancelamento pelo contrato da integração externa.
 - **Local:** `src/main/java/.../notification/email/`.
 - **Dependências:** Amazon SES na AWS e Mailpit no Docker Compose. O consumidor adquire um lease curto no PostgreSQL, chama o provedor sem transação aberta e conclui o estado em outra transação curta. Registros terminais de notificação e outbox são removidos em lotes após a retenção.
 - **Contrato:** Falha de e-mail usa retry, DLQ e alarme, sem reverter a reserva.
@@ -104,11 +106,12 @@ As relações e invariantes abaixo formam o modelo de referência. O schema é i
 - `eventId: UUID`
 - `customerId: UUID`
 - `quantity: int`
-- `status: PENDING | CANCELLED | EXPIRED`
+- `status: PENDING | CONFIRMED | CANCELLATION_PENDING | CANCELLED | EXPIRED`
 - `expiresAt: Instant`
 - `createdAt: Instant`
 - `updatedAt: Instant`
-- `closureReason: { code, description } | null`; obrigatório e imutável em CANCELLED e EXPIRED, nulo em PENDING.
+- `confirmedAt: Instant | null`; preenchido quando todas as pendências externas forem declaradas resolvidas; preservado durante cancelamento e após fechamento.
+- `closureReason: { code, description } | null`; obrigatório e imutável em CANCELLED e EXPIRED, nulo em PENDING, CONFIRMED e CANCELLATION_PENDING.
 
 ### Customer
 
@@ -177,7 +180,8 @@ A proteção não depende de sincronização Java, quantidade de containers, cac
 2. O banco conquista lock sobre a linha do evento e reavalia a condição depois de aguardar outra transação; somente operações que ainda cabem alteram uma linha.
 3. Cliente, reserva, outbox e decremento são confirmados juntos. Qualquer erro desfaz todos os efeitos.
 4. A constraint `0 <= available <= capacity` oferece uma segunda barreira contra valores impossíveis.
-5. O comando de encerramento conquista o lock da reserva e só então observa o relógio PostgreSQL: `DELETE` antes do prazo materializa `CANCELLED`; `DELETE`, consumidor ou reconciliador em `expiresAt` ou depois materializam `EXPIRED`. Somente quem alterar `PENDING` incrementa o estoque na mesma transação.
+5. O comando de encerramento conquista o lock da reserva e só então observa o relógio PostgreSQL: `DELETE` antes do prazo materializa `CANCELLED`; `DELETE`, consumidor, reconciliador ou confirmação tardia em `expiresAt` ou depois materializam `EXPIRED`. Somente quem alterar `PENDING` incrementa o estoque na mesma transação.
+6. Confirmação altera `PENDING` para `CONFIRMED` sem novo débito; `DELETE` de `CONFIRMED` retém estoque em `CANCELLATION_PENDING`, e só a conclusão externa correlacionada pode fechar e liberar.
 6. Idempotência impede que retries do mesmo comando criem novas reservas ou devolvam capacidade novamente.
 
 Com carga muito alta no mesmo evento, as transações se enfileiram na linha quente. Isso pode aumentar p95/p99 ou produzir timeout, mas não justifica relaxar a regra: o sistema degrada ou rejeita antes de aceitar uma reserva sem capacidade. A arquitetura alta mantém exatamente esse algoritmo e mede quando a contenção passa a violar o SLO.
@@ -188,7 +192,7 @@ O publisher calcula `DelaySeconds` a partir de `expiresAt`, limitado a 15 minuto
 
 Concluir a transição, a gravação do motivo e a devolução de capacidade na mesma transação até expiresAt + 5 segundos em operação saudável. O relógio PostgreSQL decide a elegibilidade; mensagem antecipada não autoriza expiração antes de expiresAt e o reconciliador varre candidatos ao menos a cada segundo. A janela não estende a validade e não define a defasagem de caches.
 
-O `DELETE` participa da mesma regra temporal. A persistência bloqueia a reserva pendente, amostra o relógio do banco depois do lock e encerra como `CANCELLED` apenas se esse instante ainda for anterior a `expiresAt`; caso contrário, encerra como `EXPIRED`. A resposta `200` contém o estado terminal efetivamente persistido. Isso impede que uma requisição iniciada antes do prazo, mas desbloqueada depois dele, registre um cancelamento tardio.
+O `DELETE` aplica a mesma regra temporal a `PENDING`: bloqueia a reserva, amostra o relógio depois do lock, encerra como `CANCELLED` antes de `expiresAt` ou `EXPIRED` no prazo/depois, e devolve capacidade uma vez. Para `CONFIRMED`, registra `CANCELLATION_PENDING`, responde `202` e não devolve capacidade. Repetições não emitem nova solicitação. O estado só passa a `CANCELLED` após a conclusão externa correlacionada.
 
 ## Tratamento de erros
 
@@ -227,7 +231,7 @@ Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfi
 | --- | --- | --- | --- |
 | Hot row no evento | Reserva | Aumento de latência sob flash sale extrema | Medir lock waits; o plano de alta carga define promoção. |
 | Escala excessiva de comandos | Command API | Mais tasks criam conexões sem aumentar a vazão da linha concorrida | Limite de tasks derivado do banco, throttling antes do ALB e RDS Proxy somente na arquitetura alta. |
-| Devolução duplicada de ingressos | Cancelamento/expiração | `available` pode superar `capacity` e permitir oversell posterior | Somente a transição condicional que altera `PENDING` incrementa estoque na mesma transação; constraint impede valor acima da capacidade. |
+| Devolução duplicada de ingressos | Cancelamento/expiração | `available` pode superar `capacity` e permitir oversell posterior | Somente a transição condicional que altera `PENDING` ou a conclusão correlacionada de `CANCELLATION_PENDING` incrementa estoque; constraint impede valor acima da capacidade. |
 | Dual write DB/SQS | Expiração | Reserva pode não expirar | Transactional outbox e reconciliador. |
 | Mensagem duplicada | Consumidor | Capacidade devolvida duas vezes | Transição condicional de estado. |
 | E-mail indisponível | Notificação | Cliente não recebe referência da reserva | Retry, DLQ e alarme; falha não altera a reserva. |

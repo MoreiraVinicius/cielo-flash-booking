@@ -63,7 +63,7 @@ Uma nova migration Flyway cria `executive_summary_control` como singleton com `e
 
 ### Apuracao no fechamento
 
-O relatorio usa `endsAt` como corte comercial e o horario da leitura como `asOf`. O universo aceito inclui somente reservas do evento com `saleStartsAt <= created_at < endsAt`; volume acumulado e `COUNT(*)` e `SUM(quantity)` desse universo. Ingressos validos em `endsAt` exigem `expires_at > endsAt` e reserva ainda pendente no fechamento (`status=PENDING` ou `updated_at > endsAt`), permitindo reconstruir uma reserva que so foi cancelada/vencida depois do fim. Cancelamentos ate o fim usam `status=CANCELLED` e `updated_at <= endsAt`. Vencimentos ate o fim usam `expires_at <= endsAt`, exceto quando uma reserva foi cancelada antes do fim. Essas tres quantidades formam uma particao do volume aceito; se nao fecharem exatamente, o conjunto de fatos e marcado incompleto, os numeros inconsistentes sao omitidos do texto e Bedrock nao e consultado. Os agregados de quantidade sao `BIGINT`, embora a capacidade seja `INTEGER`.
+O relatorio usa `endsAt` como corte comercial e o horario da leitura como `asOf`. O universo inclui reservas do evento com `saleStartsAt <= created_at < endsAt`; volume acumulado e `COUNT(*)` e `SUM(quantity)` desse universo, incluindo encerradas depois, e representa atividade de reserva, nao compra. Ingressos com estoque comprometido em `endsAt` incluem `CONFIRMED` e `CANCELLATION_PENDING`; `PENDING` exige `expires_at > endsAt`. Reservas canceladas ou expiradas depois do fim permanecem validas no corte quando `updated_at > endsAt` e, para reservas pendentes, `expires_at > endsAt`; reservas confirmadas nao expiram pelo prazo original. Cancelamentos ate o fim usam `status=CANCELLED` e `updated_at <= endsAt`. Vencimentos ate o fim usam `(status=EXPIRED AND updated_at <= endsAt)` ou `(status=PENDING AND expires_at <= endsAt)`. Cancelamentos e vencimentos ate o fim completam a particao do volume aceito com os ingressos ainda comprometidos; se os totais nao fecharem exatamente, os fatos ficam incompletos, os numeros inconsistentes sao omitidos e Bedrock nao e consultado. Os agregados de quantidade sao `BIGINT`, embora a capacidade seja `INTEGER`.
 
 O ritmo vem de `created_at` e `quantity`: pico = maior soma de ingressos em um minuto da janela, com desempate pelo minuto mais cedo; participacao inicial = ingressos aceitos nos primeiros 5 minutos / total aceito, arredondada ao inteiro mais proximo, exibida apenas se a janela durar pelo menos 10 minutos e o total for positivo. O tempo ate o primeiro zero e `first_available_zero_at - inicio comercial`, arredondado em segundos e formatado em minutos/segundos. O zero de disponibilidade e um fato de inventario, nao prova de compra ou de reserva ainda valida no fechamento.
 
@@ -90,7 +90,7 @@ Sinais observados no ambiente; nao ha confirmacao de relacao com este evento.
 {ate duas notas de alerta em linguagem comum; secao omitida se nao houver transicoes}
 {nota discreta apenas se monitoramento parcial/indisponivel}
 
-Reservas sao temporarias; compras concluidas nao sao verificadas aqui.
+Este relatorio mede reservas e compromissos de estoque; nao verifica pagamentos ou compras.
 ```
 
 Cancelamentos e vencimentos ate o fim entram em uma unica frase de Resultado somente quando positivos. O texto nao mostra `PENDING`, `EXPIRED`, `ALARM`, nome tecnico de servico, tokens ou termos de arquitetura. Datas e duracoes sao formatadas em pt-BR; nenhum paragrafo repete os mesmos numeros apenas para preencher espaco.
@@ -114,7 +114,7 @@ O pico foi de 210 ingressos reservados em um minuto.
 ## Leitura
 As reservas se concentraram no inicio e a disponibilidade se esgotou temporariamente. No fechamento, parte da capacidade ja nao estava em reservas validas.
 
-Reservas sao temporarias; compras concluidas nao sao verificadas aqui.
+Este relatorio mede reservas e compromissos de estoque; nao verifica pagamentos ou compras.
 ```
 
 ## Trigger, flag e estados
@@ -170,7 +170,7 @@ Referencias AWS: [Amazon Nova Micro](https://docs.aws.amazon.com/bedrock/latest/
 | --- | --- | --- |
 | Feature flag | Uma chave global persistida, default off, sem ativacao por evento | Ativacao manual durante a apresentacao; nenhum custo de inferencia quando desligada. |
 | Momento da apuracao | Primeira varredura apos `endsAt` | Relatorio de conclusao, sem aguardar expiracao de reservas. |
-| Fonte de numeros | PostgreSQL por `event_id` e corte em `endsAt` | Separar volume aceito de reservas validas no fechamento. |
+| Fonte de numeros | PostgreSQL por `event_id` e corte em `endsAt` | Separar volume aceito de compromissos de estoque validos no fechamento, sem inferir compra. |
 | Redacao | Template deterministico + ate duas frases comerciais | Precisao e custo baixo para publico nao tecnico; alertas sao descritos como sinais do ambiente sem relacao causal confirmada com o evento. |
 | Entrega | GET autenticado e um Incoming Webhook Discord | Publicar o texto salvo sem nova inferencia. |
 | Segredo Discord | AWS Secrets Manager; ARN apenas no `demo.tfvars` local | A URL e credencial de publicacao e nao deve aparecer no estado/codigo Terraform. |

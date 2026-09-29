@@ -1,5 +1,7 @@
 # Flash Booking Demo Specification
 
+Esta especificação descreve o ciclo de reserva temporária e confirmação integral. `CONFIRMED` significa que o único responsável externo declarou resolvidas todas as pendências e que os ingressos continuam comprometidos no estoque; não representa pagamento, compra verificada ou ingresso emitido. O contrato completo está em [confirmação externa da reserva](../reservation-confirmation/spec.md).
+
 ## Problem Statement
 
 Construir o núcleo funcional de uma reserva de ingressos para flash sale. A solução deve impedir oversell, suportar múltiplas instâncias, expirar reservas e ser simples de operar por uma pessoa.
@@ -16,7 +18,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 
 | Item | Motivo |
 | --- | --- |
-| Pagamento | Não consta no case. |
+| Pagamento, cobrança, estorno e emissão de ingresso | Pertencem a outros módulos. O Flash Booking recebe somente uma declaração de que todas as pendências foram resolvidas e decide se pode confirmar o compromisso de estoque. |
 | Cadastro, senha e login de cliente final | Não constam no case; a borda autentica apenas operadores e entrevistadores. |
 | Frontend | O desafio é backend. |
 | Deploy contínuo para AWS | Exige credenciais e autorização remota; o CI localiza falhas sem aplicar infraestrutura. |
@@ -29,7 +31,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 | --- | --- | --- | --- |
 | Duração da reserva | 10 minutos configuráveis | Compatível com SQS message timer e comum para checkout. | yes |
 | Janela comercial do evento | `startsAt` e `endsAt` opcionais, decididos pelo PostgreSQL | Sem início a venda vale imediatamente; sem fim não há encerramento temporal; a regra permanece consistente entre tasks. | yes |
-| Aceitação da reserva | Síncrona, com estado PENDING | Bloqueio temporário, sem compra definitiva. | yes |
+| Aceitação da reserva | A criação é síncrona e inicia em `PENDING`; a confirmação integral chega depois por fila assíncrona. | Mantém a retenção HTTP original e permite concluir a reserva sem interpretar a causa externa. | yes |
 | Liberação após vencimento | Até expiresAt + 5 segundos com banco e processamento saudáveis | Limita estoque temporariamente bloqueado. | yes |
 | Encerramento | Persistir código e descrição do motivo em CANCELLED e EXPIRED | O catálogo e o formato de consulta estão definidos nesta especificação. | yes |
 | Banco | RDS PostgreSQL 16 Single-AZ | Econômico e suficiente para a demo. | yes |
@@ -73,7 +75,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 1. WHEN capacity is sufficient and the customer is valid THEN the system SHALL create or reuse the customer, decrement availability, and create a `PENDING` reservation linked to that customer and event in one transaction.
 2. IF capacity is insufficient THEN the system SHALL return `409` without changing inventory, customer, or reservation.
 3. WHILE multiple instances contend for the same event, the system SHALL keep availability between zero and total capacity.
-4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, quantity, expiry, customer, closure reason, and the event reference containing only `id` and `name`.
+4. WHEN `GET /reservations/{id}` finds the reservation THEN the system SHALL return its status, `confirmedAt` when present, quantity, expiry, customer, closure reason, and the event reference containing only `id` and `name`.
 5. WHEN `GET /reservations/{id}` is called THEN the system SHALL query PostgreSQL directly and SHALL NOT depend on Valkey availability.
 6. IF the customer's name or email is invalid THEN the system SHALL return `400` without reserving capacity.
 7. WHILE a reservation command evaluates an event, the system SHALL atomically require sufficient capacity, `startsAt` absent or reached, and `endsAt` absent or not reached; outside that window it SHALL return `409` without customer, reservation, outbox or availability changes.
@@ -94,6 +96,8 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 6. WHILE the current instant is earlier than `expiresAt`, the system SHALL prevent early reservation expiry.
 7. WHEN cancellation or expiry commits its transaction THEN the system SHALL invalidate the cache entry for the affected event.
 8. WHEN `GET /reservations/{id}` returns a terminal reservation THEN the system SHALL return a `closureReason` object with `code` and `description`; for `PENDING`, that object SHALL be null.
+9. WHEN `DELETE /reservations/{id}` targets `CONFIRMED` THEN the system SHALL return `202`, persist `CANCELLATION_PENDING`, enqueue one external cancellation request and retain the inventory; repeating DELETE SHALL preserve `202` and SHALL NOT enqueue another request.
+10. WHEN the external owner reports `ReservationCancellationCompleted` for the matching `cancellationId` THEN the system SHALL transition to `CANCELLED` and release inventory exactly once; without that message, inventory SHALL remain committed.
 
 **Teste independente:** Cancelar e expirar reservas com duplicidade de mensagens e conferir o inventário final.
 
@@ -223,6 +227,8 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 - SE uma reserva referenciar evento inexistente, ENTÃO o sistema DEVE retornar `404` sem efeito parcial.
 - SE `DELETE` e o worker de expiração concorrerem antes do prazo, ENTÃO somente a primeira transição DEVE liberar capacidade; SE o lock for obtido em `expiresAt` ou depois, ENTÃO o estado terminal DEVE ser `EXPIRED`, independentemente de qual caminho materializar o encerramento.
 - SE a publicação no SQS atrasar, ENTÃO o reconciliador DEVE expirar a reserva pelo horário persistido.
+- SE confirmação, cancelamento ou expiração concorrerem, ENTÃO somente uma transição válida sob o lock DEVE vencer; `CONFIRMED` e `CANCELLATION_PENDING` DEVEM manter o estoque comprometido.
+- SE uma confirmação chegar no prazo ou depois, ENTÃO o sistema DEVE decidir usando o relógio PostgreSQL após o lock e nunca confirmar com o horário declarado pela mensagem.
 - SE o banco estiver indisponível, ENTÃO o sistema DEVE falhar sem confirmar reserva.
 - SE a hora PostgreSQL for igual a `startsAt`, ENTÃO uma reserva com capacidade DEVE ser aceita; SE for igual a `endsAt`, ENTÃO a reserva DEVE retornar `409` e preservar disponibilidade.
 - SE o cache de evento falhar, ENTÃO `GET /events/{id}` DEVE consultar PostgreSQL com timeout de cache de 100 ms, no máximo 5 fallbacks simultâneos por task e circuito aberto após 5 falhas em 10 segundos.

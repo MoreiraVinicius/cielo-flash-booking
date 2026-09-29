@@ -63,7 +63,7 @@ O diagrama representa uma única imagem Java compartilhada pelos três modos da 
 2. Target tracking reage a picos inesperados dentro do máximo aceito pelo banco.
 3. RDS Proxy concentra conexões, mas não aumenta a vazão da linha de inventário; o teto de tasks respeita o envelope medido.
 4. A atualização condicional no Aurora mantém `available >= 0`; criar reserva e outbox ocorre na mesma transação.
-5. Cancelamento e expiração incrementam estoque somente quando conquistam a transição de `PENDING` para um estado terminal.
+5. Cancelamento e expiração incrementam estoque somente quando conquistam a transição de `PENDING` para um estado terminal; confirmação não altera disponibilidade, e `CANCELLATION_PENDING` conserva o compromisso até o desfecho externo.
 6. Lock waits e p99 definem o limite desta arquitetura; ao atingir o limite, a borda devolve `429/503` em vez de aceitar trabalho que produziria timeout.
 
 ### Workers
@@ -95,6 +95,8 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 
 ## Alternativas para escala além do PostgreSQL
 
+Nesta seção, “confirmação assíncrona” significa aceitar o **pedido inicial de reserva** com HTTP `202` e decidir sua retenção depois. Não significa transicionar uma reserva `PENDING` para `CONFIRMED`; essa [integração com módulo externo](../reservation-confirmation/design.md) tem contrato e filas próprios.
+
 | Restrição observada | Alternativa | Consequência |
 | --- | --- | --- |
 | Confirmação síncrona obrigatória | DynamoDB com inventário particionado e escritas condicionais | Exige novo modelo e código; não é uma simples troca de infraestrutura e só pode ocorrer após uma nova decisão em STATE.md. |
@@ -118,7 +120,7 @@ O publisher conhece apenas essas operações e nunca mantém uma transação abe
 | Risco | Impacto | Controle e justificativa |
 | --- | --- | --- |
 | Oversell em reservas concorrentes | Mais reservas aceitas que a capacidade | Decremento condicional no writer e criação da reserva na mesma transação. O cache nunca participa da decisão. Constraint impede `available < 0`. |
-| Estoque inflado por cancelamento/expiração concorrentes | Ingressos podem ser vendidos duas vezes depois de uma devolução duplicada | Somente uma transição condicional saindo de `PENDING` autoriza o incremento; os demais concorrentes afetam zero linhas. Constraint também impede `available > capacity`. |
+| Estoque inflado por cancelamento/expiração concorrentes | Ingressos podem ser vendidos duas vezes depois de uma devolução duplicada | Somente uma transição condicional saindo de `PENDING` ou uma conclusão correlacionada saindo de `CANCELLATION_PENDING` autoriza o incremento; os demais concorrentes afetam zero linhas. Constraint também impede `available > capacity`. |
 | Falha do cache de evento | Rajada de disponibilidade retorna ao banco e compete com comandos | Timeout de 100 ms, circuito após 5 falhas em 10 s e no máximo 5 fallbacks simultâneos por task; excesso de leitura recebe `503`, preservando comandos. |
 | Cache desatualizado | Usuário vê disponibilidade antiga | TTL máximo de um segundo e invalidação pós-commit; o comando sempre revalida no writer, portanto inconsistência visual não vira oversell. |
 | Réplica Aurora atrasada | Consulta de evento mostra valor antigo ou reserva recém-criada parece ausente | Disponibilidade aceita consistência eventual; consulta de reserva usa endpoint read-write para leitura após escrita. |

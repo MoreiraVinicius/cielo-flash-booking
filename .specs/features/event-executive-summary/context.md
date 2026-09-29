@@ -1,7 +1,7 @@
 # Contexto do resumo executivo da performance do evento
 
 **Spec:** `.specs/features/event-executive-summary/spec.md`
-**Status:** Implementado e verificado independentemente (44/44 requisitos)
+**Status:** Resumo executivo base verificado (44/44 requisitos); projeções para os novos estados de reserva são cobertas pela T07 de reservation-confirmation.
 
 ## Limite funcional
 
@@ -28,7 +28,7 @@ O produto desta feature e um relatorio curto por evento sobre capacidade, volume
 - O nome da propriedade/configuracao ECS e `executive-summary.discord.webhook-secret-arn` / `EXECUTIVE_SUMMARY_DISCORD_WEBHOOK_SECRET_ARN`; no `demo.tfvars`, preencher somente `discord_webhook_secret_arn`, nunca a URL.
 - A role worker usa `bedrock:InvokeModel` restrito ao foundation model Nova Micro e `cloudwatch:DescribeAlarmHistory`; os alarmes observados sao configurados por pares nome/rotulo em `executive_summary_operational_alarms` no modulo `compute` (ate 12).
 - Falha na entrega Discord nao apaga o relatorio. O GET mostra `SENT`, `FAILED`, `UNKNOWN` ou `NOT_CONFIGURED`.
-- O texto publico usa "ingressos em reservas aceitas", "reservas validas no fechamento" e "primeira vez sem ingressos disponiveis". Nao usa "vendas concluidas" nem apresenta siglas de estado.
+- O texto publico usa "ingressos em reservas aceitas", "estoque comprometido no fechamento" e "primeira vez sem ingressos disponiveis". Nao usa "vendas concluidas" nem apresenta siglas de estado.
 - Eventos sem reservas nao fazem chamada Bedrock. Alertas do ambiente aparecem apenas se houver transicoes observadas; ausencia de alertas nao declara ausencia de incidente.
 
 ## Dados presentes e lacunas
@@ -37,10 +37,10 @@ O produto desta feature e um relatorio curto por evento sobre capacidade, volume
 | --- | --- | --- |
 | Quando abriu e fechou? | `event.starts_at`, `created_at`, `ends_at` | Inicio imediato usa `created_at`; `ends_at` e necessario para elegibilidade. |
 | Quantas reservas e ingressos foram aceitos? | `reservation.event_id`, `quantity`, `created_at` | Fluxo acumulado, separado de capacidade e de posicao no fechamento. |
-| Quantos ingressos estavam em reservas validas no fechamento? | `created_at`, `expires_at`, `status`, `updated_at` | Reconstruir validade em `endsAt`, independentemente do status posterior. |
+| Quantos ingressos estavam comprometidos no fechamento? | `created_at`, `expires_at`, `confirmed_at`, `status`, `updated_at` | Contar `CONFIRMED` e `CANCELLATION_PENDING`; para reservas ainda `PENDING`, aplicar o prazo; reconstruir estado no corte `endsAt`. |
 | Quando a disponibilidade chegou a zero? | Hoje nao ha marco duravel; `available` pode subir depois. | Persistir o primeiro zero na transacao de inventario durante a janela global ativa. |
 | Como foi o ritmo? | Horarios e quantidades das reservas aceitas. | Minuto de pico e concentracao nos primeiros 5 minutos quando a janela permitir. |
-| Houve compra concluida, receita ou demanda rejeitada? | Nao ha esses fatos no contrato executavel. | Nao inferir. AD-031 e proposta separada de confirmacao externa. |
+| Houve compra concluida, receita ou demanda rejeitada? | `CONFIRMED` declara compromisso do estoque, nao pagamento; tentativas rejeitadas nao sao persistidas por evento. | Nao inferir sem um contrato de fatos do modulo externo; pagamentos continuam fora do Flash Booking. |
 | Houve incidente causado pelo evento? | Alarmes sao do ambiente, sem correlacao causal. | Nota operacional secundaria, nunca causalidade. |
 
 ## Configuracao do Discord para a demonstracao
@@ -54,5 +54,5 @@ O produto desta feature e um relatorio curto por evento sobre capacidade, volume
 ## Ideias adiadas
 
 - Discord bot para receber comandos ou conversar com usuarios; um Incoming Webhook so envia mensagens.
-- Incorporar compras confirmadas quando a proposta de confirmacao externa tiver contrato executavel.
+- Mostrar fatos de pagamento ou compra somente se um contrato externo os fornecer; nao implementar esse modulo no Flash Booking.
 - Medir rejeicoes por evento para falar de demanda nao atendida ou conversao.
