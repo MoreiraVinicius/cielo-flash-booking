@@ -138,3 +138,38 @@ The orchestrator updated EXECSUM-01..44 to `Verified`, marked all goals and succ
 **Issues found**: None in the feature scope. The repo-wide fmt command could not inspect unrelated locked content; changed Terraform files were checked directly.
 
 **Next steps**: None. No code changes are requested by this verifier.
+
+---
+
+## T10 Supplement: Worker Health Check and Demo Rollout
+
+**Date**: 2026-09-29
+**Commit**: `1ea1999` (`fix(infra): allow worker startup before health checks`)
+**Verifier scope**: T10 delta only; earlier T01-T09 validation remains above.
+
+### T10 Acceptance Check
+
+| T10 criterion | Evidence | Result |
+| --- | --- | --- |
+| Worker receives 120 seconds of startup grace before health-check failures count. | `infra/modules/compute/main.tf:358` - worker container `healthCheck.startPeriod = 120`; `infra/modules/compute/compute.tftest.hcl:52-55` asserts the worker definition is exactly `120`. Query and command retain independent 30-second settings at `main.tf:265,306`. | PASS |
+| Terraform regression test detects reverting the worker grace period. | In an isolated `git archive` scratch copy, changed only worker `startPeriod` from `120` to `30`; `terraform test` failed the worker assertion with actual `30`, expected `120`. Scratch was then removed. | PASS; mutant killed |
+| T10 Terraform source is formatted, valid and passes the module tests. | From `infra/modules/compute`, `terraform fmt -check main.tf compute.tftest.hcl` passed; `terraform validate` returned “The configuration is valid”; `terraform test` returned 2 passed, 0 failed. Terraform emitted an environment warning that it cannot read `C:\Users\vinic\AppData\Roaming\terraform.d`, but all gates completed with success. | PASS |
+| Source and task spec record the corrective change and rollout evidence. | `tasks.md` T10 marks Complete and records test, plan, ECS and activation outcomes; commit `1ea1999` changes the worker health check and its test, and updates context/design/spec/task artifacts. | PASS for committed documentation of supplied rollout evidence |
+| Demo services use the expected image and are stable; worker task is HEALTHY; activation PUT succeeded with an enabled window. | `tasks.md` T10 records query/command image `summary-7c23aec`, worker revision 10 `HEALTHY`, stable services, and PUT `200`, `enabled=true`, `enabledAt=2026-09-29T07:07:45.090815Z`. This evidence was reported by the orchestrator, not independently fetched by this verifier. `aws sts get-caller-identity --profile codex-discord-summary` could not run because that profile is absent in this environment. | Reported operational evidence; not independently verified here |
+
+### Operational Boundaries
+
+- No AWS deployment or mutation was performed by this verifier.
+- No Secrets Manager value was requested or read.
+- No activation PUT was repeated, and no Discord POST or Bedrock inference was triggered.
+- Bedrock and real Discord delivery remain unexercised; the task notes they await a post-activation eligible event reaching its close time.
+
+### T10 Discrimination Sensor and Isolation
+
+The scratch used a full tracked `git archive` copy under the permitted visualization root because Git reported dubious ownership for the worktree under the sandbox account; no global Git configuration was changed. The only mutation changed the worker health-check `startPeriod` from 120 to 30. The Terraform module test failed the exact assertion at `compute.tftest.hcl:53`, reporting actual 30 versus expected 120. The scratch directory was removed after the run. SHA-256 of real-worktree `git status --porcelain` before and after sensor work matched exactly: `62F55226AF5054751D10A715A94308A375CFF21C77F04131A75B55CAFA517282`; pre-existing formatter-normalized Java changes and ignored/local Terraform files were preserved.
+
+### T10 Verdict
+
+**Overall**: PASS for the committed health-check correction, Terraform regression coverage, and local module gates. The ECS/activation observations are recorded as orchestrator-provided operational evidence because AWS profile `codex-discord-summary` was unavailable to this verifier. This verdict does not claim real Bedrock inference or Discord delivery was exercised.
+
+**Gate**: targeted Terraform formatting passed; validate passed; compute 2/2 tests passed; mutation killed; real-tree status unchanged. No Java tests were rerun because T10's diff contains no Java change, and this worktree has broad pre-existing formatter normalization in Java files which remained untouched.
