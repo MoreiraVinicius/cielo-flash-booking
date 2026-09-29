@@ -1,7 +1,7 @@
 # Contexto do resumo executivo da performance do evento
 
 **Spec:** `.specs/features/event-executive-summary/spec.md`
-**Status:** Aprovado para implementacao pelo pedido do usuario
+**Status:** Implementado localmente; verificacao independente pendente
 
 ## Limite funcional
 

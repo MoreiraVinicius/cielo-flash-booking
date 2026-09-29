@@ -69,18 +69,28 @@ run "keeps_the_api_iam_authenticated_private_and_cost_limited" {
   }
 
   assert {
-    condition     = aws_lb.internal.internal && aws_api_gateway_method.create_event.authorization == "AWS_IAM" && aws_api_gateway_method.get_event.authorization == "AWS_IAM" && aws_api_gateway_method.create_reservation.authorization == "AWS_IAM" && aws_api_gateway_method.get_reservation.authorization == "AWS_IAM" && aws_api_gateway_method.cancel_reservation.authorization == "AWS_IAM"
+    condition     = aws_lb.internal.internal && aws_api_gateway_method.create_event.authorization == "AWS_IAM" && aws_api_gateway_method.get_event.authorization == "AWS_IAM" && aws_api_gateway_method.get_executive_summary.authorization == "AWS_IAM" && aws_api_gateway_method.activate_executive_summary.authorization == "AWS_IAM" && aws_api_gateway_method.create_reservation.authorization == "AWS_IAM" && aws_api_gateway_method.get_reservation.authorization == "AWS_IAM" && aws_api_gateway_method.cancel_reservation.authorization == "AWS_IAM"
     error_message = "The public API must require IAM while the ALB remains internal."
   }
 
   assert {
-    condition     = aws_api_gateway_integration.get_event.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_reservation.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.create_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.cancel_reservation.integration_target == aws_lb.internal.arn && contains(aws_apigatewayv2_vpc_link.private.security_group_ids, var.vpc_link_security_group_id)
+    condition     = aws_api_gateway_integration.get_event.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.get_executive_summary.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.activate_executive_summary.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_reservation.connection_id == aws_apigatewayv2_vpc_link.private.id && aws_api_gateway_integration.create_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_event.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_executive_summary.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.activate_executive_summary.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.create_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.get_reservation.integration_target == aws_lb.internal.arn && aws_api_gateway_integration.cancel_reservation.integration_target == aws_lb.internal.arn && contains(aws_apigatewayv2_vpc_link.private.security_group_ids, var.vpc_link_security_group_id)
     error_message = "API Gateway must use VPC Link V2 to reach only the internal ALB."
   }
 
   assert {
     condition     = aws_lb_listener_rule.get_event.action[0].target_group_arn == var.query_target_group_arn && aws_lb_listener_rule.create_event.action[0].target_group_arn == var.command_target_group_arn && aws_lb_listener_rule.cancel_reservation.action[0].target_group_arn == var.command_target_group_arn
     error_message = "GET routes must reach query-api, while POST and DELETE routes reach command-api."
+  }
+
+  assert {
+    condition     = aws_lb_listener_rule.activate_executive_summary.action[0].target_group_arn == var.command_target_group_arn && contains(flatten([for condition in aws_lb_listener_rule.activate_executive_summary.condition : [for method in condition.http_request_method : method.values]]), "PUT") && contains(flatten([for condition in aws_lb_listener_rule.activate_executive_summary.condition : [for path in condition.path_pattern : path.values]]), "/executive-summary/activation")
+    error_message = "The global activation PUT must route to command-api at its exact path."
+  }
+
+  assert {
+    condition     = aws_api_gateway_method.get_executive_summary.http_method == "GET" && aws_api_gateway_resource.event_executive_summary.path_part == "executive-summary" && aws_api_gateway_method.activate_executive_summary.http_method == "PUT" && aws_api_gateway_resource.executive_summary_activation.path_part == "activation" && aws_api_gateway_integration.get_executive_summary.uri == "http://${aws_lb.internal.dns_name}/events/{id}/executive-summary" && aws_api_gateway_integration.activate_executive_summary.uri == "http://${aws_lb.internal.dns_name}/executive-summary/activation" && contains(keys(aws_api_gateway_deployment.this.triggers), "redeployment")
+    error_message = "Summary query and global activation routes must be deployed through the private API integration."
   }
 
   assert {

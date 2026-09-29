@@ -159,6 +159,23 @@ resource "aws_lb_listener_rule" "cancel_reservation" {
   }
 }
 
+resource "aws_lb_listener_rule" "activate_executive_summary" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 60
+
+  action {
+    type             = "forward"
+    target_group_arn = var.command_target_group_arn
+  }
+
+  condition {
+    http_request_method { values = ["PUT"] }
+  }
+  condition {
+    path_pattern { values = ["/executive-summary/activation"] }
+  }
+}
+
 resource "aws_apigatewayv2_vpc_link" "private" {
   name               = "${var.name}-private"
   security_group_ids = [var.vpc_link_security_group_id]
@@ -229,6 +246,24 @@ resource "aws_api_gateway_resource" "event_id" {
   path_part   = "{id}"
 }
 
+resource "aws_api_gateway_resource" "event_executive_summary" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.event_id.id
+  path_part   = "executive-summary"
+}
+
+resource "aws_api_gateway_resource" "executive_summary" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "executive-summary"
+}
+
+resource "aws_api_gateway_resource" "executive_summary_activation" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.executive_summary.id
+  path_part   = "activation"
+}
+
 resource "aws_api_gateway_resource" "event_reservations" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_resource.event_id.id
@@ -260,6 +295,21 @@ resource "aws_api_gateway_method" "get_event" {
   http_method        = "GET"
   authorization      = "AWS_IAM"
   request_parameters = { "method.request.path.id" = true }
+}
+
+resource "aws_api_gateway_method" "get_executive_summary" {
+  rest_api_id        = aws_api_gateway_rest_api.this.id
+  resource_id        = aws_api_gateway_resource.event_executive_summary.id
+  http_method        = "GET"
+  authorization      = "AWS_IAM"
+  request_parameters = { "method.request.path.id" = true }
+}
+
+resource "aws_api_gateway_method" "activate_executive_summary" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.executive_summary_activation.id
+  http_method   = "PUT"
+  authorization = "AWS_IAM"
 }
 
 resource "aws_api_gateway_method" "create_reservation" {
@@ -309,6 +359,31 @@ resource "aws_api_gateway_integration" "get_event" {
   integration_target      = aws_lb.internal.arn
   uri                     = "http://${aws_lb.internal.dns_name}/events/{id}"
   request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
+}
+
+resource "aws_api_gateway_integration" "get_executive_summary" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.event_executive_summary.id
+  http_method             = aws_api_gateway_method.get_executive_summary.http_method
+  integration_http_method = "GET"
+  type                    = "HTTP_PROXY"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
+  uri                     = "http://${aws_lb.internal.dns_name}/events/{id}/executive-summary"
+  request_parameters      = { "integration.request.path.id" = "method.request.path.id" }
+}
+
+resource "aws_api_gateway_integration" "activate_executive_summary" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.executive_summary_activation.id
+  http_method             = aws_api_gateway_method.activate_executive_summary.http_method
+  integration_http_method = "PUT"
+  type                    = "HTTP_PROXY"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_apigatewayv2_vpc_link.private.id
+  integration_target      = aws_lb.internal.arn
+  uri                     = "http://${aws_lb.internal.dns_name}/executive-summary/activation"
 }
 
 resource "aws_api_gateway_integration" "create_reservation" {
@@ -363,6 +438,8 @@ resource "aws_api_gateway_deployment" "this" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_integration.create_event.id,
       aws_api_gateway_integration.get_event.id,
+      aws_api_gateway_integration.get_executive_summary.id,
+      aws_api_gateway_integration.activate_executive_summary.id,
       aws_api_gateway_integration.create_reservation.id,
       aws_api_gateway_integration.get_reservation.id,
       aws_api_gateway_integration.cancel_reservation.id

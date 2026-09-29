@@ -231,15 +231,31 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08
 
 ### T08: Expor consulta e documentar operacao
 
-**Status:** Planned
+**Status:** Complete
 **What:** Expor `GET /events/{id}/executive-summary`, publicar as rotas via API Gateway IAM e documentar ativacao, encerramento e setup do Discord.
-**Where:** query API, `infra/modules/edge-observability/main.tf`, `infra/environments/demo/README.md` e exemplos Terraform
+**Where:** query API, infraestrutura de borda e runbook operacional da demo
 **Depends on:** T07
 **Requirement:** EXECSUM-06, EXECSUM-24, EXECSUM-28, EXECSUM-29, EXECSUM-40, EXECSUM-44
 **Done when:** GET retorna relatorio e `deliveryStatus` persistidos, `404` para evento inexistente, sem chamadas externas ou recomputacao; rotas usam IAM/SigV4; README explica onde criar/configurar webhook, como informar ARN no `demo.tfvars` e como ativar/desativar a flag global.
 **Tests:** HTTP para estados e `404`; Terraform para rotas/autenticacao; `git diff --check` para documentacao.
 **Gate:** Build
 **Commit:** `feat(summary): expose report status and document operations`
+
+**Gate result:** `clean verify -Pintegration` passou (80 unitarios + 90 integracao, 0 falhas/erros/skips); `terraform fmt -check -recursive` passou; `terraform test` passou no modulo `compute` (2 runs) e `edge-observability` (1 run); `git diff --check` passou.
+
+**Test Adequacy Review:**
+
+| Done-when criterion / spec AC / listed edge case | `file:line` + assertion expression | Spec-defined outcome | Covered? |
+| --- | --- | --- | --- |
+| GET reports `DISABLED`, `SCHEDULED`, `NOT_ELIGIBLE`, and persisted report/status/timestamps without recomputing Markdown | `ExecutiveSummaryQueryIT.java:50-85` - JSON status/body assertions; after changing event source, stored Markdown remains `# Saved report` | Reader shows current eligibility or durable report; a read does not trigger work or rewrite history | Yes |
+| Missing event returns `404` | `ExecutiveSummaryQueryIT.java:89-92` - `status().isNotFound()` | Unknown event is not represented as an empty report | Yes |
+| Query endpoint reads report and reports missing rows through the application error mapping | `ExecutiveSummaryQueryController.java:17-20`; `GetExecutiveSummaryService.java:16-20`; `JdbcExecutiveSummaryReportReader.java:24-44` - single read-only SELECT, empty result raises `ResourceNotFoundException` | GET has no command side effects or external adapter dependency | Yes |
+| Both endpoints use IAM and VPC Link; GET/PUT reach the intended internal services and deploy trigger includes them | `edge-observability.tftest.hcl:72-79, 81-94` - IAM, VPC Link, listener target, method/path/integration and deployment trigger assertions | SigV4 protected routes reach query-api/command-api through the private ALB | Yes |
+| Operator can configure Discord without storing webhook URL and can manually open/close the global window | `infra/environments/demo/README.md:7-18, 20-49` - SecretString, ARN-only `demo.tfvars`, SigV4 enable/GET/disable commands; `:51` confirms no live calls | Human-readable runbook supports setup and safe local verification without real publication | Yes |
+
+*Check C - Necessary:* the five evidence groups cover every T08 criterion and EXECSUM-06/24/28/29/40/44; no assertions beyond the agreed behavior.
+
+**Verdict:** consulta HTTP e rotas passaram em PostgreSQL/Testcontainers e Terraform simulado. Nenhum deploy, acesso AWS real ou publicacao Discord foi executado.
 
 ## Traceability Review
 
