@@ -140,3 +140,18 @@ T14 auditou cada um dos 22 arquivos de `docs/images/` em `documentation-audit.md
 | Diff | `git diff --check`: PASS. |
 
 Esta revisão é documental; os testes funcionais de T01–T12 são a evidência do runtime local.
+
+## Verificação final independente da documentação (fallback TLC)
+
+**Veredito: PASS para os critérios documentais AC6 e AC7.** A tentativa de despachar um subagente Verifier falhou antes de iniciar, pois a conta atingiu o limite de uso. Foi executada a revisão standalone de fallback prevista pelo TLC: rederivei os resultados diretamente da spec e revisei os commits `ef04c42..22d5c04`, o README e os desenhos renderizados. Este veredito cobre T13–T14; a verificação funcional anterior T01–T12 permanece registrada acima.
+
+| Critério | Resultado esperado pela spec | Evidência |
+| --- | --- | --- |
+| AC6 — fluxo AWS numerado | Criação PENDING/outbox → responsável único → resolução completa → inbox/decisão PostgreSQL → resultado; incluir expiração/cancelamento e estado não aplicado, sem IAM | `spec.md:128`; sequência e ramos em `docs/images/flash-booking-confirmation-aws-components.svg:126`, `:159`, `:166`, `:173`, `:180`, `:190`, `:198`; README incorpora a figura em `README.md:90`. Render final inspecionado sem clipping. |
+| AC7 — auditoria e atualização | Todos os desenhos correntes coerentes; históricos/alvos identificados | Inventário cobre cada imagem em `documentation-audit.md:23` e linhas 25–46; legendas históricas no README em `README.md:136`, `:146`; nova outbox em `README.md:134`. |
+| Três eventos na criação | ReservationCreated, ReservationExpirationScheduled e ReservationHeld seguem destinos distintos | `CreateReservationService.java:59`, `:60`, `:61`; roteamento em `OutboxSqsPublisher.java:80`, `:81`, `:82`; desenho em `docs/images/flash-booking-transactional-outbox.svg:47`, `:55`, `:63`. |
+| Nome do cancelamento | O evento declarado usa o nome integral | `JdbcReservationPersistenceAdapter.java:172`, `OutboxSqsPublisher.java:86` e `docs/images/flash-booking-confirmation-lifecycle.svg:39`. |
+
+**Sensor documental:** em uma cópia temporária do lifecycle, troquei `ReservationCancellationRequested` por `CancellationRequested`. A asserção do contrato que exige o nome canônico falhou (mutação morta). A cópia foi removida e o `git status --porcelain` real permaneceu idêntico ao baseline.
+
+**Gates finais:** `validate-readme.ps1` PASS (7 imagens, 47 referências); `validate_spec.py` PASS; `validate_tasks.py` PASS; 19 SVGs parseados como XML; `git diff --check` PASS. O verificador automático de estado deve ser executado depois deste registro.
