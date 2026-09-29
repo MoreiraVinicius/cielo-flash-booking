@@ -4,7 +4,7 @@ import com.cielo.flashbooking.domain.reservation.ReservationStatus;
 import java.time.Instant;
 import java.util.Objects;
 
-public record ReservationConfirmationResult(ReservationStatus status, Instant confirmedAt) {
+public record ReservationConfirmationResult(ReservationStatus status, Instant confirmedAt, boolean changed) {
 
     public ReservationConfirmationResult {
         Objects.requireNonNull(status, "status must not be null");

@@ -35,10 +35,16 @@ public interface ReservationWriter {
     /** Starts cancellation only if the reservation is still CONFIRMED. */
     Optional<CancellationRequest> requestConfirmedCancellation(UUID reservationId, UUID cancellationId);
 
+    /** Completes cancellation only when the supplied id matches the pending request. */
+    Optional<CancellationCompletionTransition> completeConfirmedCancellation(UUID reservationId, UUID cancellationId);
+
     record CapacityRelease(UUID eventId, int quantity) {}
 
     record ConfirmationTransition(
-            ReservationStatus status, Instant confirmedAt, CapacityRelease expiredCapacityRelease) {}
+            ReservationStatus status, Instant confirmedAt, CapacityRelease expiredCapacityRelease, boolean changed) {}
 
     record CancellationRequest(UUID reservationId, UUID eventId, int quantity, UUID cancellationId) {}
+
+    record CancellationCompletionTransition(
+            ReservationStatus status, UUID cancellationId, boolean changed, CapacityRelease capacityRelease) {}
 }

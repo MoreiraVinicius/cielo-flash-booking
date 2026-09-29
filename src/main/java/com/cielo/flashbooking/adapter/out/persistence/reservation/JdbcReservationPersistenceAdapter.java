@@ -211,7 +211,8 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
         LockedReservation reservation = locked.orElseThrow();
         if (reservation.status() != ReservationStatus.PENDING) {
-            return Optional.of(new ConfirmationTransition(reservation.status(), reservation.confirmedAt(), null));
+            return Optional.of(
+                    new ConfirmationTransition(reservation.status(), reservation.confirmedAt(), null, false));
         }
 
         Instant decidedAt = currentTime();
@@ -222,7 +223,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                     WHERE id = ? AND status = 'PENDING'
                     """, Timestamp.from(decidedAt), Timestamp.from(decidedAt), reservationId);
             requireSingleTransition(updated, reservationId);
-            return Optional.of(new ConfirmationTransition(ReservationStatus.CONFIRMED, decidedAt, null));
+            return Optional.of(new ConfirmationTransition(ReservationStatus.CONFIRMED, decidedAt, null, true));
         }
 
         int updated = jdbcTemplate.update("""
@@ -235,7 +236,10 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 """, Timestamp.from(decidedAt), reservationId);
         requireSingleTransition(updated, reservationId);
         return Optional.of(new ConfirmationTransition(
-                ReservationStatus.EXPIRED, null, new CapacityRelease(reservation.eventId(), reservation.quantity())));
+                ReservationStatus.EXPIRED,
+                null,
+                new CapacityRelease(reservation.eventId(), reservation.quantity()),
+                true));
     }
 
     @Override
@@ -256,6 +260,51 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                         : Optional.empty(),
                 cancellationId,
                 reservationId);
+    }
+
+    @Override
+    public Optional<CancellationCompletionTransition> completeConfirmedCancellation(
+            UUID reservationId, UUID cancellationId) {
+        Optional<LockedCancellation> locked = jdbcTemplate.query(
+                """
+                SELECT event_id, quantity, status, cancellation_id
+                FROM reservation
+                WHERE id = ?
+                FOR UPDATE
+                """,
+                resultSet -> resultSet.next()
+                        ? Optional.of(new LockedCancellation(
+                                resultSet.getObject("event_id", UUID.class),
+                                resultSet.getInt("quantity"),
+                                ReservationStatus.valueOf(resultSet.getString("status")),
+                                resultSet.getObject("cancellation_id", UUID.class)))
+                        : Optional.empty(),
+                reservationId);
+        if (locked.isEmpty()) {
+            return Optional.empty();
+        }
+
+        LockedCancellation reservation = locked.orElseThrow();
+        if (reservation.status() != ReservationStatus.CANCELLATION_PENDING
+                || !cancellationId.equals(reservation.cancellationId())) {
+            return Optional.of(new CancellationCompletionTransition(
+                    reservation.status(), reservation.cancellationId(), false, null));
+        }
+
+        int updated = jdbcTemplate.update("""
+                UPDATE reservation
+                SET status = 'CANCELLED',
+                    closure_reason_code = 'CANCELLED_BY_REQUEST',
+                    closure_reason_description = 'Reserva cancelada por solicitação',
+                    updated_at = clock_timestamp()
+                WHERE id = ? AND status = 'CANCELLATION_PENDING' AND cancellation_id = ?
+                """, reservationId, cancellationId);
+        requireSingleTransition(updated, reservationId);
+        return Optional.of(new CancellationCompletionTransition(
+                ReservationStatus.CANCELLED,
+                reservation.cancellationId(),
+                true,
+                new CapacityRelease(reservation.eventId(), reservation.quantity())));
     }
 
     private LockedReservation toLockedReservation(ResultSet resultSet) throws SQLException {
@@ -309,4 +358,6 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
 
     private record LockedReservation(
             UUID eventId, int quantity, ReservationStatus status, Instant expiresAt, Instant confirmedAt) {}
+
+    private record LockedCancellation(UUID eventId, int quantity, ReservationStatus status, UUID cancellationId) {}
 }

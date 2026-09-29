@@ -59,7 +59,7 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 1. WHEN uma solicitação recebida da fila exclusiva do responsável externo identificar uma reserva `PENDING` e o PostgreSQL observar tempo anterior a `expiresAt` depois do lock THEN o sistema SHALL persistir `CONFIRMED` e `confirmedAt` em uma transação, sem alterar `event.available`.
 2. WHEN uma reserva passar a `CONFIRMED` THEN `GET /reservations/{id}` SHALL retornar esse estado e `confirmedAt` sem declarar pagamento ou emissão.
 3. IF a solicitação de confirmação chegar para reserva inexistente THEN o sistema SHALL registrar resultado `NOT_FOUND` correlacionado, sem alterar inventário.
-4. IF a mensagem não contiver um envelope válido com `source`, `resolutionId`, `reservationId` e tipo conhecido THEN o consumidor SHALL deixá-la elegível a retry e DLQ sem alterar a reserva; a permissão IAM da fila SHALL limitar o produtor ao único responsável externo.
+4. IF a mensagem não contiver um envelope JSON v1 válido com `source`, `resolutionId`, `reservationId`, tipo conhecido e apenas campos permitidos para esse tipo, ou exceder 16 KiB UTF-8, THEN o consumidor SHALL deixá-la elegível a retry e DLQ sem alterar a reserva; a permissão IAM da fila SHALL limitar o produtor ao único responsável externo.
 5. WHEN uma reserva de quantidade maior que um for confirmada THEN o sistema SHALL comprometer a quantidade inteira ou rejeitar a solicitação sem confirmação parcial.
 6. WHEN uma reserva `PENDING` for criada THEN o sistema SHALL registrar `ReservationHeld` na outbox da mesma transação para a fila direta do responsável externo, com `reservationId`, `eventId`, `quantity`, `expiresAt` e identidade durável do evento.
 
@@ -86,7 +86,7 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 **Acceptance Criteria:**
 
 1. WHEN uma resolução nova for consumida THEN o sistema SHALL gravar `(source, resolutionId)`, fingerprint e resultado em uma inbox durável na mesma transação da decisão sobre a reserva.
-2. IF o mesmo `resolutionId` for entregue novamente, mesmo com outro `messageId` de transporte, THEN o sistema SHALL reproduzir o resultado registrado sem nova transição ou nova devolução de capacidade; payload divergente com a mesma chave SHALL produzir conflito.
+2. IF o mesmo `resolutionId` for entregue novamente, mesmo com outro `messageId` de transporte ou com JSON reformatado contendo os mesmos campos e valores, THEN o sistema SHALL reproduzir o resultado registrado sem nova transição ou nova devolução de capacidade; payload semanticamente divergente com a mesma chave SHALL produzir conflito e permanecer elegível a retry/DLQ.
 3. WHEN uma confirmação for aceita ou rejeitada por regra de negócio THEN o sistema SHALL registrar um evento de resultado na outbox na mesma transação da inbox e da reserva.
 4. IF a publicação do resultado falhar THEN a outbox SHALL manter o evento elegível a retry; o produtor externo SHALL tratar o resultado como pendente até recebê-lo.
 5. IF o consumidor não conseguir processar uma mensagem após as tentativas configuradas THEN a mensagem SHALL permanecer recuperável em DLQ com motivo observável.

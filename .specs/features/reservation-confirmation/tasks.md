@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T01–T04 estão concluídas; T05 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
+**Status:** Execução aprovada. T01–T05 estão concluídas; T06 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
 
 ## Execution Protocol
 
@@ -106,6 +106,8 @@ T08 → T09 → T10
 **Done when:** Reenvio com o mesmo `resolutionId`, ainda que outro `messageId`, reproduz resultado; chave repetida com payload diferente conflita; erro técnico mantém mensagem para retry/DLQ; testes não encontram efeito duplicado.
 **Tests:** integration de SQS/PostgreSQL, incluídos na tarefa.
 **Gate:** Java.
+
+**Status:** Complete; consumidor valida envelope v1, deduplica por `(source, resolutionId)` com fingerprint semântico, grava decisão transacionalmente e confirma/devolve estoque apenas uma vez. Oito testes de integração SQS/PostgreSQL passaram, cobrindo reentrega, concorrência, colisão, cancelamento correlacionado, rollback, inexistente e retry de payload inválido.
 
 ### T06: Publicar resultados e solicitação de cancelamento
 

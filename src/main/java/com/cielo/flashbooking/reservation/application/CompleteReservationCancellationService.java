@@ -9,13 +9,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ConfirmReservationService {
+public class CompleteReservationCancellationService {
 
     private final ReservationWriter reservationWriter;
     private final InventoryOperations inventoryOperations;
     private final ApplicationEventPublisher eventPublisher;
 
-    public ConfirmReservationService(
+    public CompleteReservationCancellationService(
             ReservationWriter reservationWriter,
             InventoryOperations inventoryOperations,
             ApplicationEventPublisher eventPublisher) {
@@ -25,19 +25,22 @@ public class ConfirmReservationService {
     }
 
     @Transactional
-    public Optional<ReservationConfirmationResult> confirm(UUID reservationId) {
-        return reservationWriter.confirmPending(reservationId).map(this::releaseExpiredCapacityAndResult);
+    public Optional<ReservationCancellationCompletionResult> complete(UUID reservationId, UUID cancellationId) {
+        return reservationWriter
+                .completeConfirmedCancellation(reservationId, cancellationId)
+                .map(this::releaseCapacityAndResult);
     }
 
-    private ReservationConfirmationResult releaseExpiredCapacityAndResult(
-            ReservationWriter.ConfirmationTransition transition) {
-        ReservationWriter.CapacityRelease release = transition.expiredCapacityRelease();
+    private ReservationCancellationCompletionResult releaseCapacityAndResult(
+            ReservationWriter.CancellationCompletionTransition transition) {
+        ReservationWriter.CapacityRelease release = transition.capacityRelease();
         if (release != null) {
             if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
-                throw new IllegalStateException("could not return expired reservation capacity");
+                throw new IllegalStateException("could not return cancelled reservation capacity");
             }
             eventPublisher.publishEvent(new EventAvailabilityChanged(release.eventId()));
         }
-        return new ReservationConfirmationResult(transition.status(), transition.confirmedAt(), transition.changed());
+        return new ReservationCancellationCompletionResult(
+                transition.status(), transition.cancellationId(), transition.changed());
     }
 }
