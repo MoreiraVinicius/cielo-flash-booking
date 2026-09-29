@@ -153,6 +153,7 @@ Construir o núcleo funcional de uma reserva de ingressos para flash sale. A sol
 **Acceptance Criteria:**
 
 1. WHEN `docker compose up` completes THEN the system SHALL make local `query-api`, `command-api`, worker, PostgreSQL, Valkey, messaging, and Mailpit available.
+   The worker's SQS client timeout SHALL exceed the confirmation consumer's 20-second long poll so an empty queue does not repeatedly fail.
 2. WHEN the local concurrency profile starts THEN it SHALL run at least two `command-api` processes against the same PostgreSQL instance.
 3. WHEN `terraform validate` runs THEN the infrastructure SHALL be valid.
 4. WHEN the demo Terraform plan is applied with authorized credentials THEN the system SHALL create all AWS runtime resources.

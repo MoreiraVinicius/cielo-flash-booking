@@ -225,6 +225,8 @@ O API Gateway REST regional é o único endpoint público. IAM/SigV4 autentica o
 
 Mesmo com uma task de cada serviço na demo AWS, Docker Compose oferece um perfil com pelo menos duas instâncias de comandos para provar concorrência entre processos. Na arquitetura alta, Terraform apenas muda mínimos, máximos e métricas de cada serviço. Controllers e regras não conhecem a quantidade de réplicas.
 
+No Compose local, o worker usa timeout de 25 segundos para chamadas SQS. Isso cobre a espera longa de 20 segundos do consumidor de confirmações quando a fila está vazia.
+
 ## Riscos e controles
 
 | Risco | Local | Impacto | Controle |

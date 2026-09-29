@@ -8,6 +8,10 @@
 
 ## Validation
 
+### Local Compose worker, 2026-09-29
+
+PASS: `docker compose config` resolved `OUTBOX_PUBLISHER_API_CALL_TIMEOUT=25s` for the worker, above the confirmation consumer's 20-second long poll. `docker compose up -d --no-build --wait worker` completed with all seven default services running and healthy. The worker reconciled reservation `cebb24ed-fee2-40da-8abb-60fa01923996` from `PENDING` to `EXPIRED`; event availability returned from 200 to 400. A subsequent 30-second worker log window contained no `ERROR` or `ApiCallTimeoutException`. An independent read-only verifier confirmed the seven services remained healthy after about three minutes and found no repeated SQS timeouts; this does not replace a full end-to-end messaging test.
+
 **Result:** PASS no escopo da regra de prazo de cancelamento
 
 A regra vigente de DEMO-03 passa nos testes unitários e nos quatro cenários PostgreSQL de `ReservationDeadlineIT`. O PostgreSQL descartável disponível era 17.5. O target oficial PostgreSQL 16/Testcontainers e o Full gate completo permanecem pendentes e não são alegados por esta verificação. As evidências anteriores dos demais critérios continuam registradas abaixo; este passe atualiza apenas o escopo dos commits `db604d0` e `2809840`.
