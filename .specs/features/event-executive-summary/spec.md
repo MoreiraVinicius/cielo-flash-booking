@@ -1,6 +1,6 @@
 # Resumo executivo da performance do evento
 
-**Status:** Aprovado pelo usuario; Execute autorizado para alteracoes locais e commits. Deploy, chamadas AWS reais e publicacao Discord real continuam fora da autorizacao.
+**Status:** Implementado e verificado independentemente (44/44 criterios). Deploy, chamadas AWS reais e publicacao Discord real continuam fora da autorizacao.
 
 ## Problem Statement
 
@@ -8,9 +8,9 @@ Ao terminar a janela comercial de um evento, a demonstracao nao mostra em lingua
 
 ## Goals
 
-- [ ] Permitir ativacao manual global, desligada por padrao, mantendo a geracao e publicacao automatica no encerramento dos eventos elegiveis.
-- [ ] Mostrar capacidade, ingressos em reservas aceitas, reservas validas no fechamento, primeiro esgotamento temporario e ritmo de reservas.
-- [ ] Produzir um template curto e verificavel, com no maximo uma tentativa Bedrock para a leitura textual de cada evento ativado.
+- [x] Permitir ativacao manual global, desligada por padrao, mantendo a geracao e publicacao automatica no encerramento dos eventos elegiveis.
+- [x] Mostrar capacidade, ingressos em reservas aceitas, reservas validas no fechamento, primeiro esgotamento temporario e ritmo de reservas.
+- [x] Produzir um template curto e verificavel, com no maximo uma tentativa Bedrock para a leitura textual de cada evento ativado.
 
 ## Out of Scope
 
@@ -147,57 +147,57 @@ Ao terminar a janela comercial de um evento, a demonstracao nao mostra em lingua
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| EXECSUM-01 | Controle global | Specify | Pending |
-| EXECSUM-02 | Controle global | Specify | Pending |
-| EXECSUM-03 | Controle global | Specify | Pending |
-| EXECSUM-04 | Controle global | Specify | Pending |
-| EXECSUM-05 | Controle global | Specify | Pending |
-| EXECSUM-06 | Controle global | Specify | Pending |
-| EXECSUM-07 | Controle global | Specify | Pending |
-| EXECSUM-08 | Encerramento | Specify | Pending |
-| EXECSUM-09 | Encerramento | Specify | Pending |
-| EXECSUM-10 | Encerramento | Specify | Pending |
-| EXECSUM-11 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-12 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-13 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-14 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-15 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-16 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-17 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-18 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-19 | Resultado e ritmo | Specify | Pending |
-| EXECSUM-20 | Leitura e alertas | Specify | Pending |
-| EXECSUM-21 | Leitura e alertas | Specify | Pending |
-| EXECSUM-22 | Leitura e alertas | Specify | Pending |
-| EXECSUM-23 | Leitura e alertas | Specify | Pending |
-| EXECSUM-24 | Leitura e alertas | Specify | Pending |
-| EXECSUM-25 | Edge cases | Specify | Pending |
-| EXECSUM-26 | Edge cases | Specify | Pending |
-| EXECSUM-27 | Edge cases | Specify | Pending |
-| EXECSUM-28 | Edge cases | Specify | Pending |
-| EXECSUM-29 | Edge cases | Specify | Pending |
-| EXECSUM-30 | Edge cases | Specify | Pending |
-| EXECSUM-31 | Edge cases | Specify | Pending |
-| EXECSUM-32 | Edge cases | Specify | Pending |
-| EXECSUM-33 | Edge cases | Specify | Pending |
-| EXECSUM-34 | Edge cases | Specify | Pending |
-| EXECSUM-35 | Encerramento | Specify | Pending |
-| EXECSUM-36 | Leitura e alertas | Specify | Pending |
-| EXECSUM-37 | Edge cases | Specify | Pending |
-| EXECSUM-38 | Edge cases | Specify | Pending |
-| EXECSUM-39 | Discord | Specify | Pending |
-| EXECSUM-40 | Discord | Specify | Pending |
-| EXECSUM-41 | Discord | Specify | Pending |
-| EXECSUM-42 | Discord | Specify | Pending |
-| EXECSUM-43 | Discord | Specify | Pending |
-| EXECSUM-44 | Discord | Specify | Pending |
+| EXECSUM-01 | Controle global | Specify | Verified |
+| EXECSUM-02 | Controle global | Specify | Verified |
+| EXECSUM-03 | Controle global | Specify | Verified |
+| EXECSUM-04 | Controle global | Specify | Verified |
+| EXECSUM-05 | Controle global | Specify | Verified |
+| EXECSUM-06 | Controle global | Specify | Verified |
+| EXECSUM-07 | Controle global | Specify | Verified |
+| EXECSUM-08 | Encerramento | Specify | Verified |
+| EXECSUM-09 | Encerramento | Specify | Verified |
+| EXECSUM-10 | Encerramento | Specify | Verified |
+| EXECSUM-11 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-12 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-13 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-14 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-15 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-16 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-17 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-18 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-19 | Resultado e ritmo | Specify | Verified |
+| EXECSUM-20 | Leitura e alertas | Specify | Verified |
+| EXECSUM-21 | Leitura e alertas | Specify | Verified |
+| EXECSUM-22 | Leitura e alertas | Specify | Verified |
+| EXECSUM-23 | Leitura e alertas | Specify | Verified |
+| EXECSUM-24 | Leitura e alertas | Specify | Verified |
+| EXECSUM-25 | Edge cases | Specify | Verified |
+| EXECSUM-26 | Edge cases | Specify | Verified |
+| EXECSUM-27 | Edge cases | Specify | Verified |
+| EXECSUM-28 | Edge cases | Specify | Verified |
+| EXECSUM-29 | Edge cases | Specify | Verified |
+| EXECSUM-30 | Edge cases | Specify | Verified |
+| EXECSUM-31 | Edge cases | Specify | Verified |
+| EXECSUM-32 | Edge cases | Specify | Verified |
+| EXECSUM-33 | Edge cases | Specify | Verified |
+| EXECSUM-34 | Edge cases | Specify | Verified |
+| EXECSUM-35 | Encerramento | Specify | Verified |
+| EXECSUM-36 | Leitura e alertas | Specify | Verified |
+| EXECSUM-37 | Edge cases | Specify | Verified |
+| EXECSUM-38 | Edge cases | Specify | Verified |
+| EXECSUM-39 | Discord | Specify | Verified |
+| EXECSUM-40 | Discord | Specify | Verified |
+| EXECSUM-41 | Discord | Specify | Verified |
+| EXECSUM-42 | Discord | Specify | Verified |
+| EXECSUM-43 | Discord | Specify | Verified |
+| EXECSUM-44 | Discord | Specify | Verified |
 
-**Coverage:** 44 criterios; todos devem ser mapeados em `tasks.md` antes de Execute.
+**Coverage:** 44/44 requisitos verificados independentemente em `validation.md`.
 
 ## Success Criteria
 
-- [ ] A flag global desligada impede relatorios e chamadas de IA/Discord; enquanto ligada, cada evento elegivel produz um unico relatorio e no maximo uma mensagem na primeira varredura apos `endsAt`.
-- [ ] O leitor identifica em menos de uma pagina o resultado, o tempo ate a primeira indisponibilidade total e o ritmo das reservas.
-- [ ] Numeros e marcos temporais sao derivados do PostgreSQL; IA e monitoramento podem falhar sem perder o resultado comercial.
-- [ ] Nenhuma compra concluida, receita, conversao ou causalidade de incidente e afirmada sem fonte de dados propria.
-- [ ] Cada relatorio elegivel gera no maximo uma mensagem no Discord, com estado de entrega consultavel e URL armazenada fora do repositorio.
+- [x] A flag global desligada impede relatorios e chamadas de IA/Discord; enquanto ligada, cada evento elegivel produz um unico relatorio e no maximo uma mensagem na primeira varredura apos `endsAt`.
+- [x] O leitor identifica em menos de uma pagina o resultado, o tempo ate a primeira indisponibilidade total e o ritmo das reservas.
+- [x] Numeros e marcos temporais sao derivados do PostgreSQL; IA e monitoramento podem falhar sem perder o resultado comercial.
+- [x] Nenhuma compra concluida, receita, conversao ou causalidade de incidente e afirmada sem fonte de dados propria.
+- [x] Cada relatorio elegivel gera no maximo uma mensagem no Discord, com estado de entrega consultavel e URL armazenada fora do repositorio.

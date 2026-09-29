@@ -1,7 +1,7 @@
 # Desenho do resumo executivo da performance do evento
 
 **Spec:** `.specs/features/event-executive-summary/spec.md`
-**Status:** Aprovado para Execute local; sem deploy ou chamadas externas reais
+**Status:** Implementado e verificado independentemente; sem deploy ou chamadas externas reais
 
 ## Architecture Overview
 
