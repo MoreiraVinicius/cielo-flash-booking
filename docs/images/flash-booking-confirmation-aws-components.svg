@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="1260" viewBox="0 0 1960 1260" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="2070" viewBox="0 0 1960 2070" role="img" aria-labelledby="title desc">
   <title id="title">Componentes AWS da confirmação assíncrona de reservas</title>
-  <desc id="desc">Topologia declarada em Terraform, ainda não aplicada na AWS. AWS WAF e Amazon API Gateway REST encaminham a criação de reserva por VPC Link v2 e Application Load Balancer interno à Command API no Amazon ECS Fargate. Amazon RDS for PostgreSQL guarda reserva, estoque, outbox e confirmation inbox. O Worker no ECS publica ReservationHeld na Amazon SQS reservation-to-owner. Um único módulo externo, de hospedagem não especificada, consome essa fila e resolve todas as pendências com idempotência própria. Depois envia ReservationConfirmationRequested à SQS reservation-from-owner. O Worker bloqueia a reserva e consulta a inbox: uma reentrega com a mesma chave e conteúdo recebe o resultado anterior; uma resolução nova é decidida pelo estado e horário PostgreSQL. O resultado sai pela outbox, e o módulo externo aguarda ReservationConfirmed ou ReservationConfirmationRejected. Cada fila tem sua DLQ.</desc>
+  <desc id="desc">Topologia declarada em Terraform, ainda não aplicada na AWS. O fluxo numerado 01 a 08 mostra: entrada HTTP pelo AWS WAF e Amazon API Gateway REST até a Command API no ECS Fargate; transação no RDS PostgreSQL que retém estoque, cria PENDING e ReservationHeld na outbox; publicação pelo Worker à SQS reservation-to-owner; trabalho integral do único responsável externo; envio de ReservationConfirmationRequested à SQS reservation-from-owner; lock da reserva e replay de uma mensagem idêntica pela inbox ou decisão nova pelo relógio PostgreSQL; gravação atômica de estado, inbox e outbox; resultado ReservationConfirmed ou ReservationConfirmationRejected devolvido ao responsável pela fila de saída. Cada SQS tem DLQ própria. Ramos finais mostram fechamento de PENDING com liberação única e cancelamento de CONFIRMED com estoque retido até conclusão externa correlacionada.</desc>
   <defs>
     <style>
       text{font-family:Arial,Helvetica,sans-serif}.page{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#51697d}.blue{fill:#1168bd}.orange{fill:#a75a00}.teal{fill:#087f76}
@@ -9,7 +9,8 @@
       .edge{fill:#fff4e7;stroke:#f39c28;stroke-width:2.5}.compute{fill:#e8f3fc;stroke:#1168bd;stroke-width:2.5}
       .rds{fill:#efeafd;stroke:#8064ba;stroke-width:2.5}.sqs{fill:#fff6e8;stroke:#e18d18;stroke-width:2.5}
       .dlq{fill:#fff;stroke:#d5a462;stroke-width:2}.external{fill:#243c52;stroke:#142b3d;stroke-width:3}
-      .footer{fill:#fff;stroke:#bfd0de;stroke-width:2}
+      .footer{fill:#fff;stroke:#bfd0de;stroke-width:2}.stepCard{fill:#fff;stroke:#bfd0de;stroke-width:2}.branch{fill:#eef5fb;stroke:#a9c4d9;stroke-width:2}
+      .stepHead{font-size:21px;font-weight:700}.stepBody{font-size:17px}.stepNo{font-size:17px;font-weight:700;fill:#fff}
       .type{font-size:15px;font-weight:700;letter-spacing:.8px}.name{font-size:24px;font-weight:700}.body{font-size:18px}.small{font-size:16px}.tiny{font-size:14px}
       .white{fill:#fff}.light{fill:#dae6ef}.flow{fill:none;stroke:#1168bd;stroke-width:3;marker-end:url(#blueArrow)}
       .async{fill:none;stroke:#d46916;stroke-width:3.5;marker-end:url(#orangeArrow)}
@@ -21,10 +22,10 @@
     <marker id="tealArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#087f76"/></marker>
     <marker id="purpleArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8064ba"/></marker>
   </defs>
-  <rect width="1960" height="1260" class="page"/>
+  <rect width="1960" height="2070" class="page"/>
   <text x="46" y="54" class="eyebrow orange">TERRAFORM DECLARADO · RECURSOS DE CONFIRMAÇÃO AINDA NÃO APLICADOS NA AWS</text>
   <text x="46" y="109" class="heading ink">Como o módulo externo confirma a reserva?</text>
-  <text x="46" y="148" class="sub muted">Serviços AWS previstos para Flash Booking; o único responsável pelas pendências continua fora deste sistema.</text>
+  <text x="46" y="148" class="sub muted">Topologia dos serviços acima; a sequência 01–08 abaixo acompanha uma reserva até o resultado externo.</text>
 
   <rect x="42" y="204" width="1342" height="852" rx="22" class="region"/>
   <text x="72" y="244" class="type blue">AWS REGION · RECURSOS DO FLASH BOOKING</text>
@@ -94,8 +95,8 @@
   <path d="M1341 567 H1425" class="async"/>
   <path d="M1425 810 H1341" class="back"/>
   <path d="M866 810 H794" class="back"/>
-  <text x="850" y="467" class="small orange">outbox → SQS → responsável</text>
-  <text x="850" y="710" class="small teal">responsável → SQS → inbox</text>
+  <text x="850" y="467" class="small orange">03 / 08 · outbox → SQS → responsável</text>
+  <text x="850" y="710" class="small teal">05 · responsável → SQS → inbox</text>
 
   <rect x="1425" y="484" width="491" height="571" rx="18" class="external"/>
   <text x="1455" y="522" class="type light">SISTEMA EXTERNO · CAIXA PRETA</text>
@@ -117,4 +118,86 @@
   <text x="70" y="1118" class="type blue">DUAS IDENTIDADES, DUAS RESPONSABILIDADES</text>
   <text x="70" y="1154" class="body ink">Responsável externo: deduplica a própria operação por reserva + tipo, inclusive no provedor que usar.</text>
   <text x="70" y="1185" class="body ink">Flash Booking: a inbox reapresenta o resultado da mesma mensagem; lock, estado e prazo decidem resoluções novas.</text>
+
+  <text x="46" y="1270" class="eyebrow blue">SEQUÊNCIA DE UMA RESERVA · LEITURA EM ZIGUE-ZAGUE</text>
+  <text x="46" y="1308" class="sub muted">Linha superior: 01 → 04. Desça no canto direito; linha inferior: 05 → 08, da direita para a esquerda.</text>
+
+  <rect x="42" y="1344" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="82" cy="1383" r="24" fill="#1168bd"/><text x="70" y="1389" class="stepNo">01</text>
+  <text x="119" y="1389" class="stepHead ink">Entrada HTTP</text>
+  <text x="70" y="1425" class="stepBody ink">API Gateway → VPC Link → ALB</text>
+  <text x="70" y="1455" class="stepBody ink">encaminha POST à Command API.</text>
+  <text x="70" y="1497" class="small muted">Resposta 201 ainda é PENDING.</text>
+
+  <rect x="516" y="1344" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="556" cy="1383" r="24" fill="#1168bd"/><text x="544" y="1389" class="stepNo">02</text>
+  <text x="593" y="1389" class="stepHead ink">Retenção atômica</text>
+  <text x="544" y="1425" class="stepBody ink">RDS: debita disponibilidade uma vez,</text>
+  <text x="544" y="1455" class="stepBody ink">grava PENDING + ReservationHeld</text>
+  <text x="544" y="1485" class="stepBody ink">na outbox da mesma transação.</text>
+
+  <rect x="990" y="1344" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="1030" cy="1383" r="24" fill="#d46916"/><text x="1018" y="1389" class="stepNo">03</text>
+  <text x="1067" y="1389" class="stepHead ink">Entrega do trabalho</text>
+  <text x="1018" y="1425" class="stepBody ink">Worker publica a outbox na SQS</text>
+  <text x="1018" y="1455" class="stepBody ink">reservation-to-owner após commit.</text>
+  <text x="1018" y="1497" class="small muted">Falha mantém evento pendente; pode repetir.</text>
+
+  <rect x="1464" y="1344" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="1504" cy="1383" r="24" fill="#243c52"/><text x="1492" y="1389" class="stepNo">04</text>
+  <text x="1541" y="1389" class="stepHead ink">Responsável externo</text>
+  <text x="1492" y="1425" class="stepBody ink">Consome ReservationHeld; evita</text>
+  <text x="1492" y="1455" class="stepBody ink">repetir sua operação por reserva.</text>
+  <text x="1492" y="1497" class="small muted">Resolve todas as pendências, sem parcial.</text>
+
+  <path d="M482 1437 H516" class="flow"/>
+  <path d="M956 1437 H990" class="flow"/>
+  <path d="M1430 1437 H1464" class="flow"/>
+  <path d="M1684 1532 V1570" class="flow"/>
+
+  <rect x="1464" y="1570" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="1504" cy="1609" r="24" fill="#087f76"/><text x="1492" y="1615" class="stepNo">05</text>
+  <text x="1541" y="1615" class="stepHead ink">Declara resolução</text>
+  <text x="1492" y="1651" class="stepBody ink">Só após resolver tudo, envia</text>
+  <text x="1492" y="1681" class="stepBody ink">ReservationConfirmationRequested</text>
+  <text x="1492" y="1711" class="stepBody ink">à SQS de entrada, com resolutionId.</text>
+
+  <rect x="990" y="1570" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="1030" cy="1609" r="24" fill="#087f76"/><text x="1018" y="1615" class="stepNo">06</text>
+  <text x="1067" y="1615" class="stepHead ink">Valida e decide</text>
+  <text x="1018" y="1651" class="stepBody ink">Worker bloqueia reserva; inbox</text>
+  <text x="1018" y="1681" class="stepBody ink">reapresenta resultado da mesma</text>
+  <text x="1018" y="1711" class="stepBody ink">mensagem. Nova: estado + prazo RDS.</text>
+
+  <rect x="516" y="1570" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="556" cy="1609" r="24" fill="#087f76"/><text x="544" y="1615" class="stepNo">07</text>
+  <text x="593" y="1615" class="stepHead ink">Persiste o desfecho</text>
+  <text x="544" y="1651" class="stepBody ink">Antes de expiresAt: CONFIRMED,</text>
+  <text x="544" y="1681" class="stepBody ink">sem novo débito. Tardia: rejeição.</text>
+  <text x="544" y="1711" class="stepBody ink">Inbox + outbox na mesma transação.</text>
+
+  <rect x="42" y="1570" width="440" height="188" rx="15" class="stepCard"/>
+  <circle cx="82" cy="1609" r="24" fill="#087f76"/><text x="70" y="1615" class="stepNo">08</text>
+  <text x="119" y="1615" class="stepHead ink">Entrega o resultado</text>
+  <text x="70" y="1651" class="stepBody ink">Outbox → SQS de saída → dono:</text>
+  <text x="70" y="1681" class="stepBody ink">ReservationConfirmed ou Rejected.</text>
+  <text x="70" y="1721" class="small muted">Rejeição exige compensação externa.</text>
+
+  <path d="M1464 1663 H1430" class="back"/>
+  <path d="M990 1663 H956" class="back"/>
+  <path d="M516 1663 H482" class="back"/>
+
+  <text x="46" y="1816" class="eyebrow blue">CAMINHOS ALTERNATIVOS · O ESTOQUE CONTINUA AUTORITATIVO NO POSTGRESQL</text>
+  <rect x="42" y="1842" width="910" height="179" rx="15" class="branch"/>
+  <text x="69" y="1878" class="stepHead ink">PENDING encerrada antes da confirmação</text>
+  <text x="69" y="1913" class="stepBody ink">DELETE ou prazo → CANCELLED / EXPIRED; devolve capacidade uma vez.</text>
+  <text x="69" y="1943" class="stepBody ink">A outbox envia ReservationHoldClosed; o responsável trata sua compensação.</text>
+  <text x="69" y="1988" class="small muted">Confirmação posterior recebe ReservationConfirmationRejected.</text>
+
+  <rect x="978" y="1842" width="926" height="179" rx="15" class="branch"/>
+  <text x="1005" y="1878" class="stepHead ink">DELETE de CONFIRMED</text>
+  <text x="1005" y="1913" class="stepBody ink">HTTP 202 → CANCELLATION_PENDING; estoque ainda comprometido.</text>
+  <text x="1005" y="1943" class="stepBody ink">Outbox: ReservationCancellationRequested. O responsável devolve</text>
+  <text x="1005" y="1973" class="stepBody ink">ReservationCancellationCompleted correlacionado pela SQS de entrada.</text>
+  <text x="1005" y="2001" class="small muted">Só então CANCELLED libera capacidade uma vez.</text>
 </svg>

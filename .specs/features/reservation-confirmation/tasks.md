@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** T01–T12 concluídas. O runtime local e a documentação foram verificados; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
+**Status:** T01–T12 concluídas; T13–T14 refinam as vistas a pedido do usuário. O runtime local foi verificado; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
 
 ## Execution Protocol
 
@@ -15,7 +15,7 @@ Seguir `tlc-spec-driven`: atualizar spec/context/design e decisões antes de alt
 | Infraestrutura de integração | Terraform/static + Compose smoke | T04: 7 testes Terraform passaram nos módulos data-plane, compute e edge-observability; `terraform validate` passou na composição demo; LocalStack saudável criou as 4 filas novas, cada qual com DLQ própria, long polling de 20s e visibility timeout de 60s. |
 | Inbox, outbox, SQS | integration | T05: 8 integrações SQS/PostgreSQL passaram para inbox, replay, concorrência e retry. T06: 37 integrações selecionadas passaram; outbox de `ReservationHeld`, resultado, fechamento e cancelamento, roteamento ao dono, criação, expiração e concorrência. |
 | HTTP e fluxo externo simulado | integration | T07: 8 testes `ReservationQueryControllerIT` e 10 `SqsReservationConfirmationConsumerIT` passaram; a simulação percorre retenção, confirmação e cancelamento; cinco rotas do case preservadas. |
-| Specs e diagramas | validation + inspeção visual | Gate documental passou: 6 imagens README, 44 referências resolvidas; SVGs de C4, lifecycle e modelo renderizados e inspecionados. |
+| Specs e diagramas | validation + inspeção visual | Baseline documental anterior passou. T13–T14 exigem sequência numerada, auditoria de todos os diagramas, renderização dos alterados e gate de links. |
 | Regressões do Verifier | focused PostgreSQL/LocalStack integration + discrimination sensor | T12: 13 integrações focadas passaram; os três cenários identificados foram adicionados; sensor isolado matou 1/1 mutações. |
 
 ## Gate Check Commands
@@ -194,12 +194,39 @@ T08 → T09 → T10
 
 **Status:** Complete; 13 integrações focadas passaram, os três gaps de comportamento têm asserts explícitos e o sensor isolado matou a mutação `confirmedAt = null` no GET confirmado.
 
+### Phase 4: Clareza visual e auditoria
+
+### T13: Numerar o fluxo AWS da confirmação
+
+**What:** Ampliar `flash-booking-confirmation-aws-components.svg` com sequência 01–08 da criação ao resultado externo e ramos de expiração/cancelamento. Preservar a caixa preta do responsável, as duas SQS com DLQ, o estado não aplicado da infraestrutura e a ausência de IAM no desenho.
+**Where:** `docs/images/flash-booking-confirmation-aws-components.svg`, `.specs/features/reservation-confirmation/`.
+**Depends on:** T12.
+**Requirement:** CONFIRM-04.
+**Done when:** Os números levam o leitor da retenção e outbox ao responsável, retorno à inbox, decisão PostgreSQL e resposta assíncrona; os ramos mostram liberação única de estoque e cancelamento confirmado aguardando conclusão externa; o SVG renderiza sem cortes ou afirmação de AWS aplicada.
+**Tests:** XML, renderização e inspeção visual, contrato da spec.
+**Gate:** Docs, Diff.
+
+**Status:** Complete; sequência 01–08 renderizada e inspecionada, com ramos de expiração e cancelamento, sem IAM.
+
+### T14: Auditar e corrigir os demais diagramas
+
+**What:** Conferir todos os SVGs e PNGs de `docs/images/` contra o runtime, Terraform e a fonte da verdade; corrigir ou substituir os vigentes que usam estado, nome de mensagem, contagem de eventos ou texto de notificação antigos. Rotular visões históricas e alvos não provisionados, mantendo evidência histórica intacta.
+**Where:** `docs/images/`, `README.md`, `.specs/features/reservation-confirmation/`.
+**Depends on:** T13.
+**Requirement:** CONFIRM-04.
+**Done when:** Auditoria registra cada imagem e seu escopo; diagramas vigentes não dizem que o domínio termina em PENDING, não chamam e-mail temporário de compra/confirmação, usam `ReservationCancellationRequested` e três eventos na criação; imagens históricas e alvos têm rótulo visível ou legenda inequívoca no README.
+**Tests:** Extração de textos, XML, renderização e inspeção das figuras alteradas, gate README e conferência com código/spec.
+**Gate:** Docs, Diff.
+
+**Status:** Pending.
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 → T02
 Phase 2: T02 → T03 → T04 → T05 → T06 → T07
 Phase 3: T07 → T08 → T09 → T10 → T11 → T12
+Phase 4: T12 → T13 → T14
 ```
 
 ## Diagram-Definition Cross-Check
@@ -218,6 +245,8 @@ Phase 3: T07 → T08 → T09 → T10 → T11 → T12
 | T10 | T09 | T09 → T10 | OK |
 | T11 | T10 | T10 → T11 | OK |
 | T12 | T11 | T11 → T12 | OK |
+| T13 | T12 | T12 → T13 | OK |
+| T14 | T13 | T13 → T14 | OK |
 
 ## Test Co-location Validation
 
@@ -235,3 +264,5 @@ Phase 3: T07 → T08 → T09 → T10 → T11 → T12
 | T10 | README | validation | validation | OK |
 | T11 | Operational docs | validation | validation | OK |
 | T12 | Concorrência | integration + sensor | integration + sensor | OK |
+| T13 | SVG AWS | XML + visual + README | XML + visual + README | OK |
+| T14 | Auditoria de imagens | texto + XML + visual + README | texto + XML + visual + README | OK |
