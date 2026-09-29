@@ -460,14 +460,18 @@ foreach ($contract in $lifecycleContracts) {
 # The AWS sequence must show complete integration result names in visible text,
 # not only in the SVG accessibility description.
 $confirmationAwsSvg = Get-Content -LiteralPath (Join-Path $awsVisualRoot 'flash-booking-confirmation-aws-components.svg') -Raw
+[xml]$confirmationAwsXml = $confirmationAwsSvg
+$step08 = $confirmationAwsXml.SelectSingleNode("//*[@id='step08-result']")
+Assert-Condition -Condition ($null -ne $step08) -Message 'AWS confirmation diagram lacks the semantic step 08 group'
+$step08TextNodes = @($step08.SelectNodes(".//*[local-name()='text']") | ForEach-Object { $_.InnerText })
+$step08VisibleText = [regex]::Replace(($step08TextNodes -join ' '), '\s+', ' ').Trim()
 foreach ($visibleMessage in @(
-    'ReservationHeld</text>',
-    'ReservationConfirmationRequested</text>',
-    'ReservationConfirmed ou</text>',
-    'ReservationConfirmationRejected.</text>',
-    'ReservationCancellationRequested.'
+    '08',
+    'Entrega o resultado',
+    'ReservationConfirmed ou ReservationConfirmationRejected.'
 )) {
-    Assert-Contains -Text $confirmationAwsSvg -Expected $visibleMessage -Context 'visible AWS confirmation sequence contract'
+    Assert-Contains -Text $step08VisibleText -Expected $visibleMessage -Context 'visible AWS step 08 result contract'
 }
+Assert-Contains -Text $confirmationAwsSvg -Expected 'ReservationCancellationRequested.' -Context 'visible AWS cancellation request contract'
 
 Write-Output "validate-readme: PASS - current specs linked, $($imageMatches.Count) README images, $($localReferences.Count) local references, 3 performance scenarios"

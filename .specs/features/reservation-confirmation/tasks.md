@@ -230,7 +230,7 @@ T08 → T09 → T10
 **Tests:** README gate, XML, renderização/inspeção e sensor em scratch isolado.
 **Gate:** Docs, Sensor, Diff.
 
-**Status:** Complete; evento de rejeição exibido por extenso, gate semântico passa e mata a mutação abreviada em cópia temporária; SVG renderizado e inspecionado.
+**Status:** Complete; evento de rejeição exibido por extenso, gate semântico limitado ao grupo step08-result passa e mata a mutação abreviada em cópia temporária; SVG renderizado e inspecionado. Aguarda veredito independente final.
 
 ## Phase Execution Map
 

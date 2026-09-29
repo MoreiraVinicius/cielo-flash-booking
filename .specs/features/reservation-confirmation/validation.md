@@ -180,3 +180,44 @@ Esta revisão é documental; os testes funcionais de T01–T12 são a evidência
 ### Resultado inicial do Verifier (supersedido por T15)
 
 **Initial result:** FAIL — AC7 label gap and one surviving documentation mutant. T15 corrige ambos e solicita nova verificação independente.
+
+## Independent fresh re-verification of T13–T15 (29/09/2026)
+
+**Verdict: FAIL — the visible SVG correction is present, but the T15 discriminator does not enforce the step 08 label.** Review scope: `.specs/features/reservation-confirmation/spec.md`, `tasks.md`, `documentation-audit.md`, `design.md`, `validation.md`, plus `git diff 22d5c04..53de354`.
+
+### Spec-anchored evidence
+
+| Criterion | Expected outcome | Independent evidence | Result |
+| --- | --- | --- | --- |
+| CONFIRM-04 AC6 (`spec.md:128`) | AWS sequence 01–08 communicates hold/outbox, owner work, resolution, PostgreSQL decision, result, cancellation/expiration branches, and un-applied AWS status without IAM | Visible sequence and branch labels in `docs/images/flash-booking-confirmation-aws-components.svg:26–28`, `:122–123`, `:125–185`, `:191–203`; AWS resources are separately declared in `infra/modules/data-plane/main.tf:121–160`. README embeds it at `README.md:88–90`. Fresh Chrome headless render at 1960×2070 inspected: sequence and branch text visible, no clipping; SVG parses as XML. | ✅ PASS |
+| CONFIRM-04 AC7 (`spec.md:129`) | Current diagrams use current state names, complete message names, and event count in visible labels; historical/target diagrams are identified | Step 08 now visibly contains both full names at `docs/images/flash-booking-confirmation-aws-components.svg:183–184`. Runtime names match `ReservationResolutionProcessor.java:49–51`, outbox event producers at `CreateReservationService.java:59–61`, and routing at `OutboxSqsPublisher.java:80–86`. Three creation events are shown in `flash-booking-transactional-outbox.svg:47`, `:55`, `:63`, and summarized at `README.md:134–136`. README history/target labels are at `README.md:141–147`; inventory classifications are at `documentation-audit.md:27–48`. | ❌ GAP: visible step 08 label mutation survives the README gate (sensor below). |
+| T15 Done when (`tasks.md:229`) | Gate fails if the full visible result name in step 08 is shortened | Replaced only step 08 `ReservationConfirmationRejected.</text>` with `Rejected.</text>` in a scratch copy of `docs/images/`; ran `validate-readme.ps1 -AwsVisualDirectory <scratch>`. It exited 0 and reported PASS because the whole-file search at `scripts/validate-readme.ps1:463–470` still found the same token at SVG lines 114 and 196. | ❌ GAP |
+| Inventory and classification (`spec.md:129`, `documentation-audit.md:23–48`) | Every image inventoried and current/historic/target scope identifiable | Direct directory comparison: 22/22 filenames listed; 19 SVG + 3 PNG. All 19 SVGs parse as XML. README identifies historical and target scopes in the cited lines. | ✅ PASS |
+
+### Gates and isolation
+
+| Gate | Result |
+| --- | --- |
+| `validate_spec.py .specs/features/reservation-confirmation/spec.md` | PASS — 0 errors, 0 warnings |
+| `validate_tasks.py .specs/features/reservation-confirmation/tasks.md` | PASS — 0 errors, 0 warnings |
+| `scripts/validate-readme.ps1` | PASS — 7 README images, 47 local references, 3 performance scenarios |
+| XML | PASS — 19/19 SVGs |
+| Chrome headless render and visual inspection | PASS — current AWS SVG rendered; visible step 08 names legible and no clipping |
+| `git diff --check 22d5c04..53de354` | PASS |
+| `validate_state.py reservation-confirmation` before this report | FAIL — existing report verdict was FAIL; validator requires ranked gaps to be fixed before the feature is done |
+| Scratch sensor | ❌ SURVIVED — one targeted step 08 abbreviation; gate exited 0 |
+| Real working-tree status around sensor | PASS — `git status --porcelain=v1 -uall` was byte-for-byte equivalent before and after cleanup |
+
+### Ranked gap
+
+1. **Major — gate does not bind the required complete rejection name to visible step 08.** The SVG itself is corrected at `docs/images/flash-booking-confirmation-aws-components.svg:184`, but a one-line abbreviation there survives because `scripts/validate-readme.ps1:467` searches the entire SVG and identical full-name text remains at lines 114 and 196. Anchor the assertion to step 08’s text block (or an equivalent semantic region), then repeat this exact scratch mutation. No source/runtime or diagram correction is indicated by this review.
+
+**Summary:** T13’s visible flow and T14’s 22-image audit pass this review. T15’s visible output is corrected, but its required semantic sensor remains weak; overall re-verification is FAIL pending a gate fix and re-run.
+
+### T15 follow-up fix by author (awaiting independent re-verification)
+
+Grouped the full visible step 08 under SVG id `step08-result` at `docs/images/flash-booking-confirmation-aws-components.svg:180–186`. The README validator now parses the SVG and inspects only visible text nodes inside that group (`scripts/validate-readme.ps1:464–475`), so matching names in the accessibility description or other blocks cannot satisfy this contract.
+
+Repeated the exact targeted mutation: only the step 08 line was shortened to `Rejected.` in a scratch copy. `validate-readme.ps1 -AwsVisualDirectory <scratch>` now fails specifically at `visible AWS step 08 result contract`; 1/1 targeted mutation killed. Scratch was removed and real working tree status matched its baseline. The correct diagram passed the README, spec, tasks, XML and diff gates, and a fresh Chrome render was visually inspected.
+
+This is author-side evidence only. A fresh independent Verifier must confirm the correction and write the final PASS before `validate_state.py` can close the feature.
