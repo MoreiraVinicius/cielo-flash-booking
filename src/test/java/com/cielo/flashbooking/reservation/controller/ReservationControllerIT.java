@@ -96,13 +96,23 @@ class ReservationControllerIT extends LocalIntegrationInfrastructure {
         List<Map<String, Object>> outboxEvents = jdbcTemplate.queryForList(
                 "SELECT event_type, payload FROM outbox_event WHERE aggregate_id = ? ORDER BY event_type",
                 reservationId);
-        assertThat(outboxEvents).hasSize(2);
+        assertThat(outboxEvents).hasSize(3);
         assertThat(outboxEvents)
                 .extracting(event -> event.get("event_type"))
-                .containsExactly("ReservationCreated", "ReservationExpirationScheduled");
+                .containsExactly("ReservationCreated", "ReservationExpirationScheduled", "ReservationHeld");
         assertThat(outboxEvents)
                 .allSatisfy(event -> assertThat(event.get("payload").toString())
                         .contains(reservationId.toString(), eventId.toString(), "expiresAt"));
+        Map<String, Object> heldEvent = jdbcTemplate.queryForMap(
+                "SELECT id, payload FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationHeld'",
+                reservationId);
+        var heldPayload = objectMapper.readTree(heldEvent.get("payload").toString());
+        assertThat(heldPayload.get("outboxEventId").asString())
+                .isEqualTo(heldEvent.get("id").toString());
+        assertThat(heldPayload.get("type").asString()).isEqualTo("ReservationHeld");
+        assertThat(heldPayload.get("version").asInt()).isEqualTo(1);
+        assertThat(heldPayload.get("quantity").asInt()).isEqualTo(3);
+        assertThat(heldPayload.has("customerId")).isFalse();
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
     }
 

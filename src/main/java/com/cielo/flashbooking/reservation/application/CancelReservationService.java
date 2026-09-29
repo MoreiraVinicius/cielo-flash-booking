@@ -36,13 +36,17 @@ public class CancelReservationService {
     }
 
     private ReservationDetails beginConfirmedCancellationAndRead(UUID reservationId) {
-        reservationWriter.requestConfirmedCancellation(reservationId, UUID.randomUUID());
+        reservationWriter
+                .requestConfirmedCancellation(reservationId, UUID.randomUUID())
+                .ifPresent(reservationWriter::addReservationCancellationRequestedOutboxEvent);
         return reservationReader
                 .findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("reservation not found: " + reservationId));
     }
 
     private ReservationDetails closeAndReturn(UUID reservationId, ReservationWriter.CapacityRelease release) {
+        reservationWriter.addReservationHoldClosedOutboxEvent(
+                reservationId, release.eventId(), release.quantity(), release.closedStatus());
         if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
             throw new IllegalStateException("could not return reservation capacity");
         }

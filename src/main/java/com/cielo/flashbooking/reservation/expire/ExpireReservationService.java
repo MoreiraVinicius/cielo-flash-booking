@@ -28,11 +28,13 @@ public class ExpireReservationService {
     public boolean expire(UUID reservationId) {
         return reservationWriter
                 .expirePending(reservationId)
-                .map(this::expireAndReturn)
+                .map(release -> expireAndReturn(reservationId, release))
                 .orElse(false);
     }
 
-    private boolean expireAndReturn(ReservationWriter.CapacityRelease release) {
+    private boolean expireAndReturn(UUID reservationId, ReservationWriter.CapacityRelease release) {
+        reservationWriter.addReservationHoldClosedOutboxEvent(
+                reservationId, release.eventId(), release.quantity(), release.closedStatus());
         if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
             throw new IllegalStateException("could not return expired reservation capacity");
         }

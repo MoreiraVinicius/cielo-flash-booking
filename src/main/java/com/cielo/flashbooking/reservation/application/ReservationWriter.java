@@ -19,7 +19,21 @@ public interface ReservationWriter {
 
     void addReservationCreatedOutboxEvent(Reservation reservation);
 
+    void addReservationHeldOutboxEvent(Reservation reservation);
+
     void addReservationExpirationScheduledOutboxEvent(Reservation reservation);
+
+    void addReservationHoldClosedOutboxEvent(UUID reservationId, UUID eventId, int quantity, ReservationStatus status);
+
+    void addReservationCancellationRequestedOutboxEvent(CancellationRequest request);
+
+    void addReservationConfirmationResultOutboxEvent(
+            UUID reservationId,
+            String resolutionId,
+            String resultType,
+            String resultCode,
+            ReservationStatus status,
+            Instant decidedAt);
 
     /**
      * Closes PENDING as CANCELLED before the deadline or EXPIRED at/after it, using database time after the row lock.
@@ -38,7 +52,7 @@ public interface ReservationWriter {
     /** Completes cancellation only when the supplied id matches the pending request. */
     Optional<CancellationCompletionTransition> completeConfirmedCancellation(UUID reservationId, UUID cancellationId);
 
-    record CapacityRelease(UUID eventId, int quantity) {}
+    record CapacityRelease(UUID eventId, int quantity, ReservationStatus closedStatus) {}
 
     record ConfirmationTransition(
             ReservationStatus status, Instant confirmedAt, CapacityRelease expiredCapacityRelease, boolean changed) {}

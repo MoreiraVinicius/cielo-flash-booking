@@ -5,6 +5,7 @@ import com.cielo.flashbooking.reservation.application.CompleteReservationCancell
 import com.cielo.flashbooking.reservation.application.ConfirmReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationCancellationCompletionResult;
 import com.cielo.flashbooking.reservation.application.ReservationConfirmationResult;
+import com.cielo.flashbooking.reservation.application.ReservationWriter;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,14 +16,17 @@ public class ReservationResolutionProcessor {
     private final ReservationResolutionInbox inbox;
     private final ConfirmReservationService confirmReservationService;
     private final CompleteReservationCancellationService completeReservationCancellationService;
+    private final ReservationWriter reservationWriter;
 
     public ReservationResolutionProcessor(
             ReservationResolutionInbox inbox,
             ConfirmReservationService confirmReservationService,
-            CompleteReservationCancellationService completeReservationCancellationService) {
+            CompleteReservationCancellationService completeReservationCancellationService,
+            ReservationWriter reservationWriter) {
         this.inbox = inbox;
         this.confirmReservationService = confirmReservationService;
         this.completeReservationCancellationService = completeReservationCancellationService;
+        this.reservationWriter = reservationWriter;
     }
 
     @Transactional
@@ -40,6 +44,18 @@ public class ReservationResolutionProcessor {
         }
 
         ReservationResolutionOutcome outcome = decide(message);
+        if (message.type() == ReservationResolutionMessage.Type.CONFIRMATION_REQUESTED) {
+            String resultType = outcome.status() == ReservationStatus.CONFIRMED
+                    ? "ReservationConfirmed"
+                    : "ReservationConfirmationRejected";
+            reservationWriter.addReservationConfirmationResultOutboxEvent(
+                    message.reservationId(),
+                    message.resolutionId(),
+                    resultType,
+                    outcome.code(),
+                    outcome.status(),
+                    outcome.confirmedAt() == null ? reservationWriter.currentTime() : outcome.confirmedAt());
+        }
         inbox.complete(message.source(), message.resolutionId(), outcome);
         return outcome;
     }

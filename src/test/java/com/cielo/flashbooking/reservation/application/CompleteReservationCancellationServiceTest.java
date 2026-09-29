@@ -30,7 +30,7 @@ class CompleteReservationCancellationServiceTest {
                         ReservationStatus.CANCELLED,
                         cancellationId,
                         true,
-                        new ReservationWriter.CapacityRelease(eventId, 3))));
+                        new ReservationWriter.CapacityRelease(eventId, 3, ReservationStatus.CANCELLED))));
         when(inventory.increment(eventId, 3)).thenReturn(true);
 
         assertThat(new CompleteReservationCancellationService(writer, inventory, publisher)
@@ -76,7 +76,7 @@ class CompleteReservationCancellationServiceTest {
                         ReservationStatus.CANCELLED,
                         cancellationId,
                         true,
-                        new ReservationWriter.CapacityRelease(eventId, 3))));
+                        new ReservationWriter.CapacityRelease(eventId, 3, ReservationStatus.CANCELLED))));
         when(inventory.increment(eventId, 3)).thenReturn(false);
 
         assertThatThrownBy(() -> new CompleteReservationCancellationService(writer, inventory, publisher)

@@ -106,6 +106,9 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
         assertThat(available(fixture.eventId())).isEqualTo(7);
         assertThat(inboxCount("reservation-owner", "resolution-1")).isEqualTo(1);
         assertThat(inboxOutcome("reservation-owner", "resolution-1")).isEqualTo("CONFIRMED");
+        assertThat(outboxCount("ReservationConfirmed", fixture.reservationId())).isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmationRejected", fixture.reservationId()))
+                .isZero();
         awaitSourceQueueEmpty();
     }
 
@@ -141,6 +144,8 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
         assertThat(reservationStatus(first.reservationId())).isEqualTo("CONFIRMED");
         assertThat(reservationStatus(second.reservationId())).isEqualTo("PENDING");
         assertThat(inboxCount("reservation-owner", "resolution-conflict")).isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmed", first.reservationId())).isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmed", second.reservationId())).isZero();
         var retry = sqsClient
                 .receiveMessage(request -> request.queueUrl(queueUrl)
                         .maxNumberOfMessages(10)
@@ -230,6 +235,26 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
                         "resolution-not-found"))
                 .isNull();
         awaitSourceQueueEmpty();
+    }
+
+    @Test
+    void poll_whenConfirmationArrivesAfterDeadline_closesHoldAndPublishesRejectionOnce() {
+        Fixture fixture = insertPendingReservation(10, 7, 3);
+        jdbcTemplate.update(
+                "UPDATE reservation SET expires_at = clock_timestamp() - interval '1 second' WHERE id = ?",
+                fixture.reservationId());
+        send(confirmationBody(fixture.reservationId(), "resolution-expired"));
+
+        consumer().poll();
+
+        assertThat(reservationStatus(fixture.reservationId())).isEqualTo("EXPIRED");
+        assertThat(available(fixture.eventId())).isEqualTo(10);
+        assertThat(inboxOutcome("reservation-owner", "resolution-expired")).isEqualTo("EXPIRED");
+        assertThat(outboxCount("ReservationHoldClosed", fixture.reservationId()))
+                .isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmationRejected", fixture.reservationId()))
+                .isEqualTo(1);
+        assertThat(outboxCount("ReservationConfirmed", fixture.reservationId())).isZero();
     }
 
     @Test
@@ -430,6 +455,14 @@ class SqsReservationConfirmationConsumerIT extends LocalIntegrationInfrastructur
                 String.class,
                 source,
                 resolutionId);
+    }
+
+    private int outboxCount(String eventType, UUID reservationId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_event WHERE event_type = ? AND aggregate_id = ?",
+                Integer.class,
+                eventType,
+                reservationId);
     }
 
     private void awaitSourceQueueEmpty() {

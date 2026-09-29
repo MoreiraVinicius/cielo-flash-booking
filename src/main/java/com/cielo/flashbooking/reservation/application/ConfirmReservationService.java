@@ -26,13 +26,17 @@ public class ConfirmReservationService {
 
     @Transactional
     public Optional<ReservationConfirmationResult> confirm(UUID reservationId) {
-        return reservationWriter.confirmPending(reservationId).map(this::releaseExpiredCapacityAndResult);
+        return reservationWriter
+                .confirmPending(reservationId)
+                .map(transition -> releaseExpiredCapacityAndResult(reservationId, transition));
     }
 
     private ReservationConfirmationResult releaseExpiredCapacityAndResult(
-            ReservationWriter.ConfirmationTransition transition) {
+            UUID reservationId, ReservationWriter.ConfirmationTransition transition) {
         ReservationWriter.CapacityRelease release = transition.expiredCapacityRelease();
         if (release != null) {
+            reservationWriter.addReservationHoldClosedOutboxEvent(
+                    reservationId, release.eventId(), release.quantity(), release.closedStatus());
             if (!inventoryOperations.increment(release.eventId(), release.quantity())) {
                 throw new IllegalStateException("could not return expired reservation capacity");
             }

@@ -45,6 +45,7 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
     private SqsClient sqsClient;
     private String expirationQueueUrl;
     private String notificationQueueUrl;
+    private String ownerQueueUrl;
 
     @BeforeEach
     void setUp() {
@@ -60,6 +61,9 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
                 .queueUrl();
         notificationQueueUrl = sqsClient
                 .createQueue(request -> request.queueName("notification-" + UUID.randomUUID()))
+                .queueUrl();
+        ownerQueueUrl = sqsClient
+                .createQueue(request -> request.queueName("owner-" + UUID.randomUUID()))
                 .queueUrl();
     }
 
@@ -141,6 +145,52 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
     }
 
     @Test
+    void publishesReservationLifecycleEventsToTheSingleOwnerQueue() {
+        UUID held = insertOutboxEvent("ReservationHeld", Instant.parse("2026-09-09T12:10:00Z"));
+        UUID confirmed = insertOutboxEvent("ReservationConfirmed", Instant.parse("2026-09-09T12:10:00Z"));
+        UUID rejected = insertOutboxEvent("ReservationConfirmationRejected", Instant.parse("2026-09-09T12:10:00Z"));
+        UUID closed = insertOutboxEvent("ReservationHoldClosed", Instant.parse("2026-09-09T12:10:00Z"));
+        UUID cancellation =
+                insertOutboxEvent("ReservationCancellationRequested", Instant.parse("2026-09-09T12:10:00Z"));
+
+        publisher(expirationQueueUrl).publishPendingEvents();
+
+        var ownerMessages = sqsClient
+                .receiveMessage(request ->
+                        request.queueUrl(ownerQueueUrl).maxNumberOfMessages(10).messageAttributeNames("All"))
+                .messages();
+        assertThat(ownerMessages).hasSize(5);
+        assertThat(ownerMessages)
+                .extracting(message ->
+                        message.messageAttributes().get("outboxEventId").stringValue())
+                .containsExactlyInAnyOrder(
+                        held.toString(),
+                        confirmed.toString(),
+                        rejected.toString(),
+                        closed.toString(),
+                        cancellation.toString());
+        assertThat(ownerMessages)
+                .extracting(
+                        message -> message.messageAttributes().get("eventType").stringValue())
+                .containsExactlyInAnyOrder(
+                        "ReservationHeld",
+                        "ReservationConfirmed",
+                        "ReservationConfirmationRejected",
+                        "ReservationHoldClosed",
+                        "ReservationCancellationRequested");
+        assertThat(sqsClient
+                        .receiveMessage(request ->
+                                request.queueUrl(notificationQueueUrl).waitTimeSeconds(1))
+                        .messages())
+                .isEmpty();
+        assertThat(sqsClient
+                        .receiveMessage(
+                                request -> request.queueUrl(expirationQueueUrl).waitTimeSeconds(1))
+                        .messages())
+                .isEmpty();
+    }
+
+    @Test
     void leavesFailedPublicationPendingForARepeatAttempt() {
         UUID eventId = insertOutboxEvent("ReservationExpirationScheduled", Instant.parse("2026-09-09T11:59:00Z"));
 
@@ -165,6 +215,7 @@ class OutboxSqsPublisherIT extends LocalIntegrationInfrastructure {
                 sqsClient,
                 expirationUrl,
                 notificationQueueUrl,
+                ownerQueueUrl,
                 clock,
                 JsonMapper.builder().build());
     }

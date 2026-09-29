@@ -45,7 +45,10 @@ class ConfirmReservationServiceTest {
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         when(writer.confirmPending(reservationId))
                 .thenReturn(Optional.of(new ReservationWriter.ConfirmationTransition(
-                        ReservationStatus.EXPIRED, null, new ReservationWriter.CapacityRelease(eventId, 3), true)));
+                        ReservationStatus.EXPIRED,
+                        null,
+                        new ReservationWriter.CapacityRelease(eventId, 3, ReservationStatus.EXPIRED),
+                        true)));
         when(inventory.increment(eventId, 3)).thenReturn(true);
 
         assertThat(service(writer, inventory, publisher).confirm(reservationId))
@@ -64,7 +67,10 @@ class ConfirmReservationServiceTest {
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         when(writer.confirmPending(reservationId))
                 .thenReturn(Optional.of(new ReservationWriter.ConfirmationTransition(
-                        ReservationStatus.EXPIRED, null, new ReservationWriter.CapacityRelease(eventId, 3), true)));
+                        ReservationStatus.EXPIRED,
+                        null,
+                        new ReservationWriter.CapacityRelease(eventId, 3, ReservationStatus.EXPIRED),
+                        true)));
         when(inventory.increment(eventId, 3)).thenReturn(false);
 
         assertThatThrownBy(() -> service(writer, inventory, publisher).confirm(reservationId))

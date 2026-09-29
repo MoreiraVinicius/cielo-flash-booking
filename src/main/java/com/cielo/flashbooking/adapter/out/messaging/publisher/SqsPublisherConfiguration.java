@@ -26,6 +26,7 @@ class SqsPublisherConfiguration {
     SqsClient sqsClient(OutboxPublisherProperties properties) {
         Assert.hasText(properties.expirationQueueUrl(), "outbox.publisher.expiration-queue-url must be configured");
         Assert.hasText(properties.notificationQueueUrl(), "outbox.publisher.notification-queue-url must be configured");
+        Assert.hasText(properties.ownerQueueUrl(), "outbox.publisher.owner-queue-url must be configured");
         SqsClientBuilder builder = SqsClient.builder()
                 .region(Region.of(properties.region()))
                 .overrideConfiguration(ClientOverrideConfiguration.builder()
@@ -50,6 +51,7 @@ class SqsPublisherConfiguration {
                 sqsClient,
                 properties.expirationQueueUrl(),
                 properties.notificationQueueUrl(),
+                properties.ownerQueueUrl(),
                 clock,
                 objectMapper);
     }

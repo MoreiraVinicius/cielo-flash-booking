@@ -31,7 +31,8 @@ class CancelReservationServiceTest {
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         ReservationDetails cancelled = cancelledReservation(reservationId, eventId);
         when(writer.closePendingOnCancellation(reservationId))
-                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
+                .thenReturn(
+                        Optional.of(new ReservationWriter.CapacityRelease(eventId, 3, ReservationStatus.CANCELLED)));
         when(inventory.increment(eventId, 3)).thenReturn(true);
         when(reader.findById(reservationId)).thenReturn(Optional.of(cancelled));
 
@@ -39,6 +40,7 @@ class CancelReservationServiceTest {
                 .isEqualTo(cancelled);
 
         verify(inventory).increment(eventId, 3);
+        verify(writer).addReservationHoldClosedOutboxEvent(reservationId, eventId, 3, ReservationStatus.CANCELLED);
         verify(publisher).publishEvent(new EventAvailabilityChanged(eventId));
     }
 
@@ -57,6 +59,12 @@ class CancelReservationServiceTest {
                 .isEqualTo(terminal);
 
         verify(inventory, never()).increment(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
+        verify(writer, never())
+                .addReservationHoldClosedOutboxEvent(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.any());
         verify(publisher, never()).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));
     }
 
@@ -76,14 +84,17 @@ class CancelReservationServiceTest {
                 ReservationStatus.CANCELLATION_PENDING,
                 Instant.parse("2026-09-09T12:10:00Z"),
                 null);
+        ReservationWriter.CancellationRequest request =
+                new ReservationWriter.CancellationRequest(reservationId, eventId, 3, UUID.randomUUID());
         when(writer.closePendingOnCancellation(reservationId)).thenReturn(Optional.empty());
-        when(writer.requestConfirmedCancellation(eq(reservationId), any())).thenReturn(Optional.empty());
+        when(writer.requestConfirmedCancellation(eq(reservationId), any())).thenReturn(Optional.of(request));
         when(reader.findById(reservationId)).thenReturn(Optional.of(cancellationPending));
 
         assertThat(service(writer, reader, inventory, publisher).cancel(reservationId))
                 .isEqualTo(cancellationPending);
 
         verify(writer).requestConfirmedCancellation(eq(reservationId), any());
+        verify(writer).addReservationCancellationRequestedOutboxEvent(request);
         verify(inventory, never()).increment(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
         verify(publisher, never()).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));
     }

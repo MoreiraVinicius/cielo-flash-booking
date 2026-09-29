@@ -8,6 +8,7 @@ public record OutboxPublisherProperties(
         boolean enabled,
         String expirationQueueUrl,
         String notificationQueueUrl,
+        String ownerQueueUrl,
         String region,
         String endpoint,
         Duration apiCallTimeout) {

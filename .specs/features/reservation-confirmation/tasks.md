@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** Execução aprovada. T01–T05 estão concluídas; T06 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
+**Status:** Execução aprovada. T01–T06 estão concluídas; T07 é o próximo passo. T08–T11 reconciliam documentação, diagramas e operação depois de T07.
 
 ## Execution Protocol
 
@@ -13,7 +13,7 @@ Seguir `tlc-spec-driven`: atualizar spec/context/design e decisões antes de alt
 | --- | --- | --- |
 | Estado e transições | unit + PostgreSQL integration | `PENDING → CONFIRMED`, cancelamento pendente sem retorno a `CONFIRMED`, corridas, prazo pós-lock e invariante por evento. |
 | Infraestrutura de integração | Terraform/static + Compose smoke | T04: 7 testes Terraform passaram nos módulos data-plane, compute e edge-observability; `terraform validate` passou na composição demo; LocalStack saudável criou as 4 filas novas, cada qual com DLQ própria, long polling de 20s e visibility timeout de 60s. |
-| Inbox, outbox, SQS | integration | `ReservationHeld` a um único dono lógico, fechamento por `CANCELLED`/`EXPIRED` só na transição vencedora, duplicata, mudança de `messageId` com mesmo `resolutionId`, replay após janela de dedup da fila, ordem invertida de hold/fechamento, retry, queda entre commit e ack, DLQ e resultado ao produtor. |
+| Inbox, outbox, SQS | integration | T05: 8 integrações SQS/PostgreSQL passaram para inbox, replay, concorrência e retry. T06: 37 integrações selecionadas passaram; outbox de `ReservationHeld`, resultado, fechamento e cancelamento, roteamento ao dono, criação, expiração e concorrência. |
 | HTTP | integration | `GET` confirmado/em cancelamento e `DELETE` confirmado assíncrono; cinco rotas do case preservadas. |
 | Specs e diagramas | validation + inspeção visual | Links, SVG acessível, distinção atual/proposto e contratos verdadeiros. |
 
@@ -111,13 +111,15 @@ T08 → T09 → T10
 
 ### T06: Publicar resultados e solicitação de cancelamento
 
-**What:** Acrescentar `ReservationHeld`, `ReservationConfirmed`, `ReservationConfirmationRejected`, `ReservationHoldClosed(CANCELLED/EXPIRED)` e `ReservationCancellationRequested` à outbox e rotear ao único dono lógico externo, sem SNS; o fechamento por expiração deve ser gravado só por quem vencer `PENDING → EXPIRED`, inclusive `DELETE` tardio.
+**What:** Acrescentar `ReservationHeld`, `ReservationConfirmed`, `ReservationConfirmationRejected`, `ReservationHoldClosed(CANCELLED/EXPIRED)` e `ReservationCancellationRequested` à outbox e rotear ao único dono lógico externo, sem SNS; o fechamento por expiração deve ser gravado só por quem vencer `PENDING → EXPIRED`, inclusive `DELETE` tardio. Adicionar `outboxEventId` estável ao payload público e aceitar os tipos novos no schema do evento.
 **Where:** `src/main/java/com/cielo/flashbooking/adapter/out/messaging/`
 **Depends on:** T05
 **Requirement:** CONFIRM-03, CONFIRM-05
 **Done when:** Eventos têm versão/correlação sem PII, `ReservationHeld` usa identidade estável em republicações, `DELETE` e expiração de `PENDING` notificam com motivo sem retardar devolução de estoque, falha de publicação deixa outbox pendente e replay não cria resultado adicional; Flash Booking não grava estado de compensação externa.
 **Tests:** integration de outbox/publisher, incluídos na tarefa.
 **Gate:** Java.
+
+**Status:** Complete; V7 libera os cinco tipos de integração; cada produtor grava evento na mesma transação da reserva/inbox, e o publisher os encaminha apenas à fila do responsável, mantendo filas de notificação/expiração separadas. 98 unitários e 37 integrações selecionadas passaram; contratos verificam identidade no payload, ausência de PII em `ReservationHeld`, resultado por resolução, fechamento após prazo, cancellationId estável, republicação e roteamento.
 
 ### T07: Atualizar leitura, cancelamento e projeções de reserva
 

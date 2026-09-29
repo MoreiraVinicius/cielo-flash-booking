@@ -1,6 +1,6 @@
 # Contexto da confirmação externa
 
-**Status:** decisões aprovadas; execução em andamento conforme AD-031.
+**Status:** T01–T06 implementadas; T07 e reconciliação documental/visual continuam no plano AD-031.
 
 ## Linguagem de domínio
 
@@ -34,6 +34,7 @@
 - Uma fila SQS dedicada é a entrada da confirmação; ela tem um único dono lógico, o Flash Booking, e pode ter vários workers competindo. A fila de saída tem como único dono lógico o responsável externo, ainda que várias réplicas dele a consumam.
 - A infraestrutura separa os sentidos em `reservation-to-owner` (publicação pelo worker, consumo pelo responsável) e `reservation-from-owner` (publicação pelo responsável, consumo pelo worker); ambas são SQS Standard, long poll de 20 segundos e DLQ própria. Em AWS, a role do responsável é opcional na configuração da demo, mas sem seu ARN não há acesso externo concedido.
 - O `worker` tem `SendMessage` somente na fila ao responsável e `ReceiveMessage`/`DeleteMessage`/`GetQueueAttributes` somente na fila de entrada. A role externa configurada pode consumir a fila ao responsável e publicar na fila de entrada; não recebe acesso às filas de e-mail ou expiração.
+- A outbox persiste `ReservationHeld`, `ReservationConfirmed`, `ReservationConfirmationRejected`, `ReservationHoldClosed` e `ReservationCancellationRequested` com o estado/inbox que os origina. Eventos de integração usam `outboxEventId` igual ao id da linha, sem PII, e o publisher os roteia exclusivamente a `reservation-to-owner`; criação/notificação e expiração preservam suas filas atuais.
 - Vários eventos de venda podem usar a mesma fila de confirmação com processamento paralelo por reserva.
 - O usuário quer que o cancelamento de uma reserva confirmada seja assíncrono: o Flash Booking registra um estado intermediário, envia uma solicitação ao módulo externo e só conclui após desfecho externo. `DELETE` de `PENDING` permanece imediato e precisa notificar o responsável externo para parar ou compensar seu trabalho.
 - A expiração efetiva de `PENDING` também notifica o responsável externo por `ReservationHoldClosed(EXPIRED)`; o agendamento da expiração não é esse fato.

@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -119,6 +120,90 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
         addOutboxEvent(reservation, "ReservationExpirationScheduled");
     }
 
+    @Override
+    public void addReservationHeldOutboxEvent(Reservation reservation) {
+        UUID outboxEventId = UUID.randomUUID();
+        addIntegrationOutboxEvent(
+                outboxEventId,
+                reservation.id(),
+                "ReservationHeld",
+                Map.of(
+                        "outboxEventId", outboxEventId.toString(),
+                        "version", 1,
+                        "type", "ReservationHeld",
+                        "reservationId", reservation.id().toString(),
+                        "eventId", reservation.eventId().toString(),
+                        "quantity", reservation.quantity(),
+                        "expiresAt", reservation.expiresAt().toString()),
+                reservation.createdAt());
+    }
+
+    @Override
+    public void addReservationHoldClosedOutboxEvent(
+            UUID reservationId, UUID eventId, int quantity, ReservationStatus status) {
+        if (status != ReservationStatus.CANCELLED && status != ReservationStatus.EXPIRED) {
+            throw new IllegalArgumentException("hold closure must be CANCELLED or EXPIRED");
+        }
+        UUID outboxEventId = UUID.randomUUID();
+        addIntegrationOutboxEvent(
+                outboxEventId,
+                reservationId,
+                "ReservationHoldClosed",
+                Map.of(
+                        "outboxEventId", outboxEventId.toString(),
+                        "version", 1,
+                        "type", "ReservationHoldClosed",
+                        "reservationId", reservationId.toString(),
+                        "eventId", eventId.toString(),
+                        "quantity", quantity,
+                        "status", status.name()),
+                currentTime());
+    }
+
+    @Override
+    public void addReservationCancellationRequestedOutboxEvent(CancellationRequest request) {
+        UUID outboxEventId = UUID.randomUUID();
+        addIntegrationOutboxEvent(
+                outboxEventId,
+                request.reservationId(),
+                "ReservationCancellationRequested",
+                Map.of(
+                        "outboxEventId", outboxEventId.toString(),
+                        "version", 1,
+                        "type", "ReservationCancellationRequested",
+                        "reservationId", request.reservationId().toString(),
+                        "eventId", request.eventId().toString(),
+                        "quantity", request.quantity(),
+                        "cancellationId", request.cancellationId().toString()),
+                currentTime());
+    }
+
+    @Override
+    public void addReservationConfirmationResultOutboxEvent(
+            UUID reservationId,
+            String resolutionId,
+            String resultType,
+            String resultCode,
+            ReservationStatus status,
+            Instant decidedAt) {
+        if (!"ReservationConfirmed".equals(resultType) && !"ReservationConfirmationRejected".equals(resultType)) {
+            throw new IllegalArgumentException("unsupported reservation confirmation result type");
+        }
+        UUID outboxEventId = UUID.randomUUID();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("outboxEventId", outboxEventId.toString());
+        payload.put("version", 1);
+        payload.put("type", resultType);
+        payload.put("resolutionId", resolutionId);
+        payload.put("reservationId", reservationId.toString());
+        payload.put("result", resultCode);
+        if (status != null) {
+            payload.put("status", status.name());
+        }
+        payload.put("decidedAt", decidedAt.toString());
+        addIntegrationOutboxEvent(outboxEventId, reservationId, resultType, payload, decidedAt);
+    }
+
     private void addOutboxEvent(Reservation reservation, String eventType) {
         jdbcTemplate.update(
                 """
@@ -131,6 +216,24 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 eventType,
                 reservationPayload(reservation),
                 Timestamp.from(reservation.createdAt()));
+    }
+
+    private void addIntegrationOutboxEvent(
+            UUID outboxEventId, UUID reservationId, String eventType, Map<String, Object> payload, Instant occurredAt) {
+        try {
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO outbox_event (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
+                    VALUES (?, 'Reservation', ?, ?, ?::jsonb, ?)
+                    """,
+                    outboxEventId,
+                    reservationId,
+                    eventType,
+                    objectMapper.writeValueAsString(payload),
+                    Timestamp.from(occurredAt));
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("could not serialize reservation integration outbox payload", exception);
+        }
     }
 
     @Override
@@ -164,11 +267,13 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                     updated_at = observed_reservation.observed_at
                 FROM observed_reservation
                 WHERE current_reservation.id = observed_reservation.id
-                RETURNING observed_reservation.event_id, observed_reservation.quantity
+                RETURNING observed_reservation.event_id, observed_reservation.quantity, current_reservation.status
                 """,
                 resultSet -> resultSet.next()
                         ? Optional.of(new CapacityRelease(
-                                resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                                resultSet.getObject("event_id", UUID.class),
+                                resultSet.getInt("quantity"),
+                                ReservationStatus.valueOf(resultSet.getString("status"))))
                         : Optional.empty(),
                 reservationId);
     }
@@ -185,11 +290,13 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 WHERE id = ?
                   AND status = 'PENDING'
                   AND expires_at <= clock_timestamp()
-                RETURNING event_id, quantity
+                RETURNING event_id, quantity, status
                 """,
                 resultSet -> resultSet.next()
                         ? Optional.of(new CapacityRelease(
-                                resultSet.getObject("event_id", UUID.class), resultSet.getInt("quantity")))
+                                resultSet.getObject("event_id", UUID.class),
+                                resultSet.getInt("quantity"),
+                                ReservationStatus.valueOf(resultSet.getString("status"))))
                         : Optional.empty(),
                 reservationId);
     }
@@ -238,7 +345,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
         return Optional.of(new ConfirmationTransition(
                 ReservationStatus.EXPIRED,
                 null,
-                new CapacityRelease(reservation.eventId(), reservation.quantity()),
+                new CapacityRelease(reservation.eventId(), reservation.quantity(), ReservationStatus.EXPIRED),
                 true));
     }
 
@@ -304,7 +411,7 @@ class JdbcReservationPersistenceAdapter implements ReservationWriter, Reservatio
                 ReservationStatus.CANCELLED,
                 reservation.cancellationId(),
                 true,
-                new CapacityRelease(reservation.eventId(), reservation.quantity())));
+                new CapacityRelease(reservation.eventId(), reservation.quantity(), ReservationStatus.CANCELLED)));
     }
 
     private LockedReservation toLockedReservation(ResultSet resultSet) throws SQLException {

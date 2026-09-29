@@ -86,7 +86,7 @@ class ReservationConcurrencyIT extends LocalIntegrationInfrastructure {
                         "SELECT count(*) FROM reservation WHERE event_id = ?", Integer.class, eventId))
                 .isEqualTo(10);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_event", Integer.class))
-                .isEqualTo(20);
+                .isEqualTo(30);
     }
 
     @Test

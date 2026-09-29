@@ -63,6 +63,7 @@ class CreateReservationServiceTest {
         assertThat(result.reservation().expiresAt()).isEqualTo(acceptedAt.plus(Duration.ofMinutes(10)));
         verify(reservationWriter).save(result.reservation());
         verify(reservationWriter).addReservationCreatedOutboxEvent(result.reservation());
+        verify(reservationWriter).addReservationHeldOutboxEvent(result.reservation());
         verify(reservationWriter).addReservationExpirationScheduledOutboxEvent(result.reservation());
         verify(eventPublisher).publishEvent(any(EventAvailabilityChanged.class));
     }
@@ -79,6 +80,7 @@ class CreateReservationServiceTest {
         verify(reservationWriter, never()).upsertCustomer(any());
         verify(reservationWriter, never()).save(any());
         verify(reservationWriter, never()).addReservationCreatedOutboxEvent(any());
+        verify(reservationWriter, never()).addReservationHeldOutboxEvent(any());
         verify(reservationWriter, never()).addReservationExpirationScheduledOutboxEvent(any());
     }
 
@@ -94,6 +96,7 @@ class CreateReservationServiceTest {
         verify(reservationWriter, never()).upsertCustomer(any());
         verify(reservationWriter, never()).save(any());
         verify(reservationWriter, never()).addReservationCreatedOutboxEvent(any());
+        verify(reservationWriter, never()).addReservationHeldOutboxEvent(any());
         verify(reservationWriter, never()).addReservationExpirationScheduledOutboxEvent(any());
     }
 

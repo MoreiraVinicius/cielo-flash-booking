@@ -12,6 +12,7 @@ import com.cielo.flashbooking.reservation.application.CompleteReservationCancell
 import com.cielo.flashbooking.reservation.application.ConfirmReservationService;
 import com.cielo.flashbooking.reservation.application.ReservationCancellationCompletionResult;
 import com.cielo.flashbooking.reservation.application.ReservationConfirmationResult;
+import com.cielo.flashbooking.reservation.application.ReservationWriter;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,18 +30,27 @@ class ReservationResolutionProcessorTest {
         ReservationResolutionInbox inbox = mock(ReservationResolutionInbox.class);
         ConfirmReservationService confirm = mock(ConfirmReservationService.class);
         CompleteReservationCancellationService cancel = mock(CompleteReservationCancellationService.class);
+        ReservationWriter writer = mock(ReservationWriter.class);
         when(inbox.tryBegin(message, FINGERPRINT)).thenReturn(true);
         when(confirm.confirm(reservationId))
                 .thenReturn(
                         Optional.of(new ReservationConfirmationResult(ReservationStatus.CONFIRMED, confirmedAt, true)));
 
         ReservationResolutionOutcome outcome =
-                new ReservationResolutionProcessor(inbox, confirm, cancel).process(message, FINGERPRINT);
+                new ReservationResolutionProcessor(inbox, confirm, cancel, writer).process(message, FINGERPRINT);
 
         assertThat(outcome)
                 .isEqualTo(
                         new ReservationResolutionOutcome("CONFIRMED", ReservationStatus.CONFIRMED, confirmedAt, null));
         verify(inbox).complete(message.source(), message.resolutionId(), outcome);
+        verify(writer)
+                .addReservationConfirmationResultOutboxEvent(
+                        reservationId,
+                        message.resolutionId(),
+                        "ReservationConfirmed",
+                        "CONFIRMED",
+                        ReservationStatus.CONFIRMED,
+                        confirmedAt);
         verify(cancel, never()).complete(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
@@ -52,17 +62,26 @@ class ReservationResolutionProcessorTest {
         ReservationResolutionInbox inbox = mock(ReservationResolutionInbox.class);
         ConfirmReservationService confirm = mock(ConfirmReservationService.class);
         CompleteReservationCancellationService cancel = mock(CompleteReservationCancellationService.class);
+        ReservationWriter writer = mock(ReservationWriter.class);
         when(inbox.tryBegin(message, FINGERPRINT)).thenReturn(false);
         when(inbox.find(message.source(), message.resolutionId()))
                 .thenReturn(Optional.of(new ReservationResolutionInbox.StoredResolution(FINGERPRINT, storedOutcome)));
 
-        assertThat(new ReservationResolutionProcessor(inbox, confirm, cancel).process(message, FINGERPRINT))
+        assertThat(new ReservationResolutionProcessor(inbox, confirm, cancel, writer).process(message, FINGERPRINT))
                 .isEqualTo(storedOutcome);
 
         verify(confirm, never()).confirm(org.mockito.ArgumentMatchers.any());
         verify(cancel, never()).complete(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
         verify(inbox, never())
                 .complete(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+        verify(writer, never())
+                .addReservationConfirmationResultOutboxEvent(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any());
@@ -74,14 +93,15 @@ class ReservationResolutionProcessorTest {
         ReservationResolutionInbox inbox = mock(ReservationResolutionInbox.class);
         ConfirmReservationService confirm = mock(ConfirmReservationService.class);
         CompleteReservationCancellationService cancel = mock(CompleteReservationCancellationService.class);
+        ReservationWriter writer = mock(ReservationWriter.class);
         when(inbox.tryBegin(message, FINGERPRINT)).thenReturn(false);
         when(inbox.find(message.source(), message.resolutionId()))
                 .thenReturn(Optional.of(new ReservationResolutionInbox.StoredResolution(
                         "b".repeat(64),
                         new ReservationResolutionOutcome("CONFIRMED", ReservationStatus.CONFIRMED, null, null))));
 
-        assertThatThrownBy(
-                        () -> new ReservationResolutionProcessor(inbox, confirm, cancel).process(message, FINGERPRINT))
+        assertThatThrownBy(() -> new ReservationResolutionProcessor(inbox, confirm, cancel, writer)
+                        .process(message, FINGERPRINT))
                 .isInstanceOf(ReservationResolutionConflictException.class);
 
         verify(confirm, never()).confirm(org.mockito.ArgumentMatchers.any());
@@ -96,13 +116,14 @@ class ReservationResolutionProcessorTest {
         ReservationResolutionInbox inbox = mock(ReservationResolutionInbox.class);
         ConfirmReservationService confirm = mock(ConfirmReservationService.class);
         CompleteReservationCancellationService cancel = mock(CompleteReservationCancellationService.class);
+        ReservationWriter writer = mock(ReservationWriter.class);
         when(inbox.tryBegin(message, FINGERPRINT)).thenReturn(true);
         when(cancel.complete(reservationId, cancellationId))
                 .thenReturn(Optional.of(new ReservationCancellationCompletionResult(
                         ReservationStatus.CANCELLED, cancellationId, true)));
 
         ReservationResolutionOutcome outcome =
-                new ReservationResolutionProcessor(inbox, confirm, cancel).process(message, FINGERPRINT);
+                new ReservationResolutionProcessor(inbox, confirm, cancel, writer).process(message, FINGERPRINT);
 
         assertThat(outcome)
                 .isEqualTo(new ReservationResolutionOutcome(

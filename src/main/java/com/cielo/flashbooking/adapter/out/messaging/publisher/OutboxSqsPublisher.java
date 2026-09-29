@@ -24,6 +24,7 @@ public class OutboxSqsPublisher {
     private final SqsClient sqsClient;
     private final String expirationQueueUrl;
     private final String notificationQueueUrl;
+    private final String ownerQueueUrl;
     private final Clock clock;
     private final JsonMapper objectMapper;
 
@@ -32,12 +33,14 @@ public class OutboxSqsPublisher {
             SqsClient sqsClient,
             String expirationQueueUrl,
             String notificationQueueUrl,
+            String ownerQueueUrl,
             Clock clock,
             JsonMapper objectMapper) {
         this.outboxEventStore = outboxEventStore;
         this.sqsClient = sqsClient;
         this.expirationQueueUrl = expirationQueueUrl;
         this.notificationQueueUrl = notificationQueueUrl;
+        this.ownerQueueUrl = ownerQueueUrl;
         this.clock = clock;
         this.objectMapper = objectMapper;
     }
@@ -76,6 +79,11 @@ public class OutboxSqsPublisher {
         return switch (event.eventType()) {
             case "ReservationCreated" -> notificationQueueUrl;
             case "ReservationExpirationScheduled" -> expirationQueueUrl;
+            case "ReservationHeld",
+                    "ReservationConfirmed",
+                    "ReservationConfirmationRejected",
+                    "ReservationHoldClosed",
+                    "ReservationCancellationRequested" -> ownerQueueUrl;
             default -> throw new IllegalArgumentException("unsupported outbox event type: " + event.eventType());
         };
     }

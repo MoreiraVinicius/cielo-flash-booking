@@ -57,6 +57,7 @@ public class CreateReservationService {
                 UUID.randomUUID(), eventId, customer, quantity, acceptedAt.plus(properties.holdDuration()), acceptedAt);
         reservationWriter.save(reservation);
         reservationWriter.addReservationCreatedOutboxEvent(reservation);
+        reservationWriter.addReservationHeldOutboxEvent(reservation);
         reservationWriter.addReservationExpirationScheduledOutboxEvent(reservation);
         eventPublisher.publishEvent(new EventAvailabilityChanged(eventId));
         return new CreatedReservation(reservation, customer);

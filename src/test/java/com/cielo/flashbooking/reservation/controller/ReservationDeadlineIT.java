@@ -268,6 +268,16 @@ class ReservationDeadlineIT {
                         "SELECT cancellation_id FROM reservation WHERE id = ?", UUID.class, fixture.reservationId()))
                 .isEqualTo(cancellationId);
         assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationCancellationRequested'",
+                        Integer.class,
+                        fixture.reservationId()))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT payload->>'cancellationId' FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationCancellationRequested'",
+                        String.class,
+                        fixture.reservationId()))
+                .isEqualTo(cancellationId.toString());
+        assertThat(jdbcTemplate.queryForObject(
                         "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
                 .isEqualTo(7);
     }
@@ -321,6 +331,11 @@ class ReservationDeadlineIT {
         assertThat(jdbcTemplate.queryForObject(
                         "SELECT available FROM event WHERE id = ?", Integer.class, fixture.eventId()))
                 .isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationHoldClosed'",
+                        Integer.class,
+                        fixture.reservationId()))
+                .isEqualTo(1);
     }
 
     private void lockReservation(Connection connection, UUID reservationId) throws Exception {

@@ -25,7 +25,8 @@ class ExpireReservationServiceTest {
         InventoryOperations inventory = mock(InventoryOperations.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         when(writer.expirePending(reservationId))
-                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
+                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(
+                        eventId, 3, com.cielo.flashbooking.domain.reservation.ReservationStatus.EXPIRED)));
         when(inventory.increment(eventId, 3)).thenReturn(true);
 
         assertThat(service(writer, inventory, publisher).expire(reservationId)).isTrue();
@@ -55,7 +56,8 @@ class ExpireReservationServiceTest {
         ReservationWriter writer = mock(ReservationWriter.class);
         InventoryOperations inventory = mock(InventoryOperations.class);
         when(writer.expirePending(reservationId))
-                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(eventId, 3)));
+                .thenReturn(Optional.of(new ReservationWriter.CapacityRelease(
+                        eventId, 3, com.cielo.flashbooking.domain.reservation.ReservationStatus.EXPIRED)));
         when(inventory.increment(eventId, 3)).thenReturn(false);
 
         assertThatThrownBy(() -> service(writer, inventory, mock(ApplicationEventPublisher.class))

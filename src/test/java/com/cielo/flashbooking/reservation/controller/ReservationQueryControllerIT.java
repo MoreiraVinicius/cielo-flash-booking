@@ -129,6 +129,11 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
         assertThat(jdbcTemplate.queryForObject(
                         "SELECT closure_reason_code FROM reservation WHERE id = ?", String.class, reservationId))
                 .isEqualTo("CANCELLED_BY_REQUEST");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationHoldClosed'",
+                        Integer.class,
+                        reservationId))
+                .isEqualTo(1);
         assertThat(redisTemplate.hasKey("event-availability:" + eventId)).isFalse();
     }
 
@@ -147,6 +152,11 @@ class ReservationQueryControllerIT extends LocalIntegrationInfrastructure {
 
         assertThat(jdbcTemplate.queryForObject("SELECT available FROM event WHERE id = ?", Integer.class, eventId))
                 .isEqualTo(10);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'ReservationHoldClosed'",
+                        Integer.class,
+                        reservationId))
+                .isEqualTo(1);
     }
 
     private UUID insertReservation(String status) {
