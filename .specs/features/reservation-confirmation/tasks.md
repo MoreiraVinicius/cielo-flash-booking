@@ -232,13 +232,25 @@ T08 → T09 → T10
 
 **Status:** Complete; evento de rejeição exibido por extenso, gate semântico limitado ao grupo step08-result passa e mata a mutação abreviada em cópia temporária; SVG renderizado e inspecionado. Aguarda veredito independente final.
 
+### T16: Explicar e diagramar Outbox e SQS como responsabilidades distintas
+
+**What:** Explicar no README que a outbox PostgreSQL persiste os eventos atomicamente e a SQS os transporta; ilustrar a confirmação e o cancelamento com ícones AWS em sequências PlantUML editáveis e SVGs renderizados.
+**Where:** Seção de integração do README; fontes e imagens em `docs/diagrams/` e `docs/images/`; especificação e evidências em `.specs/features/reservation-confirmation/`.
+**Depends on:** T15.
+**Requirement:** CONFIRM-04.
+**Done when:** O leitor consegue seguir criação/outbox/publisher/SQS/responsável/fila de retorno/inbox/decisão/outbox de resultado; a documentação não confunde transporte com persistência nem `CONFIRMED` com pagamento; a fonte PlantUML gera os dois SVGs com ícones AWS e caixas externas explícitas; o README identifica recursos AWS declarados, não aplicados.
+**Tests:** Renderizar os dois diagramas a partir do PlantUML; verificar XML, links locais e inspeção visual; executar o gate documental do README.
+**Gate:** Docs, XML, Visual.
+
+**Status:** Complete; as duas sequências foram renderizadas da mesma fonte PlantUML com ícones AWS da standard library local, inspecionadas em PNG e incluídas no README. README e design explicam a distinção Outbox/SQS, retry, deduplicação de inbox, módulo externo em caixa-preta e status não aplicado da AWS.
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 → T02
 Phase 2: T02 → T03 → T04 → T05 → T06 → T07
 Phase 3: T07 → T08 → T09 → T10 → T11 → T12
-Phase 4: T12 → T13 → T14 → T15
+Phase 4: T12 → T13 → T14 → T15 → T16
 ```
 
 ## Diagram-Definition Cross-Check
@@ -260,6 +272,7 @@ Phase 4: T12 → T13 → T14 → T15
 | T13 | T12 | T12 → T13 | OK |
 | T14 | T13 | T13 → T14 | OK |
 | T15 | T14 | T14 → T15 | OK |
+| T16 | T15 | T15 → T16 | OK |
 
 ## Test Co-location Validation
 
@@ -280,3 +293,4 @@ Phase 4: T12 → T13 → T14 → T15
 | T13 | SVG AWS | XML + visual + README | XML + visual + README | OK |
 | T14 | Auditoria de imagens | texto + XML + visual + README | texto + XML + visual + README | OK |
 | T15 | Contrato visual de resultados | README + XML + visual + sensor | README + XML + visual + sensor | OK |
+| T16 | Fonte diagram-as-code | Renderização PlantUML + XML + visual + README | Renderização PlantUML + XML + visual + README | OK |

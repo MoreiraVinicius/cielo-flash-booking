@@ -89,6 +89,33 @@ O Compose/LocalStack executa a integração com filas simuladas. Terraform decla
 
 ![Componentes AWS declarados e sequência 01 a 08: API Gateway e WAF chegam à Command API no ECS Fargate; PostgreSQL guarda reserva, outbox e inbox; duas SQS com DLQ ligam o worker ao responsável externo em caixa preta; os ramos mostram expiração e cancelamento](docs/images/flash-booking-confirmation-aws-components.svg)
 
+#### Como Outbox e SQS se completam
+
+**São peças diferentes do mesmo fluxo.** A outbox é persistência transacional no PostgreSQL; a SQS é o transporte assíncrono entre Flash Booking e o módulo externo. A reserva continua tendo PostgreSQL como fonte de verdade: SQS não é o estado da reserva, e outbox não envia mensagens por si só.
+
+1. A Command API retém o estoque e grava `PENDING` e `ReservationHeld` na outbox **na mesma transação**. Se a transação falha, nenhum dos dois efeitos fica confirmado.
+2. Depois do commit, o publisher do worker consulta eventos pendentes na outbox, envia `ReservationHeld` à fila `reservation-to-owner` e registra a publicação. Se houver falha ambígua entre enviar e marcar a linha como publicada, o envio pode se repetir; por isso o ID da outbox permanece estável e o consumidor externo precisa ser idempotente.
+3. O único responsável externo consome essa fila, resolve **todas** as pendências e publica `ReservationConfirmationRequested` na fila `reservation-from-owner`. A publicação apenas pede uma decisão; não confirma a reserva.
+4. O worker consome a solicitação. Em uma transação, registra ou reconhece a resolução na inbox, bloqueia a reserva e decide usando o estado e o relógio do PostgreSQL. A atualização da reserva, a inbox e o evento de resultado na outbox são atômicos.
+5. O publisher envia `ReservationConfirmed` ou `ReservationConfirmationRejected` pela fila de saída. O módulo externo só trata a reserva como confirmada ao receber `ReservationConfirmed`; se receber uma rejeição, cuida da própria compensação.
+
+Assim, `CONFIRMED` quer dizer **todas as pendências externas declaradas resolvidas e os ingressos comprometidos no estoque**. Não quer dizer `PAID`: o Flash Booking não interpreta nem processa pagamentos. A inbox evita reaplicar a mesma resolução (`source + resolutionId`); mensagens de transporte podem ser entregues de novo, então isso não representa execução exatamente uma vez.
+
+![Sequência AWS com ícones dos serviços: PostgreSQL persiste reserva, outbox e inbox; o worker publica e consome SQS; o responsável externo caixa-preta conclui todas as pendências e recebe o resultado CONFIRMED ou rejeitado](docs/images/flash-booking-external-confirmation-aws.svg)
+
+[Abrir a fonte PlantUML editável](docs/diagrams/flash-booking-external-confirmation.puml) · [abrir SVG do fluxo de cancelamento](docs/images/flash-booking-external-cancellation-aws.svg).
+
+O cancelamento de uma reserva confirmada segue a mesma fronteira: a API registra `CANCELLATION_PENDING` e `ReservationCancellationRequested` na outbox; o responsável externo recebe pela SQS e devolve `ReservationCancellationCompleted` pela fila de entrada. Até essa conclusão correlacionada, o estoque continua comprometido. A vista específica está no [diagrama de cancelamento](docs/images/flash-booking-external-cancellation-aws.svg), gerado pela mesma fonte PlantUML.
+
+<details>
+<summary>Ver sequência AWS do cancelamento</summary>
+
+![Sequência do cancelamento confirmado: API grava CANCELLATION_PENDING e evento na outbox; o worker publica na SQS; o responsável externo devolve conclusão correlacionada; só então o PostgreSQL libera o estoque](docs/images/flash-booking-external-cancellation-aws.svg)
+
+</details>
+
+**Estado da integração:** Compose/LocalStack permite executar o fluxo e os testes simulam o responsável externo. Terraform declara as filas e DLQs, mas esses novos recursos ainda não foram aplicados na AWS; o módulo externo real também não está implementado neste projeto.
+
 A inbox reconhece uma **reentrega da mesma resolução**, identificada por `source + resolutionId` e pelo conteúdo validado, e reapresenta a decisão já gravada. Ela não resolve as pendências externas. O responsável evita repetir sua própria operação por reserva e tipo; uma resolução nova ainda precisa passar pelo lock, estado e prazo da reserva no PostgreSQL.
 
 #### Estados e corridas

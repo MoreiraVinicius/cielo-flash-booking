@@ -1,0 +1,110 @@
+@startuml flash-booking-external-confirmation-aws
+' Diagramas editáveis. Ícones AWS oficiais da standard library do PlantUML.
+!include <awslib/AWSCommon.puml>
+!include <awslib/Containers/ElasticContainerService.puml>
+!include <awslib/Database/RDS.puml>
+!include <awslib/ApplicationIntegration/SimpleQueueService.puml>
+
+title Confirmação externa — a outbox persiste; a SQS transporta
+autonumber 1 1
+hide footbox
+skinparam backgroundColor #F5F8FC
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 105
+skinparam ParticipantPadding 30
+skinparam BoxPadding 10
+skinparam defaultFontSize 15
+
+actor "Cliente / API caller" as client
+box "Flash Booking · AWS declarada em Terraform, ainda não aplicada" #EAF3FA
+participant "Command API\n$ElasticContainerServiceIMG()" as api
+participant "PostgreSQL RDS\n$RDSIMG()\nreserva · outbox · inbox" as db
+participant "Worker ECS Fargate\n$ElasticContainerServiceIMG()" as worker
+participant "reservation-to-owner\nAmazon SQS\n$SimpleQueueServiceIMG()" as toOwner
+participant "reservation-from-owner\nAmazon SQS\n$SimpleQueueServiceIMG()" as fromOwner
+end box
+box "Outro sistema · responsável único; caixa-preta" #FFF3E3
+participant "Responsável por todas\nas pendências\n(não implementado aqui)" as owner
+end box
+
+== Criar a reserva temporária ==
+client -> api: POST /reservations
+api -> db: 1 transação: reter estoque + PENDING\n+ gravar ReservationHeld na outbox
+db --> api: commit
+api --> client: 201 · PENDING
+
+== Iniciar as pendências e receber confirmação ==
+worker -> db: Consultar outbox após o commit
+db --> worker: ReservationHeld + outboxEventId estável
+worker -> toOwner: Publicar ReservationHeld
+worker -> db: Registrar published_at após envio
+toOwner -> owner: Entregar trabalho ao responsável
+owner -> fromOwner: ReservationConfirmationRequested\n+ após resolver TODAS as pendências
+fromOwner -> worker: SQS entrega solicitação
+worker -> db: Inbox + lock + relógio PostgreSQL\n+ decidir estado + gravar resultado na outbox
+db --> worker: CONFIRMED ou rejeição de negócio
+worker -> db: Consultar outbox do resultado
+db --> worker: ReservationConfirmed ou ReservationConfirmationRejected
+worker -> toOwner: Publicar resultado correlacionado
+toOwner -> owner: Entregar desfecho da reserva
+
+note over api,db #E7F4EF
+  Outbox é uma tabela no PostgreSQL, não uma fila.
+  A alteração da reserva e seu evento são atômicos.
+  Se a publicação falhar, o evento continua para retry.
+end note
+
+note over toOwner,owner #FFF8E8
+  O módulo externo só considera a reserva confirmada ao receber
+  ReservationConfirmed. Mensagens podem repetir; cada lado usa idempotência.
+  Inbox guarda (source, resolutionId). O Flash Booking não entende pagamento.
+end note
+@enduml
+
+@startuml flash-booking-external-cancellation-aws
+!include <awslib/AWSCommon.puml>
+!include <awslib/Containers/ElasticContainerService.puml>
+!include <awslib/Database/RDS.puml>
+!include <awslib/ApplicationIntegration/SimpleQueueService.puml>
+
+title Cancelamento confirmado — mesmo padrão de outbox e SQS
+autonumber 1 1
+hide footbox
+skinparam backgroundColor #F5F8FC
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 100
+skinparam ParticipantPadding 30
+skinparam BoxPadding 10
+skinparam defaultFontSize 15
+
+actor "Cliente / API caller" as client
+box "Flash Booking · runtime local implementado; AWS ainda não aplicada" #EAF3FA
+participant "Command API\n$ElasticContainerServiceIMG()" as api
+participant "PostgreSQL RDS\n$RDSIMG()\nreserva · outbox · inbox" as db
+participant "Worker ECS Fargate\n$ElasticContainerServiceIMG()" as worker
+participant "reservation-to-owner\nAmazon SQS\n$SimpleQueueServiceIMG()" as toOwner
+participant "reservation-from-owner\nAmazon SQS\n$SimpleQueueServiceIMG()" as fromOwner
+end box
+box "Outro sistema · responsável único; caixa-preta" #FFF3E3
+participant "Responsável por todas\nas pendências\n(não implementado aqui)" as owner
+end box
+
+client -> api: DELETE /reservations/{id}
+api -> db: 1 transação: CONFIRMED → CANCELLATION_PENDING\n+ gravar ReservationCancellationRequested na outbox
+db --> api: commit
+api --> client: 202 · cancelamento pendente
+worker -> db: Publisher consulta a outbox
+db --> worker: ReservationCancellationRequested
+worker -> toOwner: Publicar pedido de cancelamento
+toOwner -> owner: Entregar pedido
+owner -> fromOwner: ReservationCancellationCompleted\n+ após resolver todas as obrigações
+fromOwner -> worker: SQS entrega conclusão correlacionada
+worker -> db: Inbox + conclusão + CANCELLED\n+ devolver estoque uma única vez
+note over db #E7F4EF
+  Até a conclusão positiva, o estado permanece CANCELLATION_PENDING
+  e o estoque continua comprometido. O Flash Booking não executa nem
+  acompanha a compensação externa.
+end note
+@enduml

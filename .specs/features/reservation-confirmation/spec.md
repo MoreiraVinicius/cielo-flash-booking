@@ -127,6 +127,7 @@ O Flash Booking gerencia a retenção e o compromisso definitivo dos ingressos. 
 5. WHEN a validação documental rodar THEN os SVGs SHALL ser legíveis, acessíveis, vinculados no README e coerentes com os contratos e comportamento verificados, sem alegar compra paga ou implantação AWS.
 6. WHEN o README mostrar a vista AWS da confirmação THEN o SVG SHALL numerar em ordem a criação `PENDING`, gravação da outbox, envio ao responsável, resolução completa, pedido de confirmação, decisão PostgreSQL, resultado e reação externa; SHALL explicitar os caminhos de cancelamento/expiração e identificar os recursos ainda não aplicados, sem detalhar IAM.
 7. WHEN os diagramas do repositório forem auditados THEN cada diagrama vigente SHALL usar os estados, nomes completos de mensagens e quantidade de eventos atuais em seus rótulos visíveis; vistas históricas ou alvos futuros SHALL estar identificados como tais no próprio desenho ou na legenda do README.
+8. WHEN o README explicar a comunicação externa THEN ele SHALL distinguir a outbox PostgreSQL, que persiste eventos atomicamente, das filas SQS, que os transportam; SHALL explicar retries, duplicidade e inbox sem alegar execução exatamente uma vez; SHALL incluir diagramas AWS de confirmação e cancelamento gerados de uma fonte PlantUML editável.
 
 **Independent Test:** Inspecionar README e SVGs renderizados e executar o gate documental contra os contratos implementados e os limites de deployment.
 

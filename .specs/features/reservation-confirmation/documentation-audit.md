@@ -25,6 +25,8 @@ Inventário de todos os arquivos de `docs/images/`. **Vigente** descreve o runti
 | Arquivo | Recorte | Resultado da auditoria |
 | --- | --- | --- |
 | `flash-booking-confirmation-aws-components.svg` | Vigente, AWS declarada | Sequência 01–08, duas SQS direcionais com DLQ, caixa preta externa e ramos de expiração/cancelamento; sem IAM e sem alegar aplicação AWS. |
+| `flash-booking-external-confirmation-aws.svg` | Vigente, sequência PlantUML/AWS | Criação grava reserva e outbox; worker publica na SQS de saída; responsável único resolve todas as pendências e retorna pedido; inbox/estado/outbox decidem e respondem. AWS não aplicada. |
+| `flash-booking-external-cancellation-aws.svg` | Vigente, sequência PlantUML/AWS | Cancelamento confirmado permanece em `CANCELLATION_PENDING` e conserva estoque até conclusão correlacionada pela SQS de entrada. AWS não aplicada. |
 | `flash-booking-confirmation-c4-context.svg` | Vigente, C4 contexto | Responsável único resolve todas as pendências; Flash Booking decide estoque e prazo. Correto. |
 | `flash-booking-confirmation-c4-containers.svg` | Vigente, C4 containers | APIs, worker, PostgreSQL e filas; inbox/outbox são dados. Correto. |
 | `flash-booking-confirmation-lifecycle.svg` | Vigente, estados | Corrigido nome completo `ReservationCancellationRequested`; mantém `CANCELLATION_PENDING` até conclusão externa. |
@@ -50,7 +52,7 @@ Inventário de todos os arquivos de `docs/images/`. **Vigente** descreve o runti
 ### Correções verificadas
 
 - Contratos comparados com `CreateReservationService`, `ReservationConfirmationService`, `CancelReservationService`, consumidores SQS, roteamento outbox, Terraform e `spec.md`.
-- SVGs alterados parseados como XML, renderizados em Chrome headless e inspecionados quanto a cortes, ordem das setas e textos.
+- SVGs alterados parseados como XML; as duas sequências novas foram renderizadas da fonte PlantUML com ícones AWS e inspecionadas quanto a cortes, ordem das setas e textos.
 - `scripts/validate-readme.ps1` deve confirmar as referências locais e exigir o novo SVG de outbox.
 
 ## Infraestrutura e integração

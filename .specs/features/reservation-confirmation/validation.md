@@ -259,3 +259,29 @@ This is author-side evidence only. A fresh independent Verifier must confirm the
 **Final independent visual follow-up (29/09/2026):** Opened the provided final Chrome headless render `C:\Users\vinic\projetos\cielo\.tmp\aws-step08-final.png` with the local image inspection tool. Step 08 is legible: the number, heading, both full result names, and compensation note are visible inside the card. No text in step 08 is clipped; the full diagram's sequence cards and alternative-path panels are within the rendered canvas. This completes the only outstanding check recorded above. The PNG is author-generated evidence, but the screenshot inspection and conclusion here are independent.
 
 **Updated verdict: PASS.** AC6/AC7 structural and contract checks remain PASS; the exact abbreviation mutant is killed; README/spec/task/XML/inventory/diff gates pass; rendered legibility and clipping inspection now passes. Ranked gaps: none.
+
+## Validação documental adicional T16 — 29/09/2026
+
+**Escopo:** somente explicação e diagramas. Nenhum código do runtime ou Terraform foi alterado.
+
+| Critério | Resultado esperado | Evidência | Resultado |
+| --- | --- | --- | --- |
+| CONFIRM-04 AC8 (`spec.md:130`) | README distingue persistência da outbox e transporte SQS, descreve reentrega/idempotência e liga a fonte editável aos diagramas de confirmação e cancelamento. | `README.md:94–117` explica a sequência, inbox, resultado e limites; `README.md:104` e `:113` incorpora os dois SVGs; `README.md:106` liga `docs/diagrams/flash-booking-external-confirmation.puml`. | ✅ PASS |
+| Precisão do contrato | O PostgreSQL continua autoritativo; `CONFIRMED` significa compromisso da reserva, sem alegar pagamento processado. | `.specs/features/reservation-confirmation/design.md:34–42` detalha outbox, SQS, inbox, replay e decisão; `docs/diagrams/flash-booking-external-confirmation.puml:1–6` fixa os ícones/fontes, e os dois diagramas mostram a caixa-preta e as filas direcionais. | ✅ PASS |
+| Estado dos recursos | Leitor distingue runtime local executável de AWS declarada e não aplicada, e de módulo externo não implementado. | `README.md:117`; confirmação SVG `docs/images/flash-booking-external-confirmation-aws.svg:1`; cancelamento SVG `docs/images/flash-booking-external-cancellation-aws.svg:1`. | ✅ PASS |
+| Inventário das imagens | Toda imagem atual está listada e os SVGs parseiam como XML. | Comparação direta: 24 arquivos (21 SVGs + 3 PNGs); inventário em `documentation-audit.md:25–50`; 21/21 SVGs parseados. | ✅ PASS |
+| Leitura visual | Setas deixam identificáveis outbox persistente, publisher, as duas SQS, o responsável externo, retorno e decisão; cancelamento conserva estoque até conclusão. | Renderização PlantUML para PNG e inspeção visual dos SVGs de confirmação e cancelamento; nenhum corte observado. | ✅ PASS |
+
+### Gates T16
+
+| Gate | Resultado |
+| --- | --- |
+| `validate_spec.py .specs/features/reservation-confirmation/spec.md` | PASS — 0 erros, 0 avisos |
+| `validate_tasks.py .specs/features/reservation-confirmation/tasks.md` | PASS — 0 erros, 0 avisos |
+| `scripts/validate-readme.ps1` | PASS — 9 imagens, 52 referências locais, 3 cenários de performance |
+| PlantUML 1.2024.3 (`-tsvg`) | PASS — dois SVGs gerados pela fonte PlantUML com ícones AWS locais |
+| XML | PASS — 21/21 SVGs |
+| Inventário | PASS — 24/24 arquivos de `docs/images/` presentes na auditoria |
+| `git diff --check` | PASS |
+
+**Veredito T16: PASS.** A explicação e as imagens não mudam a arquitetura aprovada nem alegam integração externa real ou aplicação AWS. Lacunas abertas: nenhuma para o escopo documental T16.

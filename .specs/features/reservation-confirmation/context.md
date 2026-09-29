@@ -41,6 +41,8 @@
 - Uma vez iniciado o cancelamento de `CONFIRMED`, não há comando para desfazer o cancelamento nem retorno a `CONFIRMED`. Falha ou ausência de resposta externa mantém `CANCELLATION_PENDING` e o estoque comprometido até conclusão; recuperação depende de retry ou intervenção operacional.
 - Quando uma confirmação é rejeitada após uma operação externa concluída, o Flash Booking deve enviar um resultado correlacionado que acione a compensação no módulo externo; esse serviço não executa a compensação financeira.
 - O desfecho positivo do cancelamento de `CONFIRMED` significa que todas as obrigações externas necessárias foram revertidas; até esse desfecho, estoque segue comprometido. Uma única mensagem `ReservationConfirmationRejected` basta para exigir compensação após confirmação rejeitada. O Flash Booking não acompanha a conclusão da compensação externa de reservas `CANCELLED` ou `EXPIRED`.
+- A documentação deve explicar que a outbox PostgreSQL persiste eventos em transação com a reserva, enquanto SQS transporta eventos entre serviços; inbox e idempotência tratam reentrega sem prometer execução exatamente uma vez.
+- A representação AWS da confirmação e do cancelamento deve ter fonte PlantUML editável e SVGs no README, com o responsável externo em caixa-preta e o estado de aplicação dos recursos explícito.
 
 ## Condição técnica de integração
 

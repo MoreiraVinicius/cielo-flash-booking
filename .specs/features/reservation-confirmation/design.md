@@ -31,6 +31,16 @@ flowchart LR
 
 O único responsável externo trata todas as pendências e solicita a confirmação antes do prazo. Somente a role IAM desse responsável recebe `sqs:SendMessage` para a fila de entrada; essa permissão lhe concede autoridade para declarar todas as pendências resolvidas. O campo `source` da mensagem é dado autodeclarado para correlação, não autenticação. O worker bloqueia primeiro a linha da reserva, depois registra `resolutionId` na inbox e decide a transição usando o relógio PostgreSQL após o lock. Essa ordem serializa resoluções distintas para a mesma reserva antes que a FK da inbox adquira sua referência e evita deadlock de conversão de lock compartilhado em exclusivo. Inbox, reserva e resultado da outbox permanecem na mesma transação; o publisher entrega o resultado depois. O produtor não considera a reserva definitiva até receber `ReservationConfirmed`.
 
+### Persistência de evento versus transporte
+
+Outbox e SQS não são alternativas. A outbox é uma tabela do PostgreSQL: o comando grava nela o evento junto com a mudança de estado/inventário, no mesmo commit. O publisher do worker busca linhas não publicadas e envia cada evento à fila destinada ao seu consumidor; depois registra a publicação. Essa ordem evita chamar o sistema externo antes do commit e evita perder o evento quando a transação de reserva falha.
+
+O envio e a gravação de `published_at` não formam uma transação distribuída. Se o processo enviar a mensagem à SQS e falhar antes de persistir `published_at`, ele pode publicá-la novamente. Por isso o ID da outbox permanece estável nas republicações e o consumidor externo precisa tratar redelivery idempotentemente. SQS Standard também pode entregar uma mensagem mais de uma vez; a inbox usa `(source, resolutionId)` para reconhecer a repetição de uma resolução de entrada e reapresentar o resultado já persistido. Uma resolução com outra identidade ainda disputa a reserva pelo lock e pelas regras de estado/prazo. Nenhuma dessas garantias significa que a operação externa de negócio executou exatamente uma vez.
+
+No sentido de retorno, o responsável publica em `reservation-from-owner`; o worker consome e decide. Na mesma transação da decisão, persiste inbox, estado da reserva e evento de resultado na outbox. A outbox então permite que o publisher entregue o resultado em `reservation-to-owner`. O PostgreSQL é autoritativo para reserva e estoque; a SQS desacopla produtores e consumidores e mantém mensagens recuperáveis. Cada fila tem sua DLQ.
+
+`docs/diagrams/flash-booking-external-confirmation.puml` contém as sequências PlantUML editáveis, e os SVGs correspondentes são exibidos no README. O desenho mantém o responsável externo em caixa-preta; os ícones AWS indicam a topologia-alvo declarada em Terraform, não um deployment aplicado.
+
 Há um único módulo externo responsável por **todas** as pendências. Suas réplicas competem por uma fila de trabalho; uma mensagem vai a uma réplica de cada vez, embora redelivery seja possível e exija idempotência no processamento externo. A criação grava `ReservationCreated`, `ReservationExpirationScheduled` e `ReservationHeld` na outbox da mesma transação, e o publisher encaminha cada tipo à fila correspondente. `ReservationCreated` continua interno para o consumidor de e-mail, enquanto `ReservationHeld` inicia a integração externa. Não há SNS Fan-Out.
 
 ### Filas e permissões declaradas e executadas localmente
@@ -124,6 +134,8 @@ O evento `ReservationHeld` conserva o mesmo `outboxEventId` em cada tentativa de
 | C4 System Context | Quem solicita confirmação e cancelamento e qual sistema decide/compensa? | `docs/images/flash-booking-confirmation-c4-context.svg` |
 | C4 Container | Onde estão APIs, worker, PostgreSQL, outbox e as duas filas direcionais da integração, sem SNS? | `docs/images/flash-booking-confirmation-c4-containers.svg` |
 | Componentes AWS | Quais recursos Terraform conectam criação, banco, worker, filas com DLQ e responsável externo, sem detalhar a implementação desse responsável? Como uma reserva percorre essa topologia até o resultado? | `docs/images/flash-booking-confirmation-aws-components.svg`, com sequência 01–08 e ramos de encerramento/cancelamento |
+| Sequência Outbox/SQS | Como a persistência transacional se separa do transporte externo, incluindo inbox e resultado? | `docs/diagrams/flash-booking-external-confirmation.puml`, `docs/images/flash-booking-external-confirmation-aws.svg` |
+| Sequência de cancelamento | Por que `CANCELLATION_PENDING` conserva estoque até retorno correlacionado? | `docs/diagrams/flash-booking-external-confirmation.puml`, `docs/images/flash-booking-external-cancellation-aws.svg` |
 | Dinâmica/estado | O que acontece com aceite, duplicata, atraso, expiração e cancelamento pendente? | `docs/images/flash-booking-confirmation-lifecycle.svg` |
 | Outbox da criação | Quais três mensagens a reserva PENDING grava no mesmo commit, e aonde cada uma vai? | `docs/images/flash-booking-transactional-outbox.svg` |
 
