@@ -29,7 +29,7 @@
 
   <rect width="1600" height="980" fill="url(#page)"/>
   <rect x="24" y="20" width="1552" height="108" rx="22" fill="url(#hero)"/>
-  <text class="eyebrow" x="56" y="50" fill="#63D5FF">CASE BACKEND · DISPONIBILIDADE EVENTUAL</text>
+  <text class="eyebrow" x="56" y="50" fill="#63D5FF">DEMO AWS HISTÓRICA · DUAS FILAS ORIGINAIS · DISPONIBILIDADE EVENTUAL</text>
   <text class="title" x="56" y="87">Onde o Flash Booking converge — e onde não pode divergir</text>
   <text class="subtitle" x="56" y="114">PostgreSQL decide o estoque; Valkey acelera a leitura; outbox + SQS desacoplam efeitos após o commit.</text>
 

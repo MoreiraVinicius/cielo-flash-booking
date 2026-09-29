@@ -103,7 +103,7 @@
     <text x="610" y="127" class="small" fill="#356557">somente uma transição vence a corrida</text>
 
     <rect x="996" y="70" width="446" height="75" rx="16" fill="#fff5d9"/>
-    <text x="1023" y="100" class="strong" fill="#674b13">Sem pagamento ou compra confirmada</text>
-    <text x="1023" y="127" class="small" fill="#765c27">o domínio entregue termina na reserva temporária</text>
+    <text x="1023" y="100" class="strong" fill="#674b13">CONFIRMED mantém o estoque retido</text>
+    <text x="1023" y="127" class="small" fill="#765c27">sem novo débito; libera após reversão externa</text>
   </g>
 </svg>

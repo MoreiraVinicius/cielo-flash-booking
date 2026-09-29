@@ -33,9 +33,10 @@
 
   <rect x="1320" y="250" width="385" height="185" rx="18" class="waiting"/>
   <text x="1350" y="290" class="type muted">DELETE · RESPOSTA HTTP 202</text>
-  <text x="1350" y="337" class="name ink">CANCELLATION_PENDING</text>
+  <text x="1350" y="337" class="name ink" style="font-size:26px">CANCELLATION_PENDING</text>
   <text x="1350" y="374" class="body muted">Estoque ainda comprometido.</text>
-  <text x="1350" y="402" class="body muted">Outbox: CancellationRequested.</text>
+  <text x="1350" y="398" class="small muted">Outbox:</text>
+  <text x="1350" y="423" class="small muted">ReservationCancellationRequested</text>
 
   <rect x="65" y="660" width="360" height="180" rx="18" class="terminal"/>
   <text x="94" y="701" class="type muted">PRAZO ALCANÇADO</text>

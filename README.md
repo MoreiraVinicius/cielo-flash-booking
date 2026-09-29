@@ -87,7 +87,7 @@ O Compose/LocalStack executa a integração com filas simuladas. Terraform decla
 
 #### Componentes AWS da confirmação
 
-![Componentes AWS declarados: API Gateway e WAF chegam à Command API no ECS Fargate, RDS PostgreSQL guarda reserva, outbox e inbox, e duas SQS com DLQ ligam o worker ao responsável externo mostrado como caixa preta](docs/images/flash-booking-confirmation-aws-components.svg)
+![Componentes AWS declarados e sequência 01 a 08: API Gateway e WAF chegam à Command API no ECS Fargate; PostgreSQL guarda reserva, outbox e inbox; duas SQS com DLQ ligam o worker ao responsável externo em caixa preta; os ramos mostram expiração e cancelamento](docs/images/flash-booking-confirmation-aws-components.svg)
 
 A inbox reconhece uma **reentrega da mesma resolução**, identificada por `source + resolutionId` e pelo conteúdo validado, e reapresenta a decisão já gravada. Ela não resolve as pendências externas. O responsável evita repetir sua própria operação por reserva e tipo; uma resolução nova ainda precisa passar pelo lock, estado e prazo da reserva no PostgreSQL.
 
@@ -131,9 +131,9 @@ O desenho mostra apenas os dados que participam da decisão de confirmação. O 
 
 ### Transactional outbox sob pico de requisições
 
-![Diagrama da outbox: reserva e evento são gravados na mesma transação e o worker publica após o commit; o mesmo padrão transporta eventos de reserva ao único responsável externo](docs/images/flash-booking-transactional-outbox.png)
+![Outbox transacional: a criação grava reserva PENDING e três eventos na mesma transação; após commit, o worker envia ReservationCreated à notificação temporária, ReservationExpirationScheduled à expiração e ReservationHeld ao único responsável externo](docs/images/flash-booking-transactional-outbox.svg)
 
-O diagrama da outbox mostra o exemplo de criação e notificação; resultados de confirmação, fechamento de retenção e pedido de cancelamento usam o mesmo mecanismo transacional e seguem pela fila direta do responsável externo.
+O desenho distingue os três destinos da criação. Resultados de confirmação, fechamento de retenção e pedido de cancelamento usam o mesmo mecanismo transacional e seguem pela fila direta do responsável externo. A [ilustração anterior à confirmação externa](docs/images/flash-booking-transactional-outbox-before-confirmation.png) permanece apenas como registro histórico.
 
 <details>
 <summary>Ver os demais diagramas da versão atual e do alvo high-load</summary>
@@ -143,7 +143,7 @@ O diagrama da outbox mostra o exemplo de criação e notificação; resultados d
 | [C4 da demo](docs/images/flash-booking-c4-demo.svg) | Topologia da implantação AWS histórica, anterior às filas externas novas; essa implantação foi destruída. |
 | [Componentes](docs/images/flash-booking-c4-components.svg) | Perfis do runtime local, incluindo consumidor de confirmação; as novas filas AWS ainda não foram aplicadas. |
 | [Sequência](docs/images/flash-booking-sequence-reservation.svg) | Recorte de criação, notificação, expiração e consulta; a confirmação está na vista lifecycle acima. |
-| [Consistência eventual AWS](docs/images/flash-booking-aws-eventual-consistency.svg) · [topologia AWS da demo](docs/images/flash-booking-aws-demo.svg) | Fluxos e recursos da demo de retenção temporária; a vista AWS registra uma implantação histórica. |
+| [Consistência eventual AWS](docs/images/flash-booking-aws-eventual-consistency.svg) · [topologia AWS da demo](docs/images/flash-booking-aws-demo.svg) | Fluxos históricos da demo com duas filas originais de notificação e expiração; a implantação foi destruída. A criação atual tem três eventos, como mostra a outbox acima. |
 | [Evolução da topologia](docs/images/flash-booking-architecture-evolution.svg) · [C4 high-load](docs/images/flash-booking-c4-high-load.svg) · [AWS high-load](docs/images/flash-booking-aws-high-load.svg) | Alvo de escala não aplicado. As figuras específicas acima mostram a confirmação do runtime local. |
 
 </details>

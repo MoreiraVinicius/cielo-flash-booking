@@ -124,3 +124,19 @@ Após o commit `e959234`, a vista `flash-booking-data-model.svg` passou a dizer 
 | Verificador independente | PASS na revisão read-only dos dois SVGs renderizados, README, spec e Terraform; sem clipping ou inconsistência de fronteira, e sem IAM/SigV4/ARN no novo SVG. |
 
 O gate funcional anterior (98 unitários e 118 integrações) continua sendo a evidência do runtime; este complemento verifica apenas documentação e representação visual.
+
+## Revisão visual 01–08 e inventário completo
+
+T13 produziu a sequência numerada no SVG AWS (`ef04c42`): 01 entrada, 02 commit de PENDING/outbox, 03 entrega, 04 trabalho externo, 05 declaração de resolução, 06 inbox/lock/relógio, 07 estado e resultado transacionais, 08 resposta assíncrona. Os ramos mostram expiração/cancelamento de PENDING e cancelamento de CONFIRMED. O desenho mantém o responsável como caixa preta, marca os recursos AWS de confirmação como não aplicados e não contém IAM.
+
+T14 auditou cada um dos 22 arquivos de `docs/images/` em `documentation-audit.md`. Seis SVGs vigentes/históricos foram corrigidos ou criados: `flash-booking-transactional-outbox.svg`, `flash-booking-confirmation-lifecycle.svg`, `flash-booking-last-ticket.svg`, `flash-booking-sequence-reservation.svg`, `flash-booking-aws-eventual-consistency.svg` e `flash-booking-hero.svg`. A antiga outbox PNG foi renomeada como baseline anterior à confirmação e retirada da vista vigente do README. O novo SVG mostra os três eventos que `CreateReservationService` grava e que `OutboxSqsPublisher` roteia; a notificação SES é de reserva temporária.
+
+| Gate documental T13–T14 | Resultado |
+| --- | --- |
+| Inventário/XML | 22 imagens nomeadas na auditoria; 19 SVGs parseados; sequência 01–08 sem IAM. |
+| Renderização | SVG AWS de T13 e os seis SVGs de T14 renderizados em Chrome headless e inspecionados; sem corte impeditivo. |
+| README | `validate-readme.ps1`: PASS, 7 imagens e 47 referências locais. |
+| Estrutura | `validate_spec.py` e `validate_tasks.py`: 0 erros, 0 avisos. |
+| Diff | `git diff --check`: PASS. |
+
+Esta revisão é documental; os testes funcionais de T01–T12 são a evidência do runtime local.

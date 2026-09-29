@@ -117,7 +117,7 @@ foreach ($match in $imageMatches) {
 foreach ($requiredAsset in @(
     'flash-booking-hero.svg',
     'flash-booking-data-model.svg',
-    'flash-booking-transactional-outbox.png'
+    'flash-booking-transactional-outbox.svg'
 )) {
     Assert-Contains -Text $readme -Expected $requiredAsset -Context 'README image set'
 }

@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** T01–T12 concluídas; T13–T14 refinam as vistas a pedido do usuário. O runtime local foi verificado; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
+**Status:** T01–T14 concluídas. Runtime local e documentação visual verificados; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
 
 ## Execution Protocol
 
@@ -218,7 +218,7 @@ T08 → T09 → T10
 **Tests:** Extração de textos, XML, renderização e inspeção das figuras alteradas, gate README e conferência com código/spec.
 **Gate:** Docs, Diff.
 
-**Status:** Pending.
+**Status:** Complete; 22 imagens inventariadas, 19 SVGs XML válidos, seis SVGs corrigidos ou criados e README/validador atualizados; revisão visual e gate documental passaram.
 
 ## Phase Execution Map
 

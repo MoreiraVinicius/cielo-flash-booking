@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1050" viewBox="0 0 1680 1050" role="img" aria-labelledby="title desc">
+  <title id="title">Outbox transacional e os três destinos da criação de reserva</title>
+  <desc id="desc">A Command API retém estoque e grava a reserva PENDING e três eventos na outbox na mesma transação PostgreSQL: ReservationCreated para a fila de notificação e e-mail temporário, ReservationExpirationScheduled para a fila de expiração, e ReservationHeld para a fila do único responsável externo. Após commit, o worker publica cada evento na sua fila SQS. A entrega é pelo menos uma vez; o responsável externo evita repetir sua operação. A confirmação volta por outra fila SQS e é decidida por inbox, estado e prazo PostgreSQL; o fluxo completo está no diagrama AWS da confirmação. A infraestrutura AWS da confirmação está declarada, mas ainda não aplicada.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}.bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#4c657c}.blue{fill:#1168bd}.orange{fill:#a75a00}.teal{fill:#087f76}
+      .eyebrow{font-size:16px;font-weight:700;letter-spacing:1.1px}.heading{font-size:36px;font-weight:700}.sub{font-size:19px}
+      .label{font-size:15px;font-weight:700;letter-spacing:.5px}.name{font-size:25px;font-weight:700}.body{font-size:18px}.small{font-size:16px}
+      .panel{fill:#fff;stroke:#b8cadb;stroke-width:2}.db{fill:#efeafd;stroke:#8064ba;stroke-width:2.5}.event{fill:#e8f3fc;stroke:#1168bd;stroke-width:2}
+      .queue{fill:#fff6e8;stroke:#e18d18;stroke-width:2.5}.external{fill:#243c52;stroke:#142b3d;stroke-width:2.5}.note{fill:#eaf5f3;stroke:#9ec9c3;stroke-width:2}
+      .line{fill:none;stroke:#1168bd;stroke-width:3;marker-end:url(#blueArrow)}.async{fill:none;stroke:#d46916;stroke-width:3;marker-end:url(#orangeArrow)}
+    </style>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+    <marker id="orangeArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#d46916"/></marker>
+  </defs>
+  <rect width="1680" height="1050" class="bg"/>
+  <text x="46" y="51" class="eyebrow orange">RUNTIME LOCAL IMPLEMENTADO · FILAS AWS DE CONFIRMAÇÃO AINDA NÃO APLICADAS</text>
+  <text x="46" y="103" class="heading ink">Outbox: uma gravação, três trabalhos distintos</text>
+  <text x="46" y="139" class="sub muted">O POST retorna PENDING. A entrega assíncrona começa somente após o commit no PostgreSQL.</text>
+
+  <rect x="42" y="184" width="380" height="190" rx="18" class="panel"/>
+  <circle cx="85" cy="228" r="24" fill="#1168bd"/><text x="73" y="234" class="label" fill="#fff">01</text>
+  <text x="125" y="235" class="name ink">Command API</text>
+  <text x="70" y="279" class="body ink">POST da reserva temporária</text>
+  <text x="70" y="311" class="body ink">retém estoque uma vez.</text>
+  <text x="70" y="346" class="small muted">Resposta HTTP 201 → PENDING</text>
+
+  <rect x="500" y="184" width="690" height="190" rx="18" class="db"/>
+  <circle cx="542" cy="228" r="24" fill="#8064ba"/><text x="530" y="234" class="label" fill="#fff">02</text>
+  <text x="580" y="235" class="name ink">PostgreSQL · transação única</text>
+  <text x="530" y="278" class="body ink">Disponibilidade decrementada + reservation PENDING</text>
+  <text x="530" y="311" class="body ink">+ 3 linhas outbox_event na mesma transação.</text>
+  <text x="530" y="347" class="small muted">Falha ou rollback: nenhum evento fica pronto para publicação.</text>
+  <path d="M422 279 H500" class="line"/>
+
+  <rect x="1268" y="184" width="370" height="190" rx="18" class="panel"/>
+  <circle cx="1310" cy="228" r="24" fill="#1168bd"/><text x="1298" y="234" class="label" fill="#fff">03</text>
+  <text x="1350" y="235" class="name ink">Worker</text>
+  <text x="1298" y="279" class="body ink">Lê a outbox após commit;</text>
+  <text x="1298" y="311" class="body ink">publica cada mensagem.</text>
+  <text x="1298" y="346" class="small muted">Falha mantém o evento pendente.</text>
+  <path d="M1190 279 H1268" class="line"/>
+
+  <text x="46" y="445" class="eyebrow blue">CADA EVENTO TEM SUA FILA E SEU PROPÓSITO</text>
+  <rect x="42" y="474" width="490" height="280" rx="18" class="event"/>
+  <text x="70" y="513" class="label blue">EVENTO 1 · NOTIFICAÇÃO</text>
+  <text x="70" y="551" class="name ink">ReservationCreated</text>
+  <rect x="70" y="580" width="432" height="62" rx="11" class="queue"/>
+  <text x="94" y="617" class="body ink">SQS notification → consumidor → SES</text>
+  <text x="70" y="681" class="body ink">E-mail: reserva temporária registrada.</text>
+  <text x="70" y="715" class="small muted">Não confirma compra nem pagamento.</text>
+
+  <rect x="595" y="474" width="490" height="280" rx="18" class="event"/>
+  <text x="623" y="513" class="label blue">EVENTO 2 · PRAZO</text>
+  <text x="623" y="551" class="name ink">ReservationExpirationScheduled</text>
+  <rect x="623" y="580" width="432" height="62" rx="11" class="queue"/>
+  <text x="647" y="617" class="body ink">SQS expiration → worker</text>
+  <text x="623" y="681" class="body ink">Ao vencer: PENDING → EXPIRED.</text>
+  <text x="623" y="715" class="small muted">PostgreSQL decide e libera estoque uma vez.</text>
+
+  <rect x="1148" y="474" width="490" height="280" rx="18" class="event"/>
+  <text x="1176" y="513" class="label blue">EVENTO 3 · TRABALHO EXTERNO</text>
+  <text x="1176" y="551" class="name ink">ReservationHeld</text>
+  <rect x="1176" y="580" width="432" height="62" rx="11" class="queue"/>
+  <text x="1200" y="617" class="body ink">SQS reservation-to-owner</text>
+  <text x="1176" y="681" class="body ink">Um responsável resolve tudo.</text>
+  <text x="1176" y="715" class="small muted">Evita repetir sua operação por reserva.</text>
+
+  <path d="M1452 374 V414 H287 V474" class="async"/>
+  <path d="M1452 374 V414 H840 V474" class="async"/>
+  <path d="M1452 374 V474" class="async"/>
+
+  <rect x="42" y="811" width="1596" height="187" rx="18" class="note"/>
+  <text x="71" y="853" class="label teal">DEPOIS DA RESOLUÇÃO EXTERNA</text>
+  <text x="71" y="893" class="body ink">O responsável envia ReservationConfirmationRequested pela SQS de entrada. Inbox, lock, estado e prazo no PostgreSQL decidem CONFIRMED ou rejeição.</text>
+  <text x="71" y="928" class="body ink">O resultado retorna por outra mensagem de outbox. Publicação e consumo podem repetir; cada lado controla sua própria idempotência.</text>
+  <text x="71" y="971" class="small muted">Veja a sequência 01–08 no diagrama AWS de confirmação para os caminhos de expiração e cancelamento.</text>
+</svg>
