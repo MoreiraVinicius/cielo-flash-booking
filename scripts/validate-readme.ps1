@@ -457,4 +457,17 @@ foreach ($contract in $lifecycleContracts) {
     }
 }
 
+# The AWS sequence must show complete integration result names in visible text,
+# not only in the SVG accessibility description.
+$confirmationAwsSvg = Get-Content -LiteralPath (Join-Path $awsVisualRoot 'flash-booking-confirmation-aws-components.svg') -Raw
+foreach ($visibleMessage in @(
+    'ReservationHeld</text>',
+    'ReservationConfirmationRequested</text>',
+    'ReservationConfirmed ou</text>',
+    'ReservationConfirmationRejected.</text>',
+    'ReservationCancellationRequested.'
+)) {
+    Assert-Contains -Text $confirmationAwsSvg -Expected $visibleMessage -Context 'visible AWS confirmation sequence contract'
+}
+
 Write-Output "validate-readme: PASS - current specs linked, $($imageMatches.Count) README images, $($localReferences.Count) local references, 3 performance scenarios"

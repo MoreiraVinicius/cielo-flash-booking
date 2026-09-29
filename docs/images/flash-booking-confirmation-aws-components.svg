@@ -180,8 +180,9 @@
   <circle cx="82" cy="1609" r="24" fill="#087f76"/><text x="70" y="1615" class="stepNo">08</text>
   <text x="119" y="1615" class="stepHead ink">Entrega o resultado</text>
   <text x="70" y="1651" class="stepBody ink">Outbox → SQS de saída → dono:</text>
-  <text x="70" y="1681" class="stepBody ink">ReservationConfirmed ou Rejected.</text>
-  <text x="70" y="1721" class="small muted">Rejeição exige compensação externa.</text>
+  <text x="70" y="1681" class="stepBody ink">ReservationConfirmed ou</text>
+  <text x="70" y="1711" class="stepBody ink">ReservationConfirmationRejected.</text>
+  <text x="70" y="1741" class="small muted">Rejeição exige compensação externa.</text>
 
   <path d="M1464 1663 H1430" class="back"/>
   <path d="M990 1663 H956" class="back"/>

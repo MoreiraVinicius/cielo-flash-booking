@@ -26,6 +26,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/flash-booking-demo/validation.md:214 (postgresql-retention) (+1 more)
 - last seen: 2026-09-15T08:38:17Z
 
+### L-003 - Visual contracts should spell emitted event names exactly as the runtime does.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `diagrams` · harmful: 0
+- features: reservation-confirmation
+- evidence: .specs/features/reservation-confirmation/spec.md:129 (diagrams)
+- last seen: 2026-09-29T13:49:57Z
+
+### L-004 - Document gates should inspect semantic labels on every current architecture diagram.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `diagrams` · harmful: 0
+- features: reservation-confirmation
+- evidence: mutant-aws-result-name (diagrams)
+- last seen: 2026-09-29T13:49:57Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

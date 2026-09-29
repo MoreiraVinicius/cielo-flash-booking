@@ -141,9 +141,9 @@ T14 auditou cada um dos 22 arquivos de `docs/images/` em `documentation-audit.md
 
 Esta revisão é documental; os testes funcionais de T01–T12 são a evidência do runtime local.
 
-## Verificação final independente da documentação (fallback TLC)
+## Revisão standalone provisória antes da validação independente
 
-**Veredito: PASS para os critérios documentais AC6 e AC7.** A tentativa de despachar um subagente Verifier falhou antes de iniciar, pois a conta atingiu o limite de uso. Foi executada a revisão standalone de fallback prevista pelo TLC: rederivei os resultados diretamente da spec e revisei os commits `ef04c42..22d5c04`, o README e os desenhos renderizados. Este veredito cobre T13–T14; a verificação funcional anterior T01–T12 permanece registrada acima.
+**Resultado provisório, supersedido:** o fallback standalone foi usado quando o primeiro despacho do Verifier falhou por limite de uso. A revisão independente posterior encontrou a lacuna do nome visível no passo 08; portanto, a conclusão preliminar abaixo não fecha AC7. A revisão funcional T01–T12 continua registrada acima.
 
 | Critério | Resultado esperado pela spec | Evidência |
 | --- | --- | --- |
@@ -155,3 +155,28 @@ Esta revisão é documental; os testes funcionais de T01–T12 são a evidência
 **Sensor documental:** em uma cópia temporária do lifecycle, troquei `ReservationCancellationRequested` por `CancellationRequested`. A asserção do contrato que exige o nome canônico falhou (mutação morta). A cópia foi removida e o `git status --porcelain` real permaneceu idêntico ao baseline.
 
 **Gates finais:** `validate-readme.ps1` PASS (7 imagens, 47 referências); `validate_spec.py` PASS; `validate_tasks.py` PASS; 19 SVGs parseados como XML; `git diff --check` PASS. O verificador automático de estado deve ser executado depois deste registro.
+
+## Resultado inicial do Verifier independente — falha corrigida (29/09/2026)
+
+**Veredito: FAIL para o fechamento documental T13–T14.** A sequência, ramos, caixa preta externa, duas SQS com DLQs e o estado de AWS não aplicada estão corretos. O passo visível 08 abrevia o nome de rejeição e o gate atual não discrimina esse contrato.
+
+| Critério | Resultado | Evidência independente |
+| --- | --- | --- |
+| AC6 — sequência e ramos AWS | PASS, com ressalva de rótulo | A sequência 01–08, ramo de `PENDING` encerrada e cancelamento de `CONFIRMED` estão em `docs/images/flash-booking-confirmation-aws-components.svg:126`, `:133`, `:140`, `:147`, `:159`, `:166`, `:173`, `:180`, `:190`, `:198`. Caixa preta/sem IAM/sem AWS aplicada no mesmo SVG `:3`, `:26`, `:98–109`. README vincula a vista em `README.md:88–90`. |
+| AC7 — nomes atuais e inventário | FAIL parcial | O contrato em `src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/JdbcReservationPersistenceAdapter.java:197` e `src/main/java/com/cielo/flashbooking/reservation/confirm/ReservationResolutionProcessor.java:50–51` é `ReservationConfirmed` / `ReservationConfirmationRejected`; o passo visual 08 diz `ReservationConfirmed ou Rejected` em `docs/images/flash-booking-confirmation-aws-components.svg:183`. A descrição acessível contém o nome completo em `:3`, mas o rótulo visível não. |
+| Inventário e quantidade de eventos | PASS | Inventário contém 22 arquivos e nomeia todos em `documentation-audit.md:25–48`; conferência direta achou 22/22 cobertos e 19/19 SVGs XML válidos. A criação grava três eventos em `CreateReservationService.java:59–61`; o SVG da outbox os apresenta em separado e o README os identifica em `README.md:134–136`. Terraform declara as duas filas de integração e DLQs próprias em `infra/modules/data-plane/main.tf:121–160`; nenhum apply foi executado nesta revisão. |
+| Rótulos de histórico/alvo | PASS | A legenda do README separa demo destruída e topologia high-load não aplicada em `README.md:141–147`; a auditoria classifica os 22 arquivos em `documentation-audit.md:27–48`. |
+
+**Sensor documental:** cópia temporária do diretório de imagens, com `ReservationConfirmationRejected` abreviado para `Rejected` na descrição do SVG AWS. `validate-readme.ps1` passou (mutante sobreviveu); isso mostra que o gate não verifica o contrato da vista AWS. Scratch removido; `git status --porcelain=v1 -uall` permaneceu idêntico ao baseline preexistente.
+
+**Gates executados:** `validate_spec.py` PASS (0 erros/avisos); `validate_tasks.py` PASS (0 erros/avisos); `validate-readme.ps1` PASS (7 imagens, 47 referências); XML PASS (19/19); `git diff --check ef04c42..b6d70b1` PASS. `validate_state.py` passa para o relatório anterior; depois deste complemento ele deve refletir o FAIL até re-verificação.
+
+**Correção aplicada em T15:** o passo 08 agora exibe `ReservationConfirmationRejected` por extenso em `docs/images/flash-booking-confirmation-aws-components.svg:183–184`. `scripts/validate-readme.ps1:464–470` exige os nomes de resultado visíveis no desenho. O SVG foi renderizado e inspecionado.
+
+**Sensor de T15:** cópia de `docs/images/` em `.tmp`; abreviar o rótulo visível para `Rejected` fez `validate-readme.ps1 -AwsVisualDirectory <scratch>` falhar na asserção `visible AWS confirmation sequence contract`; mutação morta, scratch removido e status real idêntico ao baseline.
+
+**Gates T15:** `validate-readme.ps1` PASS; `validate_spec.py` PASS (0 erros/avisos); `validate_tasks.py` PASS (0 erros/avisos); XML AWS PASS; `git diff --check` PASS. Aguarda reexecução pelo Verifier independente.
+
+### Resultado inicial do Verifier (supersedido por T15)
+
+**Initial result:** FAIL — AC7 label gap and one surviving documentation mutant. T15 corrige ambos e solicita nova verificação independente.

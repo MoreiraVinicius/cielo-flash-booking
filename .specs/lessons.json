@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 5,
   "lessons": [
     {
       "id": "L-001",
@@ -42,6 +42,42 @@
       ],
       "created": "2026-09-15T08:37:47Z",
       "last_seen": "2026-09-15T08:38:17Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::visual contracts should spell emitted event names exactly as the runtime does",
+      "text": "Visual contracts should spell emitted event names exactly as the runtime does.",
+      "signal": "ac_gap",
+      "scope": "diagrams",
+      "status": "candidate",
+      "features": [
+        "reservation-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/reservation-confirmation/spec.md:129 (diagrams)"
+      ],
+      "created": "2026-09-29T13:49:57Z",
+      "last_seen": "2026-09-29T13:49:57Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::document gates should inspect semantic labels on every current architecture diagram",
+      "text": "Document gates should inspect semantic labels on every current architecture diagram.",
+      "signal": "surviving_mutant",
+      "scope": "diagrams",
+      "status": "candidate",
+      "features": [
+        "reservation-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant-aws-result-name (diagrams)"
+      ],
+      "created": "2026-09-29T13:49:57Z",
+      "last_seen": "2026-09-29T13:49:57Z"
     }
   ]
 }

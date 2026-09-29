@@ -1,7 +1,7 @@
 # Confirmação externa da reserva — plano de tarefas
 
 **Design:** `.specs/features/reservation-confirmation/design.md`
-**Status:** T01–T14 concluídas. Runtime local e documentação visual verificados; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
+**Status:** T01–T15 concluídas; runtime local e documentação visual verificados; nenhuma implantação AWS ou implementação de pagamentos foi realizada.
 
 ## Execution Protocol
 
@@ -220,13 +220,25 @@ T08 → T09 → T10
 
 **Status:** Complete; 22 imagens inventariadas, 19 SVGs XML válidos, seis SVGs corrigidos ou criados e README/validador atualizados; revisão visual e gate documental passaram.
 
+### T15: Exibir e validar integralmente o resultado de confirmação
+
+**What:** Corrigir o passo 08 para exibir o nome completo `ReservationConfirmationRejected`; tornar o gate README sensível aos nomes completos visíveis na sequência AWS, não só à descrição acessível do SVG.
+**Where:** `docs/images/flash-booking-confirmation-aws-components.svg` (the task also strengthens its README validation gate).
+**Depends on:** T14.
+**Requirement:** CONFIRM-04.
+**Done when:** O passo 08 contém `ReservationConfirmed` e `ReservationConfirmationRejected` completos e legíveis; o gate passa na versão correta e falha quando o nome visível é abreviado numa cópia temporária.
+**Tests:** README gate, XML, renderização/inspeção e sensor em scratch isolado.
+**Gate:** Docs, Sensor, Diff.
+
+**Status:** Complete; evento de rejeição exibido por extenso, gate semântico passa e mata a mutação abreviada em cópia temporária; SVG renderizado e inspecionado.
+
 ## Phase Execution Map
 
 ```text
 Phase 1: T01 → T02
 Phase 2: T02 → T03 → T04 → T05 → T06 → T07
 Phase 3: T07 → T08 → T09 → T10 → T11 → T12
-Phase 4: T12 → T13 → T14
+Phase 4: T12 → T13 → T14 → T15
 ```
 
 ## Diagram-Definition Cross-Check
@@ -247,6 +259,7 @@ Phase 4: T12 → T13 → T14
 | T12 | T11 | T11 → T12 | OK |
 | T13 | T12 | T12 → T13 | OK |
 | T14 | T13 | T13 → T14 | OK |
+| T15 | T14 | T14 → T15 | OK |
 
 ## Test Co-location Validation
 
@@ -266,3 +279,4 @@ Phase 4: T12 → T13 → T14
 | T12 | Concorrência | integration + sensor | integration + sensor | OK |
 | T13 | SVG AWS | XML + visual + README | XML + visual + README | OK |
 | T14 | Auditoria de imagens | texto + XML + visual + README | texto + XML + visual + README | OK |
+| T15 | Contrato visual de resultados | README + XML + visual + sensor | README + XML + visual + sensor | OK |
