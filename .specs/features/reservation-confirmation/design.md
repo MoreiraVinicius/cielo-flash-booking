@@ -123,9 +123,10 @@ O evento `ReservationHeld` conserva o mesmo `outboxEventId` em cada tentativa de
 | --- | --- | --- |
 | C4 System Context | Quem solicita confirmação e cancelamento e qual sistema decide/compensa? | `docs/images/flash-booking-confirmation-c4-context.svg` |
 | C4 Container | Onde estão APIs, worker, PostgreSQL, outbox e as duas filas direcionais da integração, sem SNS? | `docs/images/flash-booking-confirmation-c4-containers.svg` |
+| Componentes AWS | Quais recursos Terraform conectam criação, banco, worker, filas com DLQ e responsável externo, sem detalhar a implementação desse responsável? | `docs/images/flash-booking-confirmation-aws-components.svg` |
 | Dinâmica/estado | O que acontece com aceite, duplicata, atraso, expiração e cancelamento pendente? | `docs/images/flash-booking-confirmation-lifecycle.svg` |
 
-As vistas C4 seguem níveis distintos: contexto mostra pessoas e sistemas; containers mostram processos e armazenamentos dentro do Flash Booking e as duas SQS fora do limite do software, com dono lógico identificado; o diagrama de estados mostra desfechos e corridas. O README mantém os cinco endpoints. As vistas descrevem o ciclo executável local e identificam que os recursos AWS ainda não foram aplicados; nenhuma afirma pagamento realizado.
+As vistas C4 seguem níveis distintos: contexto mostra pessoas e sistemas; containers mostram processos e armazenamentos dentro do Flash Booking e as duas SQS fora do limite do software, com dono lógico identificado. A vista AWS mostra os recursos declarados em Terraform e mantém opaca a implementação externa; ela não detalha autenticação. O diagrama de estados mostra desfechos e corridas. O README mantém os cinco endpoints. As vistas descrevem o ciclo executável local e identificam que os recursos de confirmação AWS ainda não foram aplicados; nenhuma afirma pagamento realizado. Na vista de dados, a inbox reconhece uma reentrega idêntica de `source + resolutionId` com o mesmo fingerprint e reapresenta o resultado anterior; ela não deduplica a operação externa nem substitui a decisão de estado sob lock.
 
 ## Error Handling Strategy
 

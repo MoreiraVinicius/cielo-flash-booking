@@ -144,7 +144,7 @@ T08 → T09 → T10
 **Tests:** renderização e inspeção visual, incluídas na tarefa.
 **Gate:** Docs, Diff.
 
-**Status:** Complete; vistas C4 de contexto e containers identificam o runtime local, o dono de cada fila e AWS não aplicada. C4 de componentes foi atualizado; demo AWS histórica e alvo high-load permanecem distintos. SVGs foram renderizados e inspecionados.
+**Status:** Complete; vistas C4 de contexto e containers identificam o runtime local, o dono de cada fila e AWS não aplicada. Uma vista adicional mostra os componentes AWS declarados para a confirmação e o responsável externo opaco, sem IAM no desenho. C4 de componentes foi atualizado; demo AWS histórica e alvo high-load permanecem distintos. SVGs foram renderizados e inspecionados.
 
 ### T09: Reconciliar a dinâmica e os desfechos
 

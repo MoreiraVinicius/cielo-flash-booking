@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="1260" viewBox="0 0 1960 1260" role="img" aria-labelledby="title desc">
+  <title id="title">Componentes AWS da confirmação assíncrona de reservas</title>
+  <desc id="desc">Topologia declarada em Terraform, ainda não aplicada na AWS. AWS WAF e Amazon API Gateway REST encaminham a criação de reserva por VPC Link v2 e Application Load Balancer interno à Command API no Amazon ECS Fargate. Amazon RDS for PostgreSQL guarda reserva, estoque, outbox e confirmation inbox. O Worker no ECS publica ReservationHeld na Amazon SQS reservation-to-owner. Um único módulo externo, de hospedagem não especificada, consome essa fila e resolve todas as pendências com idempotência própria. Depois envia ReservationConfirmationRequested à SQS reservation-from-owner. O Worker bloqueia a reserva e consulta a inbox: uma reentrega com a mesma chave e conteúdo recebe o resultado anterior; uma resolução nova é decidida pelo estado e horário PostgreSQL. O resultado sai pela outbox, e o módulo externo aguarda ReservationConfirmed ou ReservationConfirmationRejected. Cada fila tem sua DLQ.</desc>
+  <defs>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif}.page{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#51697d}.blue{fill:#1168bd}.orange{fill:#a75a00}.teal{fill:#087f76}
+      .eyebrow{font-size:16px;font-weight:700;letter-spacing:1.4px}.heading{font-size:40px;font-weight:700}.sub{font-size:20px}
+      .region{fill:#fff;stroke:#7eafce;stroke-width:2.5}.vpc{fill:#f4f9fd;stroke:#7897ac;stroke-width:2.5;stroke-dasharray:11 8}
+      .edge{fill:#fff4e7;stroke:#f39c28;stroke-width:2.5}.compute{fill:#e8f3fc;stroke:#1168bd;stroke-width:2.5}
+      .rds{fill:#efeafd;stroke:#8064ba;stroke-width:2.5}.sqs{fill:#fff6e8;stroke:#e18d18;stroke-width:2.5}
+      .dlq{fill:#fff;stroke:#d5a462;stroke-width:2}.external{fill:#243c52;stroke:#142b3d;stroke-width:3}
+      .footer{fill:#fff;stroke:#bfd0de;stroke-width:2}
+      .type{font-size:15px;font-weight:700;letter-spacing:.8px}.name{font-size:24px;font-weight:700}.body{font-size:18px}.small{font-size:16px}.tiny{font-size:14px}
+      .white{fill:#fff}.light{fill:#dae6ef}.flow{fill:none;stroke:#1168bd;stroke-width:3;marker-end:url(#blueArrow)}
+      .async{fill:none;stroke:#d46916;stroke-width:3.5;marker-end:url(#orangeArrow)}
+      .back{fill:none;stroke:#087f76;stroke-width:3.5;marker-end:url(#tealArrow)}
+      .data{fill:none;stroke:#8064ba;stroke-width:2.5;marker-end:url(#purpleArrow)}
+    </style>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1168bd"/></marker>
+    <marker id="orangeArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#d46916"/></marker>
+    <marker id="tealArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#087f76"/></marker>
+    <marker id="purpleArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8064ba"/></marker>
+  </defs>
+  <rect width="1960" height="1260" class="page"/>
+  <text x="46" y="54" class="eyebrow orange">TERRAFORM DECLARADO · RECURSOS DE CONFIRMAÇÃO AINDA NÃO APLICADOS NA AWS</text>
+  <text x="46" y="109" class="heading ink">Como o módulo externo confirma a reserva?</text>
+  <text x="46" y="148" class="sub muted">Serviços AWS previstos para Flash Booking; o único responsável pelas pendências continua fora deste sistema.</text>
+
+  <rect x="42" y="204" width="1342" height="852" rx="22" class="region"/>
+  <text x="72" y="244" class="type blue">AWS REGION · RECURSOS DO FLASH BOOKING</text>
+
+  <rect x="76" y="279" width="373" height="116" rx="14" class="edge"/>
+  <text x="99" y="313" class="type orange">BORDA · AWS WAF + API GATEWAY</text>
+  <text x="99" y="348" class="name ink">REST Regional</text>
+  <text x="99" y="376" class="small muted">POST cria a reserva temporária</text>
+
+  <rect x="485" y="279" width="338" height="116" rx="14" class="edge"/>
+  <text x="508" y="313" class="type orange">ACESSO À VPC</text>
+  <text x="508" y="348" class="name ink">VPC Link v2 + ALB</text>
+  <text x="508" y="376" class="small muted">Application Load Balancer interno</text>
+  <path d="M449 339 H485" class="flow"/>
+
+  <rect x="76" y="427" width="748" height="592" rx="18" class="vpc"/>
+  <text x="105" y="461" class="type muted">VPC · SERVIÇOS ECS E BANCO PRIVADOS</text>
+
+  <rect x="105" y="493" width="325" height="134" rx="13" class="compute"/>
+  <text x="127" y="526" class="type blue">AMAZON ECS FARGATE</text>
+  <text x="127" y="561" class="name ink">Command API</text>
+  <text x="127" y="591" class="body ink">Cria PENDING; retém estoque.</text>
+  <text x="127" y="615" class="small muted">Grava ReservationHeld na outbox.</text>
+
+  <rect x="105" y="695" width="325" height="209" rx="13" class="rds"/>
+  <text x="127" y="728" class="type" fill="#684da8">AMAZON RDS · POSTGRESQL</text>
+  <text x="127" y="763" class="name ink">Fonte de verdade</text>
+  <text x="127" y="796" class="body ink">Reserva + disponibilidade</text>
+  <text x="127" y="827" class="small ink">outbox_event + confirmation_inbox</text>
+  <text x="127" y="867" class="small muted">Lock e relógio do banco decidem</text>
+  <text x="127" y="890" class="small muted">se ainda cabe CONFIRMED.</text>
+  <path d="M267 627 V695" class="data"/>
+  <path d="M654 395 V443 H451 V550 H430" class="flow"/>
+
+  <rect x="476" y="493" width="318" height="411" rx="13" class="compute"/>
+  <text x="499" y="526" class="type blue">AMAZON ECS FARGATE</text>
+  <text x="499" y="561" class="name ink">Worker</text>
+  <text x="499" y="593" class="body ink">Publica eventos da outbox.</text>
+  <text x="499" y="625" class="body ink">Consome resolução da SQS.</text>
+  <path d="M499 655 H770" stroke="#a7c7de" stroke-width="2"/>
+  <text x="499" y="691" class="type blue">REENTREGA IGUAL</text>
+  <text x="499" y="724" class="small ink">source + resolutionId + fingerprint</text>
+  <text x="499" y="751" class="small ink">→ reapresenta resultado salvo.</text>
+  <text x="499" y="799" class="type blue">RESOLUÇÃO NOVA</text>
+  <text x="499" y="831" class="small ink">Lock → estado + prazo → decisão.</text>
+  <text x="499" y="862" class="small muted">CONFIRMED ou rejeição.</text>
+  <path d="M430 734 H476" class="data"/>
+  <path d="M476 851 H452 V847 H430" class="data"/>
+
+  <rect x="866" y="484" width="475" height="187" rx="15" class="sqs"/>
+  <text x="890" y="520" class="type orange">AMAZON SQS STANDARD · SAÍDA</text>
+  <text x="890" y="557" class="name ink">reservation-to-owner</text>
+  <text x="890" y="590" class="body ink">ReservationHeld → trabalho externo</text>
+  <text x="890" y="618" class="small muted">Resultado e cancelamento também saem aqui.</text>
+  <rect x="1218" y="631" width="105" height="24" rx="12" class="dlq"/>
+  <text x="1237" y="648" class="tiny orange">DLQ própria</text>
+
+  <rect x="866" y="726" width="475" height="187" rx="15" class="sqs"/>
+  <text x="890" y="762" class="type orange">AMAZON SQS STANDARD · ENTRADA</text>
+  <text x="890" y="799" class="name ink">reservation-from-owner</text>
+  <text x="890" y="832" class="body ink">ReservationConfirmationRequested</text>
+  <text x="890" y="860" class="small muted">ou ReservationCancellationCompleted</text>
+  <rect x="1218" y="873" width="105" height="24" rx="12" class="dlq"/>
+  <text x="1237" y="890" class="tiny orange">DLQ própria</text>
+
+  <path d="M794 567 H866" class="async"/>
+  <path d="M1341 567 H1425" class="async"/>
+  <path d="M1425 810 H1341" class="back"/>
+  <path d="M866 810 H794" class="back"/>
+  <text x="850" y="467" class="small orange">outbox → SQS → responsável</text>
+  <text x="850" y="710" class="small teal">responsável → SQS → inbox</text>
+
+  <rect x="1425" y="484" width="491" height="571" rx="18" class="external"/>
+  <text x="1455" y="522" class="type light">SISTEMA EXTERNO · CAIXA PRETA</text>
+  <text x="1455" y="568" class="name white">Responsável único por</text>
+  <text x="1455" y="601" class="name white">todas as pendências</text>
+  <path d="M1455 624 H1885" stroke="#688398" stroke-width="2"/>
+  <text x="1455" y="664" class="body white">Consome ReservationHeld.</text>
+  <text x="1455" y="697" class="body white">Evita repetir seu trabalho por</text>
+  <text x="1455" y="727" class="body white">reserva + operação.</text>
+  <text x="1455" y="780" class="body white">Após resolver tudo, envia</text>
+  <text x="1455" y="810" class="body white">ReservationConfirmationRequested.</text>
+  <path d="M1455 848 H1885" stroke="#688398" stroke-width="2"/>
+  <text x="1455" y="888" class="body white">Aguarda o resultado assíncrono:</text>
+  <text x="1455" y="920" class="body white">ReservationConfirmed ou</text>
+  <text x="1455" y="950" class="body white">ReservationConfirmationRejected.</text>
+  <text x="1455" y="1015" class="small light">Hospedagem e pagamentos fora deste repo.</text>
+
+  <rect x="42" y="1081" width="1874" height="132" rx="15" class="footer"/>
+  <text x="70" y="1118" class="type blue">DUAS IDENTIDADES, DUAS RESPONSABILIDADES</text>
+  <text x="70" y="1154" class="body ink">Responsável externo: deduplica a própria operação por reserva + tipo, inclusive no provedor que usar.</text>
+  <text x="70" y="1185" class="body ink">Flash Booking: a inbox reapresenta o resultado da mesma mensagem; lock, estado e prazo decidem resoluções novas.</text>
+</svg>

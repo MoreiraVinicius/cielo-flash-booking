@@ -85,6 +85,12 @@ O Compose/LocalStack executa a integração com filas simuladas. Terraform decla
 
 ![C4 containers: Command API, Query API, Worker, PostgreSQL, SQS de saída ao responsável e SQS de entrada ao Flash Booking; outbox e inbox são dados dentro do PostgreSQL](docs/images/flash-booking-confirmation-c4-containers.svg)
 
+#### Componentes AWS da confirmação
+
+![Componentes AWS declarados: API Gateway e WAF chegam à Command API no ECS Fargate, RDS PostgreSQL guarda reserva, outbox e inbox, e duas SQS com DLQ ligam o worker ao responsável externo mostrado como caixa preta](docs/images/flash-booking-confirmation-aws-components.svg)
+
+A inbox reconhece uma **reentrega da mesma resolução**, identificada por `source + resolutionId` e pelo conteúdo validado, e reapresenta a decisão já gravada. Ela não resolve as pendências externas. O responsável evita repetir sua própria operação por reserva e tipo; uma resolução nova ainda precisa passar pelo lock, estado e prazo da reserva no PostgreSQL.
+
 #### Estados e corridas
 
 ![Estados e corridas: confirmação antes do prazo, rejeição tardia e duplicada, expiração concorrente e cancelamento de confirmado aguardando sucesso externo](docs/images/flash-booking-confirmation-lifecycle.svg)

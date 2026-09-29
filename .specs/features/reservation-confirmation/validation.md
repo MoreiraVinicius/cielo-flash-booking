@@ -110,3 +110,17 @@ Nenhum gap permanece nesta validação.
 **Sensor:** 1/1 mutações mortas.
 **Gate:** 216 passaram; 0 falharam; 0 ignorados.
 **Próxima ação:** nenhuma; T01–T12 estão verificados nesta árvore.
+
+## Revisão documental complementar
+
+Após o commit `e959234`, a vista `flash-booking-data-model.svg` passou a dizer que a inbox reconhece a reentrega da mesma resolução e reapresenta o resultado salvo. A nova vista `flash-booking-confirmation-aws-components.svg` usa os componentes AWS declarados em Terraform, mostra as duas SQS com DLQ, mantém o responsável externo opaco e deixa autenticação fora do desenho, conforme solicitado. Essas mudanças não alteram contrato nem runtime.
+
+| Gate documental | Resultado |
+| --- | --- |
+| SVGs | XML válido; ambas as vistas renderizadas e inspecionadas sem texto cortado. |
+| README | `validate-readme.ps1`: 7 imagens e 46 referências locais; PASS. |
+| Tasks | `validate_tasks.py`: 0 erros e 0 avisos. |
+| Diff | `git diff --check`: PASS. |
+| Verificador independente | PASS na revisão read-only dos dois SVGs renderizados, README, spec e Terraform; sem clipping ou inconsistência de fronteira, e sem IAM/SigV4/ARN no novo SVG. |
+
+O gate funcional anterior (98 unitários e 118 integrações) continua sendo a evidência do runtime; este complemento verifica apenas documentação e representação visual.

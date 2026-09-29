@@ -24,8 +24,9 @@
 | --- | --- |
 | `flash-booking-confirmation-c4-context.svg` | C4 Context: pessoa, Flash Booking e responsável único externo; runtime local implementado e AWS não aplicada. |
 | `flash-booking-confirmation-c4-containers.svg` | C4 Container: APIs, worker, PostgreSQL e filas direcionais; outbox/inbox são dados, não containers; sem SNS. |
+| `flash-booking-confirmation-aws-components.svg` | Recursos AWS declarados para confirmação: borda API, ECS Fargate, RDS PostgreSQL, duas SQS com DLQ e único responsável externo opaco; não representa implantação ativa nem detalha autenticação. |
 | `flash-booking-confirmation-lifecycle.svg` | Estados, lock e relógio PostgreSQL, duplicidade, expiração, rejeição e cancelamento pendente. |
-| `flash-booking-data-model.svg` | Vista C4 de containers e dados decisivos: responsável externo em caixa preta, filas direcionais, worker, reserva/estoque, inbox e outbox; mostra quem solicita confirmação e quem decide. Não é um ER completo. |
+| `flash-booking-data-model.svg` | Vista C4 de containers e dados decisivos: responsável externo em caixa preta, filas direcionais, worker, reserva/estoque, inbox e outbox; distingue a reentrega idêntica da resolução da idempotência da operação externa. Não é um ER completo. |
 | `flash-booking-data-model-before-confirmation.png` | Imagem preservada como baseline anterior à inbox e aos metadados de confirmação; não é o modelo vigente. |
 | `flash-booking-transactional-outbox.png` | Exemplo didático da criação; o texto do README explica que o padrão também publica os novos tipos de integração. |
 | `flash-booking-last-ticket.svg` | Escrita condicional de estoque; confirmação não debita novamente. |

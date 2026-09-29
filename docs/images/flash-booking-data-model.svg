@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1840" height="1220" viewBox="0 0 1840 1220" role="img" aria-labelledby="title desc">
   <title id="title">Quem confirma a reserva: fronteiras e dados</title>
-  <desc id="desc">Visão C4 de containers com dados internos. O Flash Booking grava a reserva PENDING e ReservationHeld na outbox do PostgreSQL. Seu worker publica a mensagem na SQS reservation-to-owner. Um único sistema externo, mostrado como caixa preta, resolve todas as pendências e envia ReservationConfirmationRequested pela SQS reservation-from-owner. O worker bloqueia a reserva, deduplica pela inbox e decide pelo estado e horário do PostgreSQL. CONFIRMED mantém o estoque comprometido; rejeição exige compensação externa. O resultado volta pela outbox. Cancelamento de CONFIRMED aguarda uma conclusão externa correlacionada.</desc>
+  <desc id="desc">Visão C4 de containers com dados internos. O Flash Booking grava a reserva PENDING e ReservationHeld na outbox do PostgreSQL. Seu worker publica a mensagem na SQS reservation-to-owner. Um único sistema externo, mostrado como caixa preta, resolve todas as pendências e envia ReservationConfirmationRequested pela SQS reservation-from-owner. O worker bloqueia a reserva; a inbox reconhece a mesma mensagem de resolução reentregue pela chave source mais resolutionId e reapresenta o resultado já decidido. Uma mensagem nova é decidida pelo estado e horário do PostgreSQL. CONFIRMED mantém o estoque comprometido; rejeição exige compensação externa. O resultado volta pela outbox. Cancelamento de CONFIRMED aguarda uma conclusão externa correlacionada.</desc>
   <defs>
     <style>
       text{font-family:Arial,Helvetica,sans-serif}.bg{fill:#f5f8fc}.ink{fill:#17324d}.muted{fill:#526b80}.blue{fill:#1168bd}.teal{fill:#087f76}
@@ -44,7 +44,7 @@
   <rect x="102" y="670" width="418" height="102" rx="10" class="table"/>
   <text x="121" y="700" class="type blue">CONFIRMATION INBOX</text>
   <text x="121" y="729" class="code ink">source + resolution_id · outcome</text>
-  <text x="121" y="756" class="small muted">Deduplica pedido e preserva o resultado.</text>
+  <text x="121" y="756" class="small muted">Reentrega da mesma resolução → mesmo resultado.</text>
 
   <text x="102" y="817" class="body ink">Decisão: lock na reserva + relógio do banco.</text>
   <text x="102" y="846" class="small muted">Inbox e outbox são tabelas, não serviços.</text>
@@ -58,7 +58,7 @@
   <path d="M608 493 H826" stroke="#a7c7de" stroke-width="2"/>
   <text x="608" y="530" class="type compact blue">AO RECEBER CONFIRMAÇÃO</text>
   <text x="608" y="563" class="body ink">1. Bloqueia a reserva.</text>
-  <text x="608" y="594" class="body ink">2. Deduplica na inbox.</text>
+  <text x="608" y="594" class="body ink">2. Consulta a inbox.</text>
   <text x="608" y="625" class="body ink">3. Compara estado e prazo.</text>
   <text x="608" y="659" class="small muted">PENDING antes do prazo</text>
   <text x="608" y="685" class="small muted">→ CONFIRMED</text>
