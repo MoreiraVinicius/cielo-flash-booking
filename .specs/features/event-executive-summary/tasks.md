@@ -2,11 +2,11 @@
 
 ## Execution Protocol
 
-Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar rastreabilidade e criar commit atomico antes da proxima. Isto autoriza apenas alteracoes locais e commits. Nao fazer deploy, chamadas AWS reais ou publicacao Discord real.
+Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar rastreabilidade e criar commit atomico antes da proxima. O usuario autorizou separadamente a publicacao na AWS e a ativacao da chave global em 2026-09-29. A entrega Discord real depende do encerramento de um evento elegivel, nao de um POST de teste.
 
 **Design:** `.specs/features/event-executive-summary/design.md`
-**Status:** Complete; independent validation PASS
-**Task count:** 9
+**Status:** T01-T09 com validacao independente PASS; T10 aplicado na demo, aguardando verificacao final
+**Task count:** 10
 
 ## Test Coverage Matrix
 
@@ -18,6 +18,7 @@ Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar
 | Texto e adapters externos | unit | Template, prompt limitado, validacao, falha/fallback, payload Discord | `src/test/java/**/*Test.java` | `./mvnw.cmd test` |
 | Worker e consulta HTTP | integration | Fechamento automatico, concorrencia, uma tentativa, status e GET sem efeitos externos | `src/test/java/**/*IT.java` | `./mvnw.cmd verify -Pintegration` |
 | Terraform e runbook | static | IAM minimo, ARN, rotas IAM e passos operacionais | `infra/modules/**/*.tftest.hcl` | `terraform test` no modulo alterado |
+| Demo AWS | operational | Task worker saudavel, rotas publicadas e ativacao global confirmada | ECS, API Gateway e logs CloudWatch | AWS CLI na conta demo autorizada |
 
 ## Gate Check Commands
 
@@ -31,7 +32,7 @@ Execute aprovado pelo usuario. Implementar uma tarefa por vez, testar, atualizar
 ## Execution Plan
 
 ```text
-T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09
+T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09 -> T10
 ```
 
 ## Task Breakdown
@@ -286,6 +287,20 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09
 
 **Verdict:** as correcoes de evidencia passaram unitarios e PostgreSQL/Testcontainers. Os registros externos continuam mockados; nenhum deploy, chamada AWS real ou publicacao Discord foi executado.
 
+### T10: Publicar a demo e ativar a janela global
+
+**Status:** Complete
+**What:** Publicar a imagem verificada e o webhook configurado na demo; ajustar a tolerancia de bootstrap do worker observada no primeiro rollout e ativar a chave global somente depois de estabilizar os tres servicos.
+**Where:** Modulo Terraform `infra/modules/compute`, ambiente demo e AWS CLI
+**Depends on:** T09
+**Requirement:** EXECSUM-01..05, EXECSUM-08..10, EXECSUM-39..44
+**Done when:** Query e command usam a imagem `summary-7c23aec` e estao estaveis; worker usa a mesma imagem com `startPeriod=120` e task `HEALTHY`; o metodo PUT existe no API Gateway e responde `200` com `enabled=true` e `enabledAt`. Nenhum POST de teste e enviado ao Discord.
+**Tests:** `terraform fmt -check`, `terraform validate` e `terraform test` do modulo compute; plano remoto limitado; `aws ecs wait services-stable`, `describe-tasks` e `apigateway test-invoke-method`.
+**Gate:** Infra + operacional
+**Commit:** `fix(infra): allow worker startup before health checks`
+
+**Gate result:** `terraform validate` passou; `terraform test` passou 2/2. O plano corretivo remoto alterou somente a task definition e o servico worker. ECS confirmou worker revision 10 `HEALTHY` e servicos estaveis. O PUT retornou `200`, `enabled=true` e `enabledAt=2026-09-29T07:07:45.090815Z`. Bedrock e Discord reais ainda nao foram exercitados, pois requerem um evento iniciado depois da ativacao e encerrado durante ela.
+
 ## Traceability Review
 
 | Requirement group | Tasks | Evidence planned |
@@ -294,7 +309,7 @@ T01 -> T02 -> T03 -> T04 -> T05 -> T06 -> T07 -> T08 -> T09
 | EXECSUM-06..10, 33..34 | T01, T06, T08, T09 | Claim, fechamento, estados e consulta sem efeitos externos |
 | EXECSUM-11..19, 26, 31..32, 35, 37..38 | T03, T04, T05, T09 | Marco, horario de aceite, agregacao e template |
 | EXECSUM-20..23, 25, 30, 36 | T05, T09 | Alertas contextuais, limites Bedrock, falha e ausencia de reserva |
-| EXECSUM-39..44 | T01, T07, T08 | Estado, configuracao, segredo, entrega unica e limite de mensagem |
+| EXECSUM-39..44 | T01, T07, T08, T10 | Estado, configuracao, segredo, entrega unica, limite de mensagem e infraestrutura publicada |
 
 ## Test Co-location Validation
 

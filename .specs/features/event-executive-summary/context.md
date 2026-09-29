@@ -1,7 +1,7 @@
 # Contexto do resumo executivo da performance do evento
 
 **Spec:** `.specs/features/event-executive-summary/spec.md`
-**Status:** Implementado e verificado independentemente (44/44 requisitos)
+**Status:** Implementado e verificado independentemente (44/44 requisitos); publicado na demo AWS com a chave global ligada em 2026-09-29
 
 ## Limite funcional
 

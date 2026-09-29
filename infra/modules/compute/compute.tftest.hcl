@@ -50,6 +50,11 @@ run "uses_one_image_with_separate_least_privilege_services" {
   }
 
   assert {
+    condition     = jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].healthCheck.startPeriod == 120
+    error_message = "The worker must have enough bootstrap time before failed health checks count."
+  }
+
+  assert {
     condition     = aws_appautoscaling_target.query_api.max_capacity == 4 && aws_appautoscaling_target.command_api.max_capacity == 4
     error_message = "Both API services must be able to scale beyond one task."
   }

@@ -355,7 +355,7 @@ resource "aws_ecs_task_definition" "worker" {
       interval    = 10
       timeout     = 5
       retries     = 3
-      startPeriod = 30
+      startPeriod = 120
     }
     logConfiguration = {
       logDriver = "awslogs"

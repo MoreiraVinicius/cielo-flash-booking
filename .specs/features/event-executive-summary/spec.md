@@ -1,6 +1,6 @@
 # Resumo executivo da performance do evento
 
-**Status:** Implementado e verificado independentemente (44/44 criterios). Deploy, chamadas AWS reais e publicacao Discord real continuam fora da autorizacao.
+**Status:** Implementado, verificado independentemente (44/44 criterios) e publicado na demo AWS. A chave global foi ativada em 2026-09-29; a entrega Discord e a inferencia Bedrock aguardam o fechamento de um evento elegivel.
 
 ## Problem Statement
 
@@ -20,7 +20,6 @@ Ao terminar a janela comercial de um evento, a demonstracao nao mostra em lingua
 | Demanda total ou vendas perdidas | Tentativas rejeitadas nao sao persistidas por evento. |
 | Diagnostico ou causa-raiz de incidentes | Alarmes do ambiente nao provam impacto causal no evento. |
 | Resumo consolidado de varios eventos | Exigiria uma unidade de agregacao e um encerramento proprios. |
-| Deploy na AWS e envio para o Discord real | A implementacao local nao publica nem altera servicos externos. |
 
 ## Assumptions & Open Questions
 
