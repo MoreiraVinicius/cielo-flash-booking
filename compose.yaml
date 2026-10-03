@@ -107,6 +107,7 @@ services:
       OUTBOX_PUBLISHER_API_CALL_TIMEOUT: 25s
       EXPIRATION_CONSUMER_ENABLED: "true"
       EXPIRATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-expiration
+      CONFIRMATION_CONSUMER_ENABLED: "true"
       CONFIRMATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-reservation-from-owner
       NOTIFICATION_CONSUMER_ENABLED: "true"
       NOTIFICATION_CONSUMER_QUEUE_URL: http://localstack:4566/000000000000/flash-booking-notification

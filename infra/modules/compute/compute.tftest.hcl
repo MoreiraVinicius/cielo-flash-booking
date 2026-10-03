@@ -103,6 +103,7 @@ run "uses_one_image_with_separate_least_privilege_services" {
       one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Resource if statement.Sid == "PublishReservationMessagesToOwner"]) == [var.reservation_to_owner_queue_arn] &&
       one([for statement in jsondecode(aws_iam_role_policy.worker_messaging.policy).Statement : statement.Resource if statement.Sid == "ConsumeReservationResolutionsFromOwner"]) == [var.reservation_from_owner_queue_arn] &&
       one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "OUTBOX_PUBLISHER_OWNER_QUEUE_URL"]) == var.reservation_to_owner_queue_url &&
+      one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "CONFIRMATION_CONSUMER_ENABLED"]) == "true" &&
       one([for item in jsondecode(aws_ecs_task_definition.worker.container_definitions)[0].environment : item.value if item.name == "CONFIRMATION_CONSUMER_QUEUE_URL"]) == var.reservation_from_owner_queue_url
     )
     error_message = "The worker may publish to the owner queue and consume resolutions only from the inbound queue."
