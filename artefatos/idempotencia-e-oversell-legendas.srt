@@ -1,0 +1,443 @@
+1
+00:00:00,000 --> 00:00:10,368
+Neste vídeo eu vou demonstrar por que duas garantias diferentes funcionam no Flash Booking: idempotência de
+
+2
+00:00:10,368 --> 00:00:20,737
+comandos e ausência de oversell. Elas resolvem problemas distintos. Idempotência responde à pergunta: se o cliente
+
+3
+00:00:20,737 --> 00:00:31,105
+repetir a mesma intenção, o efeito acontece mais de uma vez? A regra de inventário responde
+
+4
+00:00:31,105 --> 00:00:41,473
+a outra: se clientes diferentes disputarem os últimos ingressos, o sistema aceita mais unidades do que
+
+5
+00:00:41,473 --> 00:00:51,841
+a capacidade? Uma não substitui a outra. Vou seguir uma requisição desde o controlador HTTP até
+
+6
+00:00:51,841 --> 00:00:57,026
+o PostgreSQL e depois simular duas corridas concorrentes.
+
+7
+00:00:57,676 --> 00:01:07,934
+Começo pelo contrato. Para criar uma reserva, o cliente envia POST para events, identificador do evento,
+
+8
+00:01:07,934 --> 00:01:18,192
+reservations, com quantidade, nome e e-mail, mais o cabeçalho Idempotency-Key. O DELETE de reserva também exige
+
+9
+00:01:18,192 --> 00:01:28,451
+esse cabeçalho. A chave é obrigatória, tem até cento e vinte e oito caracteres e é
+
+10
+00:01:28,451 --> 00:01:38,709
+normalizada removendo espaços das pontas. O controlador valida a requisição e constrói uma impressão digital com
+
+11
+00:01:38,709 --> 00:01:48,968
+método HTTP, alvo normalizado e SHA duzentos e cinquenta e seis da representação JSON do payload
+
+12
+00:01:48,968 --> 00:01:59,226
+validado. Na reserva, o alvo inclui o identificador do evento. Isso permite diferenciar uma repetição legítima
+
+13
+00:01:59,226 --> 00:02:08,843
+de uma tentativa de reutilizar a chave para outra operação, outro evento ou outro conteúdo.
+
+14
+00:02:09,493 --> 00:02:20,351
+No código, o controlador não chama diretamente o caso de uso de reserva. Ele chama PersistentIdempotencyService.execute
+
+15
+00:02:20,351 --> 00:02:31,209
+e passa a ação que cria a reserva. Esse serviço define a transação externa. CreateReservationService também
+
+16
+00:02:31,209 --> 00:02:42,068
+declara Transactional com a propagação padrão, portanto participa dessa mesma transação. O escopo concreto contém a
+
+17
+00:02:42,068 --> 00:02:52,926
+aquisição da chave, a decisão de inventário, o cliente, a reserva, dois registros da outbox e
+
+18
+00:02:52,926 --> 00:03:03,784
+a resposta idempotente. Não há uma transação independente para a chave. Se a ação falha inesperadamente,
+
+19
+00:03:03,784 --> 00:03:14,642
+a transação inteira desfaz tanto o claim quanto qualquer alteração de inventário que ainda não havia
+
+20
+00:03:14,642 --> 00:03:15,321
+confirmado.
+
+21
+00:03:15,971 --> 00:03:26,242
+O claim da chave é uma operação SQL no PostgreSQL. A tabela idempotency_record possui UNIQUE em
+
+22
+00:03:26,242 --> 00:03:36,514
+idempotency_key. O adaptador tenta INSERT de uma linha provisória com estado interno IN_PROGRESS e prazo calculado
+
+23
+00:03:36,514 --> 00:03:46,786
+pelo relógio do banco. Se já existe a chave, o ON CONFLICT só permite substituí-la quando
+
+24
+00:03:46,786 --> 00:03:57,058
+expires_at já passou. Durante as vinte e quatro horas, a cláusula WHERE do conflito não atualiza
+
+25
+00:03:57,058 --> 00:04:07,330
+a linha, e o claim devolve falso. Se ela expirou, uma nova tentativa reivindica a mesma
+
+26
+00:04:07,330 --> 00:04:17,602
+chave atomicamente, renovando a janela. A limpeza periódica de linhas vencidas ajuda a controlar armazenamento, mas
+
+27
+00:04:17,602 --> 00:04:21,454
+não decide a validade da chave.
+
+28
+00:04:22,104 --> 00:04:31,065
+Agora acompanhe duas requisições simultâneas, A e B, com a mesma chave e o mesmo payload.
+
+29
+00:04:31,065 --> 00:04:40,026
+A insere a linha única e mantém a transação aberta enquanto executa a reserva. B tenta
+
+30
+00:04:40,026 --> 00:04:48,987
+adquirir a mesma chave; o índice único faz B esperar a decisão de A. Se A
+
+31
+00:04:48,987 --> 00:04:57,948
+confirma, B observa a linha confirmada, não ganha o claim, compara método, alvo e hash e
+
+32
+00:04:57,948 --> 00:05:06,908
+lê o status e o corpo já persistidos. B devolve o mesmo resultado de negócio, sem
+
+33
+00:05:06,908 --> 00:05:15,869
+chamar CreateReservationService e sem diminuir o estoque outra vez. Se A sofrer uma falha inesperada e
+
+34
+00:05:15,869 --> 00:05:24,830
+fizer rollback, seu claim desaparece junto com o restante; B pode então adquirir a chave e
+
+35
+00:05:24,830 --> 00:05:32,671
+tentar a operação. O estado IN_PROGRESS não fica exposto como uma resposta final confirmada.
+
+36
+00:05:33,321 --> 00:05:43,131
+Se B reutilizar a mesma chave com quantidade diferente, outro evento ou outro comando, a comparação
+
+37
+00:05:43,131 --> 00:05:52,940
+da impressão digital falha e a API devolve conflito. A chave é global, não é separada
+
+38
+00:05:52,940 --> 00:06:02,750
+por endpoint. Um ponto sutil: repetir um erro final esperado, como quatrocentos e quatro para evento
+
+39
+00:06:02,750 --> 00:06:12,559
+inexistente ou quatrocentos e nove por estoque insuficiente, reproduz esse resultado durante a janela. Mesmo se
+
+40
+00:06:12,559 --> 00:06:22,369
+um cancelamento devolver ingressos depois, o retry com a mesma chave não se transforma numa nova
+
+41
+00:06:22,369 --> 00:06:32,178
+reserva. Já uma falha transitória inesperada não é salva como resultado final: a transação é revertida.
+
+42
+00:06:32,178 --> 00:06:41,987
+Em respostas de erro, o código reaplica o identificador de correlação da tentativa atual, então eu
+
+43
+00:06:41,987 --> 00:06:50,571
+prometo repetição do resultado de negócio, não bytes idênticos de todos os campos HTTP.
+
+44
+00:06:51,221 --> 00:07:01,393
+A idempotência não identifica magicamente intenções iguais sob chaves diferentes. Se o cliente gerar uma chave
+
+45
+00:07:01,393 --> 00:07:11,565
+nova para cada retry, serão comandos independentes; havendo estoque, podem gerar reservas distintas. É responsabilidade do
+
+46
+00:07:11,565 --> 00:07:21,737
+cliente reutilizar a chave da mesma intenção. Também há uma fronteira temporal: depois das vinte e
+
+47
+00:07:21,737 --> 00:07:31,909
+quatro horas medidas pelo PostgreSQL, a chave pode ser reivindicada de novo e causar um novo
+
+48
+00:07:31,909 --> 00:07:42,081
+efeito. Por isso a garantia é precisa: uma mesma chave compatível, dentro da janela, corresponde a
+
+49
+00:07:42,081 --> 00:07:52,253
+um único efeito confirmado. Ela não é uma garantia eterna nem uma substituição para o controle
+
+50
+00:07:52,253 --> 00:07:53,524
+de capacidade.
+
+51
+00:07:54,174 --> 00:08:04,268
+Vamos agora ao oversell. O evento persiste capacity e available. O adaptador JdbcInventoryOperations executa um único
+
+52
+00:08:04,268 --> 00:08:14,362
+UPDATE na linha do evento: available recebe available menos a quantidade pedida somente se available ainda
+
+53
+00:08:14,362 --> 00:08:24,456
+for maior ou igual à quantidade. No mesmo predicado, o relógio PostgreSQL verifica o início e
+
+54
+00:08:24,456 --> 00:08:34,551
+o fim opcionais da janela comercial. A operação retorna um timestamp do banco quando conseguiu atualizar
+
+55
+00:08:34,551 --> 00:08:44,645
+uma linha; zero linhas significa que a reserva não pode ser aceita. O teste de disponibilidade
+
+56
+00:08:44,645 --> 00:08:54,739
+e o decremento são parte da mesma escrita, não duas consultas separadas do tipo ler, conferir
+
+57
+00:08:54,739 --> 00:08:57,893
+em Java e salvar depois.
+
+58
+00:08:58,543 --> 00:09:07,744
+Imagine que resta um ingresso e A e B chegam com chaves idempotentes diferentes, cada uma
+
+59
+00:09:07,744 --> 00:09:16,946
+pedindo um ingresso. As duas podem reivindicar suas chaves, porque são intenções distintas. A chega primeiro
+
+60
+00:09:16,946 --> 00:09:26,147
+ao UPDATE, obtém o lock da linha do evento e muda available de um para zero.
+
+61
+00:09:26,147 --> 00:09:35,348
+B chega ao mesmo UPDATE e espera o lock. Quando A confirma, o PostgreSQL reavalia o
+
+62
+00:09:35,348 --> 00:09:44,549
+predicado de B contra a versão atual da linha. Available agora é zero, portanto a condição
+
+63
+00:09:44,549 --> 00:09:53,750
+available maior ou igual a um falha. B atualiza zero linhas e recebe conflito. Apenas A
+
+64
+00:09:53,750 --> 00:10:02,952
+passa ao passo de persistir cliente, reserva e outbox. Esta é a garantia contra oversell mesmo
+
+65
+00:10:02,952 --> 00:10:08,127
+com muitas tasks e nenhum lock compartilhado em Java.
+
+66
+00:10:08,777 --> 00:10:18,157
+O fluxo de criação reforça a ausência de efeitos parciais. Após verificar que o evento existe,
+
+67
+00:10:18,157 --> 00:10:27,536
+o serviço tenta primeiro o decremento condicional. Só depois faz o upsert do cliente, grava a
+
+68
+00:10:27,536 --> 00:10:36,916
+reserva pendente e os dois eventos de outbox: um para notificação e outro para expiração. Tudo
+
+69
+00:10:36,916 --> 00:10:46,295
+confirma na mesma transação que contém a chave idempotente. Se uma dessas gravações falhar, o PostgreSQL
+
+70
+00:10:46,295 --> 00:10:55,674
+desfaz o decremento e o claim. Se a capacidade for insuficiente, nenhum decremento ou cliente novo
+
+71
+00:10:55,674 --> 00:11:05,054
+é persistido; o serviço retorna o conflito esperado e a camada de idempotência grava quatrocentos e
+
+72
+00:11:05,054 --> 00:11:14,433
+nove como resposta final daquela chave. O horário aceito é obtido do banco depois da disputa
+
+73
+00:11:14,433 --> 00:11:20,881
+da linha e serve de base para o prazo da reserva.
+
+74
+00:11:21,531 --> 00:11:30,865
+Há uma segunda defesa no esquema: a coluna available tem uma constraint que exige valor entre
+
+75
+00:11:30,865 --> 00:11:40,199
+zero e capacity. Ela impede persistir estados impossíveis, mas não é o algoritmo que escolhe o
+
+76
+00:11:40,199 --> 00:11:49,532
+vencedor da disputa. O vencedor é decidido pelo UPDATE condicional. Também não é o Valkey que
+
+77
+00:11:49,532 --> 00:11:58,866
+decide. O cache atende GET de evento com até um segundo de defasagem; a tela pode
+
+78
+00:11:58,866 --> 00:12:08,199
+mostrar um ingresso que acabou de ser reservado por outra pessoa. O POST sempre volta à
+
+79
+00:12:08,199 --> 00:12:17,533
+linha autoritativa do PostgreSQL. Consistência eventual na leitura não se converte em estoque negativo na escrita.
+
+80
+00:12:18,183 --> 00:12:28,408
+A ausência de oversell também depende de devolver ingressos corretamente. Cancelamento e expiração concorrem entre si
+
+81
+00:12:28,408 --> 00:12:38,633
+e podem receber mensagens repetidas. Para cancelar, o adaptador bloqueia a reserva ainda PENDING, lê o
+
+82
+00:12:38,633 --> 00:12:48,858
+relógio PostgreSQL depois do lock e escolhe CANCELLED antes do prazo ou EXPIRED no prazo ou
+
+83
+00:12:48,858 --> 00:12:59,083
+depois. O consumidor de expiração usa UPDATE condicionado a PENDING e ao vencimento. Somente a tentativa
+
+84
+00:12:59,083 --> 00:13:09,308
+que efetivamente sai de PENDING recebe os dados necessários para incrementar available. Esse incremento ocorre na
+
+85
+00:13:09,308 --> 00:13:19,532
+mesma transação da transição de estado. Uma segunda tentativa encontra a reserva terminal, não recebe autorização
+
+86
+00:13:19,532 --> 00:13:29,757
+para devolver ingressos de novo. O próprio incremento exige available mais a quantidade menor ou igual
+
+87
+00:13:29,757 --> 00:13:34,870
+a capacity, e a constraint oferece outra barreira.
+
+88
+00:13:35,520 --> 00:13:45,672
+Podemos montar uma matriz simples. Mesma chave e mesmo payload: uma execução e replay do resultado.
+
+89
+00:13:45,672 --> 00:13:55,824
+Mesma chave e payload diferente: conflito de idempotência. Chaves diferentes disputando a última unidade: a chave
+
+90
+00:13:55,824 --> 00:14:05,977
+não serializa essas intenções, mas o UPDATE do evento aceita somente a que couber. Duas tentativas
+
+91
+00:14:05,977 --> 00:14:16,129
+de encerramento da mesma reserva: a transição condicional de PENDING autoriza uma única devolução. São três
+
+92
+00:14:16,129 --> 00:14:26,281
+linhas de defesa em níveis diferentes: chave da intenção, linha de inventário e estado da reserva.
+
+93
+00:14:26,281 --> 00:14:36,433
+Nenhuma delas depende de acertar a ordem das mensagens no SQS ou da quantidade de containers
+
+94
+00:14:36,433 --> 00:14:37,702
+em execução.
+
+95
+00:14:38,352 --> 00:14:49,579
+Os testes tornam essas afirmações verificáveis. Em InventoryConcurrencyIT, duzentas tentativas concorrentes disputam cem unidades e exatamente
+
+96
+00:14:49,579 --> 00:15:00,806
+cem são aceitas, deixando available em zero. Em ReservationConcurrencyIT, trinta tentativas disputam capacidade dez: o teste
+
+97
+00:15:00,806 --> 00:15:12,033
+exige dez reservas, zero disponível e vinte eventos de outbox, dois por reserva aceita. IdempotencyControllerIT dispara
+
+98
+00:15:12,033 --> 00:15:23,259
+duas requisições paralelas com a mesma chave e exige uma única reserva e um único decremento;
+
+99
+00:15:23,259 --> 00:15:34,486
+também cobre conflito por payload diferente, replay de quatrocentos e nove, reuso após vencimento e DELETE
+
+100
+00:15:34,486 --> 00:15:45,713
+repetido sem devolução duplicada. Há ainda teste de rollback do claim após erro inesperado. Esses testes
+
+101
+00:15:45,713 --> 00:15:56,940
+de integração usam PostgreSQL real porque mocks não reproduzem lock de linha, índice único, ON CONFLICT
+
+102
+00:15:56,940 --> 00:15:59,747
+nem reavaliação de predicado.
+
+103
+00:16:00,397 --> 00:16:09,692
+O limite conhecido é desempenho sob uma venda extremamente concentrada no mesmo evento. O lock da
+
+104
+00:16:09,692 --> 00:16:18,988
+linha protege a correção, mas pode aumentar espera e p noventa e nove. Adicionar mais tasks
+
+105
+00:16:18,988 --> 00:16:28,284
+de comando não elimina essa contenção; pode até aumentar o número de conexões esperando. A evolução
+
+106
+00:16:28,284 --> 00:16:37,580
+de alta carga é um desenho documentado, não uma promessa de vazão já validada. Eu mediria
+
+107
+00:16:37,580 --> 00:16:46,876
+lock waits, latência e conflitos, aplicaria admissão de carga e só então consideraria mudar o modelo
+
+108
+00:16:46,876 --> 00:16:56,172
+de inventário. Se precisar resumir a prova: a chave única decide quem executa uma intenção; a
+
+109
+00:16:56,172 --> 00:17:05,467
+transação mantém claim, estoque e reserva indivisíveis; o UPDATE condicional decide quais intenções diferentes cabem; e
+
+110
+00:17:05,467 --> 00:17:14,763
+a transição de PENDING devolve estoque no máximo uma vez. É por essa combinação que retry
+
+111
+00:17:14,763 --> 00:17:18,830
+e concorrência não produzem oversell neste sistema.

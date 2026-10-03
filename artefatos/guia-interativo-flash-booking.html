@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flash Booking · preparação para entrevista</title>
+  <style>
+    :root { color-scheme: dark; --bg:#07121e; --surface:#102236; --surface2:#152c41; --line:#29465a; --ink:#edf6fa; --muted:#afc5d1; --cyan:#53ddd6; --gold:#f5bb6c; --green:#8dd7a5; --red:#fa8f8f; --purple:#b9a7ff; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:Segoe UI, Arial, sans-serif; color:var(--ink); background:radial-gradient(circle at 8% 0%,#153747 0,transparent 28rem),var(--bg); line-height:1.5; }
+    a { color:var(--cyan); }
+    a:hover { color:#b8fffb; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible,a:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+    .shell { max-width:1180px; margin:0 auto; padding:30px 24px 100px; }
+    .eyebrow { color:var(--cyan); font-size:.84rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+    header { display:grid; grid-template-columns:1.4fr .6fr; gap:25px; align-items:center; padding:32px 0 36px; }
+    h1 { font-size:clamp(2.4rem,5vw,4.5rem); line-height:1.04; letter-spacing:-.045em; margin:12px 0 20px; }
+    h2 { font-size:clamp(1.7rem,3vw,2.35rem); letter-spacing:-.035em; margin:0 0 8px; }
+    h3 { margin:0 0 12px; font-size:1.22rem; }
+    p { margin:0 0 13px; }
+    .lead { max-width:740px; color:var(--muted); font-size:1.13rem; }
+    .hero-card,.panel,.card,.question,.path-card { background:var(--surface); border:1px solid var(--line); border-radius:20px; }
+    .hero-card { padding:27px; border-color:#436577; box-shadow:0 18px 60px #0004; }
+    .hero-card strong { font-size:2.3rem; color:var(--cyan); display:block; line-height:1; }
+    .hero-card span { color:var(--muted); font-size:.91rem; }
+    nav { display:flex; flex-wrap:wrap; gap:9px; padding:14px 0 28px; border-top:1px solid var(--line); }
+    nav a,.chip { display:inline-flex; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:9px 14px; text-decoration:none; color:var(--ink); font-size:.92rem; }
+    nav a:hover { border-color:var(--cyan); }
+    section { margin-top:54px; }
+    .section-lead { color:var(--muted); max-width:820px; margin-bottom:21px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .panel { padding:25px; }
+    .panel.accent { border-left:5px solid var(--cyan); }
+    .panel.warn { border-left:5px solid var(--gold); }
+    .panel ul,.answer ul { padding-left:21px; margin:8px 0 0; }
+    li { margin:7px 0; }
+    .small { color:var(--muted); font-size:.91rem; }
+    .tag { color:var(--gold); text-transform:uppercase; font-size:.76rem; font-weight:800; letter-spacing:.12em; }
+    .steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:17px; }
+    .step { background:var(--surface2); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    .step b { color:var(--cyan); display:block; font-size:1.15rem; }
+    .step span { color:var(--muted); font-size:.89rem; }
+    .toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:15px 0 19px; }
+    .toolbar select,.toolbar button,.action { border-radius:11px; color:var(--ink); background:var(--surface2); border:1px solid var(--line); padding:10px 13px; }
+    .toolbar button:hover,.action:hover { border-color:var(--cyan); }
+    .progress { color:var(--muted); font-size:.91rem; }
+    .cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .card { padding:22px; display:flex; flex-direction:column; min-height:218px; }
+    .card .topic { color:var(--purple); font-size:.8rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; }
+    .card h3 { margin:12px 0 16px; }
+    .card .answer { display:none; color:#d7ebf0; background:#071a29; border:1px solid #315267; border-radius:12px; padding:15px; margin-bottom:14px; }
+    .card.open .answer { display:block; }
+    .card .foot { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
+    .card button { border:1px solid var(--line); background:var(--surface2); color:var(--ink); border-radius:9px; padding:8px 11px; }
+    .card button:hover { border-color:var(--cyan); }
+    .card button.known { border-color:var(--green); color:var(--green); }
+    .source { font-size:.83rem; color:var(--muted); margin:0 0 12px; }
+    .question { padding:24px; margin-bottom:14px; }
+    .question .options { display:grid; gap:8px; margin-top:15px; }
+    .question .options button { text-align:left; border:1px solid var(--line); border-radius:10px; background:var(--surface2); color:var(--ink); padding:11px 14px; }
+    .question .options button:hover { border-color:var(--cyan); }
+    .question .options button.correct { border-color:var(--green); background:#173b37; }
+    .question .options button.wrong { border-color:var(--red); background:#412b35; }
+    .feedback { display:none; margin-top:14px; padding:14px; border-radius:11px; background:#092633; border:1px solid #406374; }
+    .feedback.show { display:block; }
+    .path-card { padding:19px 22px; }
+    .path-card b { color:var(--cyan); }
+    .path-card a { display:block; margin:6px 0; overflow-wrap:anywhere; font-family:Consolas, monospace; font-size:.85rem; }
+    .status { padding:13px 17px; border-radius:11px; border:1px solid var(--line); background:var(--surface2); color:var(--muted); margin:16px 0; }
+    .status strong { color:var(--gold); }
+    footer { border-top:1px solid var(--line); margin-top:60px; padding-top:22px; color:var(--muted); font-size:.9rem; }
+    @media(max-width:800px) { header,.grid,.cards { grid-template-columns:1fr; } .steps { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:480px) { .shell { padding:20px 15px 60px; } .steps { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <div class="eyebrow">Material de estudo · Flash Booking</div>
+      <h1>Treine como se estivesse no code review.</h1>
+      <p class="lead">Um roteiro curto, cartões de recordação ativa, cenários de decisão e atalhos para o código. Responda em voz alta antes de abrir cada resposta.</p>
+    </div>
+    <aside class="hero-card" aria-label="Resumo do treino">
+      <strong>30 + 10</strong><span>cartões e cenários práticos</span><br><br>
+      <strong>5 min</strong><span>de apresentação inicial sugerida</span><br><br>
+      <strong>1 fonte</strong><span>código e especificação atual do projeto</span>
+    </aside>
+  </header>
+
+  <nav aria-label="Seções">
+    <a href="#metodo">Como estudar</a><a href="#pitch">Abertura da entrevista</a><a href="#cartoes">Cartões</a><a href="#cenarios">Cenários</a><a href="#mapa">Mapa do código</a><a href="#armadilhas">Armadilhas</a>
+  </nav>
+
+  <main>
+    <section id="metodo">
+      <h2>Uma sessão de 35 minutos</h2>
+      <p class="section-lead">Use este material após assistir ao vídeo. A meta é explicar o motivo de cada escolha, a garantia que ela oferece e o custo que introduz.</p>
+      <div class="steps">
+        <div class="step"><b>1 · 5 min</b><span>Faça a abertura sem ler.</span></div>
+        <div class="step"><b>2 · 15 min</b><span>Abra 12 cartões aleatórios e responda em voz alta.</span></div>
+        <div class="step"><b>3 · 10 min</b><span>Resolva 5 cenários sem consultar a resposta.</span></div>
+        <div class="step"><b>4 · 5 min</b><span>Abra o código dos pontos em que hesitou.</span></div>
+      </div>
+      <div class="status"><strong>Escopo da apresentação:</strong> a reserva atual é temporária. A confirmação definitiva está documentada como proposta. A arquitetura de alta carga é um desenho de evolução. A demo AWS já foi validada em escopos registrados, mas o ambiente foi desmontado; não diga que há uma produção ativa.</div>
+    </section>
+
+    <section id="pitch">
+      <h2>Abertura de cinco minutos</h2>
+      <p class="section-lead">Uma sequência de ideias para apresentar naturalmente. Use suas palavras; não memorize frases inteiras.</p>
+      <div class="grid">
+        <div class="panel accent"><span class="tag">1 · Problema e contrato</span><h3>O que o sistema garante?</h3><p>“O Flash Booking reserva ingressos temporariamente em uma flash sale. O requisito que governa a arquitetura é nunca ultrapassar a capacidade, mesmo com várias instâncias. Reserva aceita não é pagamento nem compra definitiva.”</p></div>
+        <div class="panel"><span class="tag">2 · Decisão central</span><h3>Onde está a autoridade?</h3><p>“O PostgreSQL decide estoque, janela de venda e vencimento. Um <code>UPDATE</code> condicional serializa a disputa pelo evento. Cliente, reserva e outbox confirmam na mesma transação.”</p></div>
+        <div class="panel"><span class="tag">3 · Distribuição</span><h3>Como escalo sem duplicar regras?</h3><p>“Uma imagem Java roda como Query API, Command API e worker. Valkey acelera apenas a leitura de evento. Outbox e SQS tiram e-mail e expiração do caminho HTTP.”</p></div>
+        <div class="panel warn"><span class="tag">4 · Limites</span><h3>O que eu mediria?</h3><p>“Uma flash sale concentrada cria uma linha quente. Mais tasks não removem esse lock. Eu acompanharia espera por lock, p95/p99, backlog e taxa de conflito antes de promover o desenho high-load.”</p></div>
+      </div>
+    </section>
+
+    <section id="cartoes">
+      <h2>Cartões de entrevista</h2>
+      <p class="section-lead">Tente responder em 30–60 segundos. Depois revele a resposta e marque o que já domina. O progresso fica salvo apenas neste navegador.</p>
+      <div class="toolbar">
+        <div><label for="topic">Tema: </label><select id="topic"><option value="all">Todos</option></select></div>
+        <div><button id="shuffle" type="button">Embaralhar</button> <button id="reset" type="button">Zerar progresso</button></div>
+        <span class="progress" id="progress" aria-live="polite"></span>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="cenarios">
+      <h2>Cenários para defender decisões</h2>
+      <p class="section-lead">Escolha uma resposta e explique a sequência de eventos. As alternativas erradas representam erros comuns em entrevistas de sistemas distribuídos.</p>
+      <p class="progress" id="score" aria-live="polite"></p>
+      <div id="questions"></div>
+    </section>
+
+    <section id="mapa">
+      <h2>Mapa para reler o código</h2>
+      <p class="section-lead">Siga cada trilha começando no contrato, depois caso de uso, adaptador e teste. Os links são relativos a este arquivo dentro de <code>artefatos/</code>.</p>
+      <div class="grid" id="paths"></div>
+    </section>
+
+    <section id="armadilhas">
+      <h2>Afirmações para evitar</h2>
+      <div class="grid">
+        <div class="panel warn"><h3>“O cache impede oversell.”</h3><p>O cache só acelera o GET de evento. O comando decide no PostgreSQL, inclusive quando a disponibilidade exibida está defasada.</p></div>
+        <div class="panel warn"><h3>“A outbox garante exactly-once.”</h3><p>Ela torna durável a intenção de publicar. Resposta ambígua e redelivery ainda podem duplicar mensagens; consumidores precisam ser idempotentes.</p></div>
+        <div class="panel warn"><h3>“Mais instâncias resolvem o último ingresso.”</h3><p>A disputa continua na linha do evento. Scale-out pode aumentar concorrência e lock wait; a promoção de escala depende de medidas.</p></div>
+        <div class="panel warn"><h3>“Temos confirmação de compra e alta disponibilidade.”</h3><p>A implementação atual cobre reserva temporária. Confirmação externa e arquitetura high-load permanecem propostas. A demo usa RDS Single-AZ.</p></div>
+      </div>
+    </section>
+  </main>
+  <footer>Material de treino derivado do código e da <a href="../.specs/STATE.md">.specs/STATE.md</a> em 29/09/2026. Consulte a especificação e o código para verificar qualquer mudança posterior. As respostas são formulações para entrevista, não uma nova fonte de contrato.</footer>
+</div>
+
+<script>
+const root = "../";
+const cards = [
+  ["Contrato", "Qual é a diferença entre reserva e compra aqui?", "Eu entrego um bloqueio temporário de ingressos. A reserva nasce PENDING e termina CANCELLED ou EXPIRED; o sistema não processa pagamento nem confirma compra. CONFIRMED é uma proposta de evolução, sem contrato executável nesta versão.", ".specs/STATE.md"],
+  ["Contrato", "Quais são os cinco endpoints centrais do case?", "POST /events, GET /events/{id}, POST /events/{id}/reservations, GET /reservations/{id} e DELETE /reservations/{id}. O resumo executivo adiciona rotas complementares da demo.", ".specs/features/flash-booking-demo/spec.md"],
+  ["Arquitetura", "Por que monólito modular em vez de microsserviços de domínio?", "Preservo uma base única de regras e uma transação simples para inventário, reserva e outbox. O runtime já separa consulta, comando e worker por perfil, então escalo cargas diferentes sem distribuir o domínio prematuramente.", ".specs/features/flash-booking-demo/design.md"],
+  ["Arquitetura", "O que muda entre Query API, Command API e worker?", "A imagem é a mesma. Os perfis ativam entradas diferentes: GETs, POST/DELETE e consumidores/agendadores. No ECS são serviços separados, com sinais e permissões próprios.", "infra/modules/compute/main.tf"],
+  ["Arquitetura", "Onde está a fronteira hexagonal no código?", "Domínio e casos de uso dependem de contratos orientados ao negócio, como InventoryOperations ou ReservationWriter. JDBC, Valkey e AWS ficam nos adaptadores. Controllers traduzem HTTP e chamam casos de uso.", "src/test/java/com/cielo/flashbooking/architecture/ArchitectureTest.java"],
+  ["Arquitetura", "Por que não criar uma interface para cada classe?", "A abstração vale quando protege uma fronteira ou variação real. Uma porta de inventário esconde SQL e locks; uma interface para um helper estável só acrescentaria navegação sem proteger uma decisão.", "src/main/java/com/cielo/flashbooking/inventory/application/InventoryOperations.java"],
+  ["Banco", "Como uma reserva evita oversell com múltiplas tasks?", "O adaptador executa UPDATE condicional: reduz available só se houver capacidade e a janela de venda estiver aberta. PostgreSQL bloqueia a linha e reavalia a condição após a espera; reserva e outbox confirmam com o decremento.", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/inventory/JdbcInventoryOperations.java"],
+  ["Banco", "O que a constraint de available acrescenta?", "É uma segunda barreira de integridade: available deve ficar entre zero e capacity. Ela não substitui o UPDATE condicional, que também decide qual concorrente recebe o ingresso.", "src/main/resources/db/migration/V1__create_flash_booking_schema.sql"],
+  ["Banco", "Por que Spring JDBC em vez de JPA?", "Os comandos críticos exigem SQL PostgreSQL explícito para UPDATE condicional, RETURNING, locks e upsert. Uma única pilha de persistência deixa os efeitos e os planos de consulta mais visíveis.", ".specs/STATE.md"],
+  ["Banco", "Qual é o custo de concentrar inventário na linha do evento?", "Um evento popular cria contenção: lock waits e p99 podem subir. RDS Proxy ou mais tasks controlam conexões, mas não eliminam esse gargalo. Eu mediria antes de trocar o modelo.", ".specs/features/flash-booking-high-load/design.md"],
+  ["Tempo", "Por que usar o relógio PostgreSQL?", "Criação, prazo, janela comercial, idempotência e expiração são decisões compartilhadas. Relógios de instâncias podem divergir; o banco observa ou persiste o instante que governa a transição.", ".specs/STATE.md"],
+  ["Tempo", "DELETE começou antes de expiresAt mas esperou um lock. Qual status?", "A decisão acontece depois de bloquear a reserva. Se o relógio do PostgreSQL já alcançou expiresAt, registro EXPIRED e o motivo de prazo encerrado, mesmo que a requisição tenha começado cedo.", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/JdbcReservationPersistenceAdapter.java"],
+  ["Tempo", "Como cancelamento e expiração evitam devolver estoque duas vezes?", "Apenas quem muda PENDING para um estado terminal recebe autorização para incrementar o inventário, dentro da mesma transação. A tentativa concorrente afeta zero linhas; a constraint impede available acima de capacity.", "src/main/java/com/cielo/flashbooking/reservation/application/CancelReservationService.java"],
+  ["Tempo", "Por que há SQS e reconciliador para expirar?", "A mensagem atrasada permite processamento oportuno; o reconciliador varre reservas vencidas caso publicação, entrega ou consumo falhem. Uma mensagem antecipada não muda o estado antes do prazo.", "src/main/java/com/cielo/flashbooking/reservation/reconciliation/ExpirationReconciler.java"],
+  ["Tempo", "O que significa expiresAt + 5 segundos?", "A reserva deixa de ser válida exatamente em expiresAt. Com banco e processamento saudáveis, a transição e a devolução de capacidade devem se materializar até cinco segundos depois. Não é extensão do hold.", ".specs/STATE.md"],
+  ["Idempotência", "Como a chave idempotente funciona entre instâncias?", "A chave vive no PostgreSQL por 24 horas e identifica operação, alvo e hash do conteúdo. Claim e unicidade serializam concorrentes; replay compatível devolve a resposta salva, uso incompatível retorna 409.", "src/main/java/com/cielo/flashbooking/application/idempotency/PersistentIdempotencyService.java"],
+  ["Idempotência", "Por que persistir um 409 de capacidade insuficiente?", "É um resultado final esperado daquele comando. Repetir a mesma chave deve reproduzi-lo, mesmo se ingressos retornarem depois. Erros transitórios 5xx não viram resultado final.", ".specs/features/flash-booking-demo/design.md"],
+  ["Idempotência", "O atraso da limpeza prolonga a validade da chave?", "Não. A validade lógica é avaliada no claim pelo relógio PostgreSQL. O worker remove linhas vencidas em lotes como manutenção; ele não decide quando a chave pode ser reutilizada.", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/idempotency/JdbcIdempotencyStore.java"],
+  ["Mensageria", "Por que transactional outbox?", "Não posso confirmar banco e SQS atomicamente em uma transação local. Registro a intenção de publicar junto com a reserva e envio depois do commit. Isso evita perder o evento entre o commit e a chamada à fila.", "src/main/java/com/cielo/flashbooking/adapter/out/messaging/publisher/OutboxSqsPublisher.java"],
+  ["Mensageria", "A outbox entrega exatamente uma vez?", "Não. Se o envio ocorreu e a resposta se perdeu, o publisher pode tentar de novo. Mensagens têm identidade estável e consumidores tratam redelivery. Múltiplos publishers exigem claim/lease antes do scale-out proposto.", ".specs/features/flash-booking-high-load/design.md"],
+  ["Mensageria", "Por que e-mail e expiração usam filas separadas?", "Expiração controla retenção de estoque e tem prazo operacional apertado. SES lento ou indisponível não pode consumir sua cota de threads. Filas, listeners, timeouts e DLQs separados isolam as falhas.", ".specs/features/flash-booking-demo/design.md"],
+  ["Mensageria", "Por que o envio de e-mail não mantém transação aberta?", "Uma chamada remota pode demorar. Faço claim com lease em transação curta, chamo SES sem segurar conexão e depois registro o resultado. Uma resposta ambígua ainda pode gerar duplicação; não alego atomicidade entre SES e banco.", "src/main/java/com/cielo/flashbooking/notification/email/ReservationEmailService.java"],
+  ["Cache", "O que é cacheado e por quanto tempo?", "Somente a consulta GET /events/{id}, com TTL de no máximo um segundo e invalidação após commit. GET de reserva vai direto ao PostgreSQL porque expõe dados pessoais e muda de estado.", "src/main/java/com/cielo/flashbooking/event/application/GetEventService.java"],
+  ["Cache", "O que acontece se o Valkey falhar durante uma flash sale?", "O GET pode cair para PostgreSQL, mas o caso de uso limita fallbacks simultâneos por task e usa circuito de falha. Excedentes recebem indisponibilidade controlada para preservar o banco e os comandos.", "src/main/java/com/cielo/flashbooking/event/application/GetEventService.java"],
+  ["API e segurança", "Onde acontece a autenticação da demo AWS?", "No API Gateway REST, por IAM/SigV4, antes do VPC Link e do ALB interno. Essa é autenticação operacional de invocadores; não implementa login ou autorização de clientes finais.", ".specs/STATE.md"],
+  ["API e segurança", "Por que não prometer 429 determinístico?", "Os limites de throttling do API Gateway são metas de melhor esforço. A configuração existe, mas uma rajada pode ter distribuição variável. Eu reporto os limites efetivos e o comportamento observado.", ".specs/STATE.md"],
+  ["Qualidade", "O que um teste unitário não prova nesse projeto?", "Mocks não reproduzem locks, reavaliação do UPDATE, constraints e relógio PostgreSQL. Para oversell, prazos e idempotência concorrente, uso testes de integração com PostgreSQL real e concorrência sincronizada.", "src/test/java/com/cielo/flashbooking/adapter/out/persistence/inventory/InventoryConcurrencyIT.java"],
+  ["Qualidade", "O que ArchUnit protege?", "Garante que domínio não dependa de Spring/AWS, módulos não formem ciclos e entrada ou negócio não importem adaptadores de saída. A regra arquitetural fica executável na CI.", "src/test/java/com/cielo/flashbooking/architecture/ArchitectureTest.java"],
+  ["Evolução", "O que está implementado e o que é plano high-load?", "A demo tem a regra PostgreSQL, perfis ECS, cache e workers. Aurora, RDS Proxy, Multi-AZ e claim/lease para múltiplos publishers são desenho de evolução e exigem implementação e validação próprias.", ".specs/features/flash-booking-high-load/design.md"],
+  ["Evolução", "Como você apresentaria o resumo executivo?", "É um complemento opt-in: fatos numéricos vêm do PostgreSQL; template determinístico é a base; Bedrock acrescenta leitura opcional e CloudWatch só contexto. O relatório salvo pode ser publicado no Discord. A validação local está registrada, sem alegar chamada AWS ou entrega externa real.", ".specs/features/event-executive-summary/validation.md"]
+];
+
+const scenarios = [
+  {q:"Duas tasks tentam reservar o último ingresso ao mesmo tempo. Qual componente decide o vencedor?", choices:["Um lock Java em cada task", "O UPDATE condicional no PostgreSQL", "A contagem mostrada pelo Valkey"], correct:1, why:"O lock da linha do evento e a reavaliação do predicado no PostgreSQL impedem que ambas decrementem o último ingresso. Um lock local não coordena processos."},
+  {q:"Uma pessoa viu available = 1, mas o POST retorna 409. Isso indica oversell?", choices:["Sim, o cache era a fonte de verdade", "Não; a leitura pode estar defasada e o POST revalida no banco", "Sim; toda consulta precisa bloquear o evento"], correct:1, why:"A disponibilidade consultada aceita defasagem de até um segundo. A escrita tem consistência forte e pode recusar quando outro comando venceu."},
+  {q:"O DELETE chega antes do prazo, espera o lock e só prossegue depois de expiresAt. Qual transição ocorre?", choices:["CANCELLED porque a requisição começou antes", "EXPIRED porque o relógio do banco é observado depois do lock", "Nenhuma; a requisição precisa ser reenviada"], correct:1, why:"A persistência observa o instante do PostgreSQL após bloquear a linha, para não registrar um cancelamento tardio."},
+  {q:"O publisher enviou ao SQS, mas perdeu a resposta e caiu. O que é seguro afirmar?", choices:["A mensagem chegará exatamente uma vez", "A outbox pode reenviar; consumidor precisa lidar com duplicidade", "A reserva deve ser revertida"], correct:1, why:"A outbox preserva a intenção, mas não coordena atomicamente a confirmação do SQS com PostgreSQL."},
+  {q:"SES fica lento. Qual proteção evita que isso atrase a expiração?", choices:["Enviar e-mail dentro da transação da reserva", "Isolar filas, listeners, timeouts e cota de concorrência", "Aumentar o TTL do Valkey"], correct:1, why:"Notificação e expiração têm recursos assíncronos separados; a chamada remota não segura transação aberta."},
+  {q:"Um retry com a mesma Idempotency-Key chega após um 409 por estoque. Agora há estoque. O que ocorre dentro das 24 horas?", choices:["Cria nova reserva", "Reproduz o 409 salvo", "Remove a chave e tenta novamente"], correct:1, why:"Capacidade insuficiente é resultado final daquele comando. O mesmo intento reproduz a resposta registrada na janela lógica."},
+  {q:"Valkey cai e 100 GETs chegam à mesma task. Qual comportamento protege o banco?", choices:["Todos os GETs fazem fallback simultâneo", "Circuito e limite de fallbacks; excesso recebe 503", "Os POSTs passam a consultar Valkey"], correct:1, why:"O fallback simultâneo é limitado por task, evitando que falha de cache derrube a capacidade de escrita do PostgreSQL."},
+  {q:"O evento popular aumenta p99 apesar de mais tasks ECS. Qual hipótese você investiga primeiro?", choices:["A linha de inventário e os lock waits", "O CSS do dashboard", "A ausência de login de cliente"], correct:0, why:"A escrita por evento concorre na mesma linha. Scale-out pode aumentar espera e conexões sem ampliar vazão."},
+  {q:"Alguém pede para demonstrar compra confirmada. Qual resposta é fiel ao sistema?", choices:["O e-mail equivale a comprovante de compra", "O endpoint GET confirma pagamento", "Esta versão só implementa reserva temporária; confirmação externa é proposta"], correct:2, why:"PENDING, CANCELLED e EXPIRED são os estados executáveis da reserva. Pagamento e confirmação definitiva estão fora do runtime atual."},
+  {q:"Você rodou stress test local. Qual afirmação pode levar à entrevista?", choices:["A AWS suportará a mesma vazão e failover", "O teste orienta gargalos locais; capacidade AWS requer medição remota", "O banco não terá hot row"], correct:1, why:"Compose local e AWS têm topologia, latência e recursos diferentes. O benchmark local não prova capacidade nem disponibilidade na nuvem."}
+];
+
+const paths = [
+  {name:"Reserva e concorrência", links:[["Contrato da demo", ".specs/features/flash-booking-demo/spec.md"],["Caso de uso", "src/main/java/com/cielo/flashbooking/reservation/application/CreateReservationService.java"],["UPDATE condicional", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/inventory/JdbcInventoryOperations.java"],["Teste concorrente", "src/test/java/com/cielo/flashbooking/adapter/out/persistence/inventory/InventoryConcurrencyIT.java"]]},
+  {name:"Cancelamento e expiração", links:[["Decisões de prazo", ".specs/STATE.md"],["Transição JDBC", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/reservation/JdbcReservationPersistenceAdapter.java"],["Reconciliador", "src/main/java/com/cielo/flashbooking/reservation/reconciliation/ExpirationReconciler.java"],["Teste", "src/test/java/com/cielo/flashbooking/reservation/reconciliation/ExpirationReconcilerIT.java"]]},
+  {name:"Idempotência e outbox", links:[["Serviço de idempotência", "src/main/java/com/cielo/flashbooking/application/idempotency/PersistentIdempotencyService.java"],["Claim JDBC", "src/main/java/com/cielo/flashbooking/adapter/out/persistence/idempotency/JdbcIdempotencyStore.java"],["Publisher SQS", "src/main/java/com/cielo/flashbooking/adapter/out/messaging/publisher/OutboxSqsPublisher.java"],["Teste de idempotência", "src/test/java/com/cielo/flashbooking/application/idempotency/PersistentIdempotencyIT.java"]]},
+  {name:"Leitura, arquitetura e evolução", links:[["Cache de evento", "src/main/java/com/cielo/flashbooking/event/application/GetEventService.java"],["Fronteiras ArchUnit", "src/test/java/com/cielo/flashbooking/architecture/ArchitectureTest.java"],["Topologia da demo", ".specs/features/flash-booking-demo/design.md"],["Desenho high-load", ".specs/features/flash-booking-high-load/design.md"]]}
+];
+
+const escapeHtml = s => String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+const known = new Set(JSON.parse(localStorage.getItem("flashBookingKnownV1") || "[]"));
+const answered = new Map();
+let order = cards.map((_,i) => i);
+
+function renderCards() {
+  const topic = document.getElementById("topic").value;
+  const filtered = order.filter(i => topic === "all" || cards[i][0] === topic);
+  document.getElementById("cards").innerHTML = filtered.map(i => {
+    const [group,q,a,source] = cards[i];
+    return `<article class="card" id="card-${i}"><span class="topic">${escapeHtml(group)} · ${String(i+1).padStart(2,"0")}</span><h3>${escapeHtml(q)}</h3><div class="answer"><p>${escapeHtml(a)}</p><p class="source">Verifique em <a href="${root+source}">${escapeHtml(source)}</a></p></div><div class="foot"><button type="button" data-reveal="${i}" aria-expanded="false">Ver resposta</button><button type="button" data-known="${i}" class="${known.has(i)?"known":""}">${known.has(i)?"Dominado ✓":"Marcar dominado"}</button></div></article>`;
+  }).join("");
+  document.getElementById("progress").textContent = `${known.size}/${cards.length} cartões dominados`;
+}
+
+function renderQuestions() {
+  document.getElementById("questions").innerHTML = scenarios.map((s,i) => `<article class="question" id="scenario-${i}"><span class="tag">Cenário ${i+1}</span><h3>${escapeHtml(s.q)}</h3><div class="options">${s.choices.map((c,j) => `<button type="button" data-q="${i}" data-choice="${j}">${escapeHtml(c)}</button>`).join("")}</div><div class="feedback" role="status"></div></article>`).join("");
+  updateScore();
+}
+
+function updateScore() { document.getElementById("score").textContent = `${[...answered.values()].filter(Boolean).length}/${scenarios.length} decisões corretas na primeira resposta`; }
+
+document.addEventListener("click", e => {
+  const reveal = e.target.closest("[data-reveal]");
+  if (reveal) {
+    const card = document.getElementById(`card-${reveal.dataset.reveal}`);
+    const open = card.classList.toggle("open");
+    reveal.textContent = open ? "Ocultar resposta" : "Ver resposta";
+    reveal.setAttribute("aria-expanded",String(open));
+    return;
+  }
+  const mastered = e.target.closest("[data-known]");
+  if (mastered) {
+    const id = Number(mastered.dataset.known);
+    if (known.has(id)) known.delete(id); else known.add(id);
+    localStorage.setItem("flashBookingKnownV1",JSON.stringify([...known]));
+    renderCards();
+    return;
+  }
+  const option = e.target.closest("[data-q]");
+  if (option) {
+    const i = Number(option.dataset.q), choice = Number(option.dataset.choice), article = document.getElementById(`scenario-${i}`);
+    if (!answered.has(i)) answered.set(i,choice === scenarios[i].correct);
+    article.querySelectorAll("[data-q]").forEach(btn => {
+      btn.classList.remove("correct","wrong");
+      if (Number(btn.dataset.choice) === scenarios[i].correct) btn.classList.add("correct");
+      else if (Number(btn.dataset.choice) === choice) btn.classList.add("wrong");
+    });
+    const feedback = article.querySelector(".feedback");
+    feedback.textContent = (choice === scenarios[i].correct ? "Correto. " : "Reveja o raciocínio. ") + scenarios[i].why;
+    feedback.classList.add("show");
+    updateScore();
+  }
+});
+
+document.getElementById("topic").addEventListener("change",renderCards);
+document.getElementById("shuffle").addEventListener("click",() => { for (let i=order.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; } renderCards(); });
+document.getElementById("reset").addEventListener("click",() => { known.clear(); localStorage.removeItem("flashBookingKnownV1"); answered.clear(); renderCards(); renderQuestions(); });
+
+document.getElementById("topic").innerHTML += [...new Set(cards.map(c=>c[0]))].map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+document.getElementById("paths").innerHTML = paths.map(p => `<div class="path-card"><b>${escapeHtml(p.name)}</b>${p.links.map(([label,path]) => `<a href="${root+path}">${escapeHtml(label)} ↗</a>`).join("")}</div>`).join("");
+renderCards();
+renderQuestions();
+</script>
+</body>
+</html>

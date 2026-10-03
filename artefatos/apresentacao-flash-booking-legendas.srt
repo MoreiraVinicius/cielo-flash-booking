@@ -1,0 +1,551 @@
+1
+00:00:00,000 --> 00:00:10,373
+Olá. Vou apresentar o Flash Booking, o sistema de reserva temporária de ingressos que desenvolvi para um
+
+2
+00:00:10,373 --> 00:00:20,747
+cenário de flash sale. O problema central é simples de enunciar e difícil de garantir sob concorrência:
+
+3
+00:00:20,747 --> 00:00:31,120
+várias pessoas e várias instâncias da API tentam reservar uma capacidade limitada ao mesmo tempo, mas o
+
+4
+00:00:31,120 --> 00:00:41,494
+sistema nunca pode vender mais ingressos do que existem. Além disso, uma reserva abandonada precisa devolver capacidade,
+
+5
+00:00:41,494 --> 00:00:51,867
+tentativas repetidas não podem criar novos efeitos e a disponibilidade exibida pode ser eventual sem comprometer a
+
+6
+00:00:51,867 --> 00:00:53,698
+correção dos comandos.
+
+7
+00:00:54,298 --> 00:01:05,373
+Eu comecei separando duas coisas que costumam ser confundidas: reserva e compra. Nesta versão, a reserva é
+
+8
+00:01:05,373 --> 00:01:16,448
+um bloqueio temporário. Ela nasce pendente, dura dez minutos por padrão e pode terminar cancelada ou expirada.
+
+9
+00:01:16,448 --> 00:01:27,522
+Não existe pagamento nem confirmação definitiva implementada. Essa delimitação aparece no modelo, na API e no e-mail
+
+10
+00:01:27,522 --> 00:01:38,597
+enviado ao cliente. Ela me permite explicar exatamente qual garantia o sistema oferece, sem sugerir que uma
+
+11
+00:01:38,597 --> 00:01:42,506
+reserva aceita é uma venda concluída.
+
+12
+00:01:43,106 --> 00:01:53,917
+Do ponto de vista do código, escolhi Java 21, Spring Boot 4, Maven e Jackson 3. A
+
+13
+00:01:53,917 --> 00:02:04,727
+aplicação é um monólito modular com fronteiras de portas e adaptadores. A palavra monólito aqui descreve um
+
+14
+00:02:04,727 --> 00:02:15,538
+único artefato e uma única base de regras, não um único processo. A mesma imagem roda em
+
+15
+00:02:15,538 --> 00:02:26,348
+três perfis: API de consultas, API de comandos e worker. No ECS, eles são serviços separados. Consultas
+
+16
+00:02:26,348 --> 00:02:37,159
+de disponibilidade, reservas e processamento assíncrono têm perfis de carga diferentes, então posso escalar e observar cada
+
+17
+00:02:37,159 --> 00:02:45,426
+um de forma independente, sem criar três implementações divergentes da regra de estoque.
+
+18
+00:02:46,026 --> 00:02:56,847
+Organizei o código por responsabilidades de negócio e de integração. O domínio contém evento, cliente, reserva, status
+
+19
+00:02:56,847 --> 00:03:07,669
+e motivo de encerramento, sem depender de Spring ou AWS. Controllers validam entrada e traduzem HTTP. Casos
+
+20
+00:03:07,669 --> 00:03:18,490
+de uso coordenam transações e chamam interfaces como leitura de evento, operações de inventário e persistência de
+
+21
+00:03:18,490 --> 00:03:29,312
+reserva. Os adaptadores de saída concentram SQL, Valkey e SDKs da AWS. Essa direção de dependência evita
+
+22
+00:03:29,312 --> 00:03:40,133
+que uma decisão de infraestrutura contamine a regra. Não criei interfaces para toda classe: usei portas onde
+
+23
+00:03:40,133 --> 00:03:50,955
+existe uma fronteira real, por exemplo, entre o caso de uso e o PostgreSQL, ou entre a
+
+24
+00:03:50,955 --> 00:04:01,776
+aplicação e um provedor externo. Testes com ArchUnit verificam que o domínio continua puro, que os módulos
+
+25
+00:04:01,776 --> 00:04:10,688
+não formam ciclos e que código de negócio não depende dos adaptadores de saída.
+
+26
+00:04:11,288 --> 00:04:22,655
+O desenho de dados tem quatro entidades de negócio importantes: evento, cliente, reserva e o registro de
+
+27
+00:04:22,655 --> 00:04:34,021
+idempotência. O evento guarda capacidade total, disponibilidade e uma janela comercial opcional. Sem início configurado, a venda
+
+28
+00:04:34,021 --> 00:04:45,387
+pode começar imediatamente; sem fim, não há encerramento por horário. A reserva guarda quantidade, prazo, estado e,
+
+29
+00:04:45,387 --> 00:04:56,754
+quando termina, um código e uma descrição imutáveis do motivo. O cliente é persistido e associado à
+
+30
+00:04:56,754 --> 00:05:08,120
+reserva, mas não há cadastro com senha. A normalização do e-mail ocorre antes de buscar ou gravar,
+
+31
+00:05:08,120 --> 00:05:19,487
+e uma restrição única evita identidades duplicadas por diferenças triviais de escrita. Flyway versiona o esquema. Chaves
+
+32
+00:05:19,487 --> 00:05:29,516
+estrangeiras, checks e índices são parte da defesa de integridade, não apenas documentação da aplicação.
+
+33
+00:05:30,116 --> 00:05:40,139
+A escolha mais importante é fazer o PostgreSQL ser a fonte de verdade do inventário. Para aceitar
+
+34
+00:05:40,139 --> 00:05:50,162
+uma reserva, executo um único update condicional na linha do evento. Esse update diminui a disponibilidade somente
+
+35
+00:05:50,162 --> 00:06:00,184
+se ainda houver ingressos suficientes e se o relógio do banco estiver dentro da janela de venda.
+
+36
+00:06:00,184 --> 00:06:10,207
+Se duas instâncias disputam o último ingresso, o PostgreSQL serializa a escrita na linha e reavalia a
+
+37
+00:06:10,207 --> 00:06:20,230
+condição depois de esperar o lock. Apenas uma operação que ainda satisfaz a condição avança. Na mesma
+
+38
+00:06:20,230 --> 00:06:30,253
+transação, persisto a reserva e os eventos de outbox. Se algo falha, o decremento também é revertido.
+
+39
+00:06:30,253 --> 00:06:40,276
+Uma constraint mantém a disponibilidade entre zero e a capacidade total. Assim, o cache, o número de
+
+40
+00:06:40,276 --> 00:06:47,351
+containers e um lock em memória não participam da garantia contra oversell.
+
+41
+00:06:47,951 --> 00:06:57,700
+Essa solução tem um custo consciente: um evento muito popular vira uma linha quente. Mais instâncias de
+
+42
+00:06:57,700 --> 00:07:07,448
+comandos podem aumentar espera por lock e latência, sem elevar a vazão do banco. Eu prefiro medir
+
+43
+00:07:07,448 --> 00:07:17,197
+esse limite e rejeitar trabalho em excesso a trocar prematuramente o modelo de consistência. A arquitetura de
+
+44
+00:07:17,197 --> 00:07:26,946
+alta carga, que está documentada como evolução e não implantada nesta versão, preserva a mesma regra e
+
+45
+00:07:26,946 --> 00:07:36,695
+propõe limites de admissão e escala baseados em métricas. Se a linha quente realmente violar o objetivo
+
+46
+00:07:36,695 --> 00:07:46,444
+de latência, aí sim eu reavalio o modelo; não trato DynamoDB ou uma fila como substitutos transparentes
+
+47
+00:07:46,444 --> 00:07:48,164
+do contrato atual.
+
+48
+00:07:48,764 --> 00:07:59,689
+O tempo também precisa ter uma autoridade única. A criação, o prazo da reserva, a validade da
+
+49
+00:07:59,689 --> 00:08:10,613
+chave idempotente e a elegibilidade de expiração usam horários observados ou persistidos pelo PostgreSQL. Isso evita que
+
+50
+00:08:10,613 --> 00:08:21,538
+relógios de tasks diferentes decidam estados incompatíveis. No cancelamento, eu bloqueio primeiro a linha da reserva e
+
+51
+00:08:21,538 --> 00:08:32,462
+observo o relógio depois do lock. Se ainda for antes do prazo, o resultado é cancelada. No
+
+52
+00:08:32,462 --> 00:08:43,387
+prazo ou depois, o resultado é expirada, mesmo que a requisição tenha chegado como DELETE. Somente uma
+
+53
+00:08:43,387 --> 00:08:54,311
+transição bem-sucedida saindo de pendente autoriza devolver capacidade, na mesma transação. Uma segunda tentativa, uma mensagem duplicada
+
+54
+00:08:54,311 --> 00:09:02,665
+ou uma corrida entre cancelamento e expiração não incrementam o estoque outra vez.
+
+55
+00:09:03,265 --> 00:09:13,649
+Para a expiração automática, a reserva grava um evento de agendamento na outbox. O publisher envia uma
+
+56
+00:09:13,649 --> 00:09:24,034
+mensagem com atraso para uma fila SQS, respeitando o limite de quinze minutos do timer da fila.
+
+57
+00:09:24,034 --> 00:09:34,418
+O consumidor tenta expirar a reserva de forma condicional. Uma mensagem antecipada não pode vencer uma reserva
+
+58
+00:09:34,418 --> 00:09:44,802
+antes da hora. E há um reconciliador periódico que consulta pendências vencidas no PostgreSQL, cobrindo atrasos e
+
+59
+00:09:44,802 --> 00:09:55,186
+falhas no caminho de publicação ou consumo. Com banco e processamento saudáveis, o contrato é devolver a
+
+60
+00:09:55,186 --> 00:10:05,570
+capacidade até cinco segundos após o vencimento. O prazo deixa de ser válido no instante exato do
+
+61
+00:10:05,570 --> 00:10:14,733
+vencimento; esses cinco segundos são uma janela operacional de materialização, não uma extensão da reserva.
+
+62
+00:10:15,333 --> 00:10:26,011
+Também tratei repetição de comandos como regra de negócio. POST de reserva e DELETE exigem uma chave
+
+63
+00:10:26,011 --> 00:10:36,690
+de idempotência, persistida no PostgreSQL por vinte e quatro horas. A chave é associada à operação, ao
+
+64
+00:10:36,690 --> 00:10:47,368
+alvo normalizado e ao hash do conteúdo. Uma repetição compatível recebe o resultado anterior; reutilização da mesma
+
+65
+00:10:47,368 --> 00:10:58,046
+chave para outra intenção recebe conflito. A restrição única e o conflito atômico no banco fazem essa
+
+66
+00:10:58,046 --> 00:11:08,725
+proteção funcionar entre processos. Armazeno inclusive resultados finais esperados, como capacidade insuficiente, para que o mesmo retry
+
+67
+00:11:08,725 --> 00:11:19,403
+não produza uma resposta diferente; erros transitórios de servidor não viram resultado final. A limpeza em lotes
+
+68
+00:11:19,403 --> 00:11:30,081
+remove registros vencidos, mas não decide a validade da chave. A validade é lógica e observada pelo
+
+69
+00:11:30,081 --> 00:11:38,247
+relógio do banco, de modo que atraso no worker não prolonga a janela.
+
+70
+00:11:38,847 --> 00:11:49,522
+Para não fazer uma escrita no PostgreSQL e outra no SQS dentro da mesma requisição como se
+
+71
+00:11:49,522 --> 00:12:00,198
+fossem atômicas, usei transactional outbox. Reserva e eventos de expiração e notificação são gravados juntos. Um publisher
+
+72
+00:12:00,198 --> 00:12:10,873
+posterior envia os eventos para filas separadas. Esse desenho evita perder a intenção de publicar quando a
+
+73
+00:12:10,873 --> 00:12:21,549
+transação de reserva confirma e o processo cai logo depois. Ele não promete entrega exatamente uma vez:
+
+74
+00:12:21,549 --> 00:12:32,224
+uma resposta ambígua do SQS pode gerar reenvio. Por isso, os consumidores precisam ser idempotentes e cada
+
+75
+00:12:32,224 --> 00:12:42,900
+evento tem identidade estável. Na demo, o publisher opera com uma task. Antes de escalar múltiplos publishers,
+
+76
+00:12:42,900 --> 00:12:53,575
+o desenho de alta carga exige claim e lease no PostgreSQL, com seleção por skip locked; eu
+
+77
+00:12:53,575 --> 00:12:57,971
+não apresento isso como recurso já implantado.
+
+78
+00:12:58,571 --> 00:13:09,149
+A notificação por e-mail está isolada da transação principal. O worker consome a fila própria, consulta a
+
+79
+00:13:09,149 --> 00:13:19,728
+reserva, adquire um lease curto de entrega, chama o SES sem manter transação de banco aberta e
+
+80
+00:13:19,728 --> 00:13:30,306
+depois registra o resultado. Na execução local, uso SMTP com Mailpit. Há retry e fila de mensagens
+
+81
+00:13:30,306 --> 00:13:40,884
+não processadas. Uma falha de e-mail não desfaz a reserva aceita. Separei executores, timeouts e cotas da
+
+82
+00:13:40,884 --> 00:13:51,463
+notificação e da expiração porque um provedor lento de e-mail não pode atrasar a liberação do estoque.
+
+83
+00:13:51,463 --> 00:13:57,685
+O e-mail informa uma reserva temporária; nunca afirma compra concluída.
+
+84
+00:13:58,285 --> 00:14:08,187
+Para leitura, uso cache-aside com ElastiCache for Valkey apenas no GET de evento. A disponibilidade exibida pode
+
+85
+00:14:08,187 --> 00:14:18,088
+ficar defasada por até um segundo; depois de uma alteração de estoque, tento invalidar a chave após
+
+86
+00:14:18,088 --> 00:14:27,989
+o commit. Mesmo que essa invalidação falhe, o TTL limita a defasagem. O comando sempre consulta o
+
+87
+00:14:27,989 --> 00:14:37,891
+PostgreSQL e revalida capacidade, então uma tela mostrando um ingresso disponível não garante que a reserva será
+
+88
+00:14:37,891 --> 00:14:47,792
+aceita. O GET de reserva vai direto ao banco, porque seu estado muda e a resposta contém
+
+89
+00:14:47,792 --> 00:14:57,693
+dados pessoais. Em falha do Valkey, a aplicação pode consultar o banco, mas limita os fallbacks simultâneos
+
+90
+00:14:57,693 --> 00:15:07,594
+por task e usa um circuito de falha. Essa proteção evita transformar uma pane de cache em
+
+91
+00:15:07,594 --> 00:15:14,001
+uma avalanche de leituras no banco que compete com os comandos.
+
+92
+00:15:14,601 --> 00:15:27,638
+Na API, mantive contratos REST claros para criar e consultar eventos, criar e consultar reservas e cancelar
+
+93
+00:15:27,638 --> 00:15:40,676
+reservas. Entrada inválida retorna 400, recurso inexistente retorna 404, conflito de capacidade ou idempotência retorna 409 e
+
+94
+00:15:40,676 --> 00:15:53,713
+indisponibilidade controlada retorna 503. O corpo de erro usa Problem Details com identificador de correlação. Validação acontece
+
+95
+00:15:53,713 --> 00:16:06,751
+na borda HTTP, mas as invariantes decisivas também estão no banco, porque qualquer caminho futuro de escrita
+
+96
+00:16:06,751 --> 00:16:18,254
+precisa respeitá-las. Limites de tamanho de payload e respostas sem detalhes internos reduzem exposição desnecessária.
+
+97
+00:16:18,854 --> 00:16:29,953
+Na AWS, o único ponto público é o API Gateway REST regional. Ele autentica operadores e entrevistadores
+
+98
+00:16:29,953 --> 00:16:41,052
+por IAM com assinatura Sig V4 e aplica resource policy, WAF e limites de tráfego antes do
+
+99
+00:16:41,052 --> 00:16:52,150
+VPC Link. Um ALB interno distribui GETs à API de consultas e POSTs e DELETEs à API
+
+100
+00:16:52,150 --> 00:17:03,249
+de comandos. A autenticação da borda é operacional; ela não é um login de cliente final. Os
+
+101
+00:17:03,249 --> 00:17:14,348
+limites de throttling do API Gateway são de melhor esforço, então não afirmo que toda rajada acima
+
+102
+00:17:14,348 --> 00:17:25,446
+do limite receberá exatamente 429. As tasks ECS Fargate acessam RDS PostgreSQL, Valkey, SQS, SES e Secrets
+
+103
+00:17:25,446 --> 00:17:36,545
+Manager com permissões específicas. Preferi ECS a Kubernetes porque a demo precisa ser operável por uma pessoa,
+
+104
+00:17:36,545 --> 00:17:43,074
+e Kubernetes não resolve a contenção da linha de estoque.
+
+105
+00:17:43,674 --> 00:17:54,885
+Terraform descreve rede, plano de dados, compute, borda e observabilidade em módulos. A demo AWS usa RDS
+
+106
+00:17:54,885 --> 00:18:06,097
+PostgreSQL em zona única e capacidade modesta para conter custos; ela não reivindica a disponibilidade de uma
+
+107
+00:18:06,097 --> 00:18:17,309
+produção multi-zona. A arquitetura futura prevê Aurora, proxy de conexões, réplicas para leituras tolerantes a atraso, Valkey
+
+108
+00:18:17,309 --> 00:18:28,521
+multi-zona e mais tasks, mas depende de medição e implementação próprias. Há alertas de custo e um
+
+109
+00:18:28,521 --> 00:18:39,733
+mecanismo de corte recuperável que, ao atingir um gatilho mensal, reduz serviços ECS e pede a parada
+
+110
+00:18:39,733 --> 00:18:50,945
+do RDS. Esse mecanismo tem atraso e custo residual, então eu não o descrevo como teto financeiro
+
+111
+00:18:50,945 --> 00:18:51,605
+absoluto.
+
+112
+00:18:52,205 --> 00:19:04,054
+Na operação, acompanho borda, latência, serviços ECS, banco, filas e filas de erro em um dashboard técnico.
+
+113
+00:19:04,054 --> 00:19:15,903
+Há também um dashboard de negócio baseado em interações HTTP. Ele ajuda a contar interesse e respostas
+
+114
+00:19:15,903 --> 00:19:27,753
+da API, mas chamadas repetidas por idempotência ainda contam como interações; não equivale a clientes únicos, vendas
+
+115
+00:19:27,753 --> 00:19:39,602
+ou receita. O perfil de observabilidade local habilita métricas e traces HTTP por OpenTelemetry e OTLP quando
+
+116
+00:19:39,602 --> 00:19:51,451
+necessário. A configuração padrão deixa exportadores desligados. Não reivindico rastreamento distribuído completo através da outbox e do
+
+117
+00:19:51,451 --> 00:19:59,119
+SQS, porque essa instrumentação assíncrona ainda não faz parte do runtime.
+
+118
+00:19:59,719 --> 00:20:10,550
+Existe ainda um resumo executivo de evento controlado por uma flag global, desligada por padrão. Após o
+
+119
+00:20:10,550 --> 00:20:21,382
+fechamento de um evento elegível, o worker apura números no PostgreSQL e produz primeiro um texto determinístico:
+
+120
+00:20:21,382 --> 00:20:32,214
+volume aceito, reservas válidas no fechamento, ritmo e ressalva de que não houve verificação de compras. Bedrock
+
+121
+00:20:32,214 --> 00:20:43,045
+pode acrescentar uma leitura curta, opcional, sem receber dados pessoais; sinais do CloudWatch aparecem apenas como contexto
+
+122
+00:20:43,045 --> 00:20:53,877
+do ambiente. O relatório salvo pode ser consultado pela API e enviado uma vez a um webhook
+
+123
+00:20:53,877 --> 00:21:04,708
+Discord cuja URL fica no Secrets Manager. Uma entrega ambígua não é repetida automaticamente para evitar duplicar
+
+124
+00:21:04,708 --> 00:21:15,540
+mensagem. Eu apresento esse módulo como complemento de demonstração, com verificação ainda em andamento, e não como
+
+125
+00:21:15,540 --> 00:21:19,363
+parte da garantia central de inventário.
+
+126
+00:21:19,963 --> 00:21:32,165
+Minha estratégia de teste acompanha o risco. Testes unitários cobrem regras de domínio e casos de uso.
+
+127
+00:21:32,165 --> 00:21:44,367
+Testes de integração com PostgreSQL real exercitam transações, constraints, idempotência e concorrência, inclusive múltiplos processos disputando capacidade.
+
+128
+00:21:44,367 --> 00:21:56,569
+Testes com LocalStack cobrem a integração assíncrona quando disponível. ArchUnit impede regressões nas fronteiras do monólito. Docker
+
+129
+00:21:56,569 --> 00:22:08,772
+Compose reproduz localmente banco, cache, filas e e-mail. O harness de carga separa smoke, stress e spike
+
+130
+00:22:08,772 --> 00:22:20,974
+de um teste de capacidade prolongado. Resultado local ajuda a encontrar gargalos, mas eu não o transformo
+
+131
+00:22:20,974 --> 00:22:29,587
+em promessa de throughput ou failover na AWS sem medição remota equivalente.
+
+132
+00:22:30,187 --> 00:22:40,457
+Se eu resumisse o racional de arquitetura em uma frase, diria: preservei uma fonte de verdade transacional
+
+133
+00:22:40,457 --> 00:22:50,726
+para as decisões irreversíveis e usei consistência eventual somente onde o produto permite. O PostgreSQL decide quem
+
+134
+00:22:50,726 --> 00:23:00,996
+recebe estoque e quando uma reserva termina; Valkey acelera a leitura, SQS desacopla trabalho, e a outbox
+
+135
+00:23:00,996 --> 00:23:11,266
+liga os dois mundos sem prometer atomicidade distribuída. A estrutura modular protege essas regras de mudanças em
+
+136
+00:23:11,266 --> 00:23:21,535
+transporte ou infraestrutura. O principal limite conhecido é a contenção em um evento extremamente popular. Em vez
+
+137
+00:23:21,535 --> 00:23:31,805
+de escondê-lo, deixei o ponto de medição e a evolução explícitos. É assim que eu defenderia as
+
+138
+00:23:31,805 --> 00:23:38,450
+escolhas do Flash Booking numa revisão de arquitetura e de código.

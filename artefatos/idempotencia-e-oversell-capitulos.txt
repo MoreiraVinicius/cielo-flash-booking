@@ -1,0 +1,15 @@
+00:00  Duas garantias, dois problemas
+00:57  A identidade do comando
+02:09  Uma transação para a decisão
+03:15  Claim atômico da chave
+04:22  Corrida 1: mesma chave
+05:33  Replay, conflito e rollback
+06:51  A janela tem fronteira
+07:54  O UPDATE que impede oversell
+08:58  Corrida 2: chaves diferentes
+10:08  Sem efeitos parciais
+11:21  Defesas adicionais
+12:18  Devolver estoque só uma vez
+13:35  Matriz das quatro corridas
+14:38  Evidência executável
+16:00  Garantia e limite conhecido

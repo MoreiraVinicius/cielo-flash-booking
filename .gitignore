@@ -1,6 +1,9 @@
 # IDE and local workspace
 .idea/
 .vscode/
+.tmp/
+__pycache__/
+artefatos/video-deps/
 
 # Local environment and credentials
 .env

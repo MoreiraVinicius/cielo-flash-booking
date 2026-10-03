@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratório de concorrência — Flash Booking</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0a1020; --panel:#111c31; --panel2:#17253c; --edge:#30415a; --ink:#e9f0fb; --muted:#a9bad2; --blue:#74b7ff; --green:#71ddb0; --yellow:#ffcf79; --red:#ff8992; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:radial-gradient(circle at 80% -15%,#19375a 0,transparent 36%),var(--bg); color:var(--ink); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { max-width:1100px; margin:0 auto; padding:32px 18px 70px; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:clamp(2rem,4vw,3rem); line-height:1.1; letter-spacing:-.035em; max-width:800px; }
+    h2 { font-size:1.5rem; margin-bottom:10px; }
+    h3 { font-size:1.08rem; }
+    a { color:var(--blue); }
+    a:hover { color:#b7dcff; }
+    .eyebrow { color:var(--green); text-transform:uppercase; letter-spacing:.13em; font-size:.75rem; font-weight:700; }
+    .lead { max-width:780px; color:var(--muted); font-size:1.08rem; }
+    .toplinks { display:flex; gap:18px; flex-wrap:wrap; margin:22px 0 32px; }
+    .section { margin:34px 0; }
+    .intro-grid,.state-grid,.proof-grid,.quiz-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .panel { background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:20px; }
+    .panel p:last-child { margin-bottom:0; }
+    .minor { color:var(--muted); }
+    .token { display:inline-block; color:var(--blue); font: .86rem ui-monospace,SFMono-Regular,Consolas,monospace; background:#142a45; border:1px solid #294767; padding:2px 7px; border-radius:6px; }
+    .controls { display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin:16px 0 14px; }
+    label { display:block; font-weight:650; margin-bottom:6px; }
+    select,button { font:inherit; border-radius:9px; min-height:43px; }
+    select { width:min(100%,470px); background:var(--panel2); border:1px solid var(--edge); color:var(--ink); padding:8px 12px; }
+    button { cursor:pointer; background:var(--panel2); color:var(--ink); border:1px solid var(--edge); padding:8px 15px; }
+    button:hover:not(:disabled) { border-color:var(--blue); }
+    button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+    button:disabled { opacity:.42; cursor:not-allowed; }
+    .primary { background:var(--blue); color:#091522; border-color:var(--blue); font-weight:700; }
+    .stepbar { display:flex; gap:7px; margin:15px 0; }
+    .stepbar span { height:8px; flex:1; border-radius:99px; background:var(--edge); }
+    .stepbar span.done { background:var(--green); }
+    .stepbar span.current { background:var(--blue); }
+    .stephead { display:flex; align-items:baseline; flex-wrap:wrap; gap:12px; margin:8px 0 14px; }
+    .stephead strong { color:var(--blue); }
+    .state-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .state { min-height:150px; }
+    .state .k { display:block; color:var(--muted); font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+    .state .v { display:block; font-size:1.08rem; font-weight:650; line-height:1.3; overflow-wrap:anywhere; }
+    .state .detail { display:block; margin-top:9px; color:var(--muted); font-size:.91rem; }
+    .state.win .v { color:var(--green); }
+    .state.wait .v { color:var(--yellow); }
+    .state.fail .v { color:var(--red); }
+    .explanation { border-left:4px solid var(--blue); padding:4px 0 4px 15px; margin:18px 0; max-width:950px; }
+    .explanation p { margin-bottom:0; }
+    .code { background:#081323; border:1px solid var(--edge); color:#deefff; padding:16px; border-radius:10px; white-space:pre-wrap; overflow-wrap:anywhere; font: .88rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .source { font-size:.9rem; color:var(--muted); }
+    .source a { overflow-wrap:anywhere; }
+    .proof-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .proof-grid .panel { border-top:3px solid var(--green); }
+    .proof-grid ul { margin:0; padding-left:20px; }
+    .quiz-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    details { background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:16px 18px; }
+    details[open] { border-color:#5581ad; }
+    summary { cursor:pointer; font-weight:650; }
+    details p { margin:12px 0 0; color:var(--muted); }
+    .footer { color:var(--muted); border-top:1px solid var(--edge); margin-top:45px; padding-top:18px; font-size:.9rem; }
+    @media (max-width:850px) { .state-grid,.proof-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:620px) { .intro-grid,.state-grid,.proof-grid,.quiz-grid { grid-template-columns:1fr; } .state { min-height:0; } main { padding-top:22px; } }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Flash Booking · estudo para entrevista</p>
+  <h1>Por que retry e concorrência não vendem ingressos além da capacidade?</h1>
+  <p class="lead">Avance as disputas entre duas transações. Em cada passo, observe quem tem a chave idempotente, qual é o estoque confirmado e o que acontece com a reserva.</p>
+  <nav class="toplinks" aria-label="Material relacionado">
+    <a href="idempotencia-e-oversell-video.mp4">Assistir ao vídeo (17min19s)</a>
+    <a href="idempotencia-e-oversell-roteiro.txt">Ler o roteiro</a>
+    <a href="idempotencia-e-oversell-capitulos.txt">Ver capítulos</a>
+  </nav>
+
+  <section class="section" aria-labelledby="invariantes-title">
+    <h2 id="invariantes-title">As duas invariantes centrais</h2>
+    <div class="intro-grid">
+      <div class="panel"><h3>Idempotência</h3><p>Dentro da janela de 24 horas, a mesma chave com o mesmo comando tem <strong>um único efeito confirmado</strong>. O índice único decide quem executa; os demais recebem o resultado persistido.</p></div>
+      <div class="panel"><h3>Inventário</h3><p>Para cada evento, <span class="token">0 ≤ available ≤ capacity</span>. O comando só diminui o saldo quando <span class="token">available ≥ quantity</span> ainda é verdadeiro na linha atualizada.</p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="sim-title">
+    <h2 id="sim-title">Simulador: quatro corridas importantes</h2>
+    <div class="controls">
+      <div><label for="scenario">Cenário</label><select id="scenario">
+        <option value="same">Mesma chave: A confirma</option>
+        <option value="rollback">Mesma chave: A falha e desfaz</option>
+        <option value="different">Chaves diferentes: último ingresso</option>
+        <option value="restock">Cancelamento e expiração concorrem</option>
+      </select></div>
+      <button type="button" id="prev">Voltar</button>
+      <button type="button" id="next" class="primary">Avançar</button>
+    </div>
+    <div id="stepbar" class="stepbar" aria-hidden="true"></div>
+    <div class="stephead"><strong id="stepcount"></strong><h3 id="steptitle"></h3></div>
+    <div id="states" class="state-grid" aria-live="polite"></div>
+    <div class="explanation" aria-live="polite"><p id="explanation"></p></div>
+    <pre class="code"><code id="snippet"></code></pre>
+    <p class="source" id="source"></p>
+  </section>
+
+  <section class="section" aria-labelledby="proof-title">
+    <h2 id="proof-title">Como defender a escolha técnica</h2>
+    <div class="proof-grid">
+      <div class="panel"><h3>O que serializa cada disputa?</h3><ul><li>Mesma chave: restrição <span class="token">UNIQUE</span> e <span class="token">ON CONFLICT</span>.</li><li>Chaves diferentes: lock da linha de <span class="token">event</span> no <span class="token">UPDATE</span>.</li><li>Encerramentos repetidos: transição de <span class="token">PENDING</span> uma única vez.</li></ul></div>
+      <div class="panel"><h3>Por que uma transação?</h3><p>Claim, decremento, cliente, reserva, outbox e resposta idempotente confirmam juntos. Um erro inesperado desfaz todo esse conjunto. Erros de negócio esperados podem ser registrados como resposta final da chave.</p></div>
+      <div class="panel"><h3>Onde termina a garantia?</h3><p>Uma chave nova representa uma intenção nova. Após 24 horas, a chave pode ser reutilizada. A linha do evento é um ponto de contenção: protege a correção, mas pode elevar a latência numa venda muito concentrada.</p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="interview-title">
+    <h2 id="interview-title">Perguntas de entrevista — responda antes de abrir</h2>
+    <div class="quiz-grid">
+      <details><summary>Por que um SELECT antes do UPDATE não bastaria?</summary><p>Dois compradores poderiam ler <span class="token">available = 1</span> antes de qualquer escrita. A decisão precisa estar no predicado do mesmo <span class="token">UPDATE</span> que faz o decremento; após esperar o lock, o PostgreSQL reavalia a condição na versão vigente.</p></details>
+      <details><summary>O que acontece se B repete a chave enquanto A ainda executa?</summary><p>O conflito no índice único faz B esperar o commit ou rollback de A. Se A confirmar, B lê e reapresenta a resposta. Se A desfizer, B pode reivindicar a chave e executar.</p></details>
+      <details><summary>Por que persistir também o 409 de falta de estoque?</summary><p>Ele é o resultado final daquela intenção. Sem persistir, um retry com a mesma chave poderia virar uma reserva nova se outro comprador cancelasse e devolvesse unidades durante a janela.</p></details>
+      <details><summary>Como o sistema evita devolver ingressos duas vezes?</summary><p>Cancelamento e expiração só ganham o direito de incrementar o estoque quando conseguem mudar a reserva ainda <span class="token">PENDING</span> para um estado terminal. O incremento participa da transação dessa mudança.</p></details>
+      <details><summary>O CHECK do banco sozinho impediria oversell?</summary><p>Ele rejeita um saldo negativo persistido, mas não escolhe a transação vencedora nem produz o resultado de negócio esperado. O <span class="token">UPDATE ... WHERE available ≥ quantity</span> faz a seleção atômica; a constraint é uma defesa adicional.</p></details>
+      <details><summary>Adicionar mais containers aumentaria a segurança?</summary><p>A correção já depende de operações atômicas no PostgreSQL, então continua válida em vários processos. Mais concorrência no mesmo evento pode aumentar a fila pelo lock dessa linha; escala de API não remove essa contenção.</p></details>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="evidence-title">
+    <h2 id="evidence-title">Trilha de evidência no repositório</h2>
+    <div class="panel">
+      <p><a href="../src/main/java/com/cielo/flashbooking/application/idempotency/PersistentIdempotencyService.java">PersistentIdempotencyService.java</a> — transação externa, replay e persistência da resposta.</p>
+      <p><a href="../src/main/java/com/cielo/flashbooking/adapter/out/persistence/idempotency/JdbcIdempotencyStore.java">JdbcIdempotencyStore.java</a> — claim com <span class="token">ON CONFLICT</span> e prazo de 24 horas.</p>
+      <p><a href="../src/main/java/com/cielo/flashbooking/adapter/out/persistence/inventory/JdbcInventoryOperations.java">JdbcInventoryOperations.java</a> — decremento e incremento condicionais.</p>
+      <p><a href="../src/main/java/com/cielo/flashbooking/reservation/application/CreateReservationService.java">CreateReservationService.java</a> — ordem das escritas na reserva.</p>
+      <p><a href="../src/main/resources/db/migration/V1__create_flash_booking_schema.sql">V1__create_flash_booking_schema.sql</a> — unicidade e constraints.</p>
+      <p><a href="../src/test/java/com/cielo/flashbooking/adapter/out/persistence/inventory/InventoryConcurrencyIT.java">InventoryConcurrencyIT.java</a>, <a href="../src/test/java/com/cielo/flashbooking/reservation/controller/ReservationConcurrencyIT.java">ReservationConcurrencyIT.java</a> e <a href="../src/test/java/com/cielo/flashbooking/application/idempotency/IdempotencyControllerIT.java">IdempotencyControllerIT.java</a> — cenários codificados de concorrência e replay.</p>
+    </div>
+  </section>
+
+  <p class="footer">Este laboratório ilustra o comportamento implementado; o banco e os testes de integração são a evidência executável. Os passos mostram estados relevantes para raciocinar sobre concorrência, não uma captura de uma execução específica.</p>
+</main>
+<script>
+  const scenarios = {
+    same: [
+      {title:'Duas chamadas iguais chegam',a:['Pronta','chave K, quantidade 1'],b:['Pronta','chave K, quantidade 1'],key:['Ausente','nenhum resultado salvo'],stock:['1 disponível','0 reservas'],why:'As requisições têm a mesma identidade: chave, método, alvo e hash do payload. Ainda não existe uma vencedora.',sql:'POST /events/{id}/reservations\nIdempotency-Key: K\nquantity: 1',source:'IdempotencyCommand.java · ReservationController.java'},
+      {title:'A reivindica K',a:['Claim obtido','INSERT de K ainda não confirmado'],b:['Tentando claim','encontra o índice único'],key:['K em transação A','IN_PROGRESS não confirmado'],stock:['1 disponível','0 reservas'],why:'O índice UNIQUE impede dois claims simultâneos da mesma chave. A linha de A ainda faz parte da transação que criará a reserva.',sql:'INSERT INTO idempotency_record (...) VALUES (...)\nON CONFLICT (idempotency_key) DO UPDATE\n  ... WHERE expires_at <= clock_timestamp();',source:'JdbcIdempotencyStore.java:25–49 · V1__create_flash_booking_schema.sql:59–69'},
+      {title:'B aguarda; A executa',a:['Executando','decremento, reserva, outbox, resposta'],b:['Aguardando','decisão do conflito em K'],key:['K em transação A','resposta final ainda invisível'],stock:['1 confirmado','0 confirmado; A prepara 1 reserva'],why:'A faz o UPDATE condicional e grava as demais linhas na mesma transação do claim. Antes do commit, B não pode tratar IN_PROGRESS como resultado final.',sql:'UPDATE event SET available = available - 1\nWHERE id = :event AND available >= 1;',source:'PersistentIdempotencyService.java:23–39 · CreateReservationService.java:35–62'},
+      {title:'A confirma tudo',a:['Commit','reserva e resposta 201 persistidas'],b:['Reavaliando claim','K já existe e não expirou'],key:['K final','status e corpo persistidos'],stock:['0 disponível','1 reserva confirmada no banco'],why:'Após A confirmar, o ON CONFLICT de B não satisfaz expires_at <= clock_timestamp(). B não executa a ação.',sql:'WHERE idempotency_record.expires_at <= clock_timestamp()\n-- falso para K dentro da janela',source:'JdbcIdempotencyStore.java:33–49'},
+      {title:'B recebe replay',a:['Concluída','um efeito de negócio'],b:['Replay','mesmo resultado de negócio, sem novo decremento'],key:['K final','método, alvo e hash conferidos'],stock:['0 disponível','1 reserva'],why:'B lê a linha confirmada e compara a identidade do comando. O retorno usa a resposta salva. Um cabeçalho de correlação de erro pode variar por tentativa.',sql:'if (!claim(command)) return existingResult(command);\nif (!existing.matches(command)) throw conflict;',source:'PersistentIdempotencyService.java:28–49'}
+    ],
+    rollback: [
+      {title:'A reivindica K',a:['Claim obtido','transação aberta'],b:['Tentando claim','mesma chave K'],key:['K não confirmado','pertence à transação A'],stock:['1 disponível','0 reservas'],why:'A regra inicial é a mesma da corrida anterior: a unicidade do índice obriga B a esperar o desfecho de A.',sql:'INSERT INTO idempotency_record (...) ...\nON CONFLICT (idempotency_key) DO UPDATE ...;',source:'JdbcIdempotencyStore.java:25–49'},
+      {title:'A falha inesperadamente',a:['Erro 5xx','ação lança exceção não tratada como erro esperado'],b:['Aguardando','não assume a execução'],key:['K será revertida','nenhuma resposta final salva'],stock:['1 confirmado','escritas de A não confirmadas'],why:'Uma exceção inesperada sai de execute(). A transação externa faz rollback do claim e de qualquer decremento ou reserva não confirmados.',sql:'@Transactional\npublic IdempotencyResult execute(...) {\n  response = action.get(); // falha inesperada\n}',source:'PersistentIdempotencyService.java:23–39'},
+      {title:'Rollback libera K',a:['Rollback','nenhum efeito confirmado'],b:['Retomando claim','índice já não contém K de A'],key:['Ausente','claim de A desfeito'],stock:['1 disponível','0 reservas'],why:'B pode agora obter o claim. Isso evita bloquear a intenção com um IN_PROGRESS órfão depois de uma falha transitória.',sql:'ROLLBACK;\n-- claim, estoque e reserva de A desfazem juntos',source:'PersistentIdempotencyService.java:23–39'},
+      {title:'B executa e confirma',a:['Encerrada','sem efeito'],b:['Commit','reserva e resposta salvas'],key:['K final','resultado de B'],stock:['0 disponível','1 reserva'],why:'Só B produziu um efeito confirmado. A garantia é sobre commits, não sobre quantas tentativas internas começaram.',sql:'claim(K) → decrement(1) → save(reservation)\n→ complete(K, response) → COMMIT',source:'PersistentIdempotencyService.java · CreateReservationService.java'}
+    ],
+    different: [
+      {title:'Duas intenções, uma unidade',a:['Pronta','chave K1, quantidade 1'],b:['Pronta','chave K2, quantidade 1'],key:['K1 e K2','claims independentes'],stock:['1 disponível','0 reservas'],why:'Idempotência não serializa chaves distintas. A disputa real ocorre na linha do evento.',sql:'K1 ≠ K2\ncapacity = 1; available = 1;',source:'JdbcIdempotencyStore.java · JdbcInventoryOperations.java'},
+      {title:'A altera a linha do evento',a:['UPDATE obtido','available: 1 → 0; lock mantido'],b:['UPDATE esperando','mesmo evento'],key:['K1 e K2','claims em transações separadas'],stock:['1 confirmado','A tem 0 ainda não confirmado'],why:'O PostgreSQL bloqueia a linha atualizada por A até o fim da transação. B não faz uma decisão baseada numa leitura antiga em Java.',sql:'UPDATE event SET available = available - 1\nWHERE id = :event AND available >= 1;',source:'JdbcInventoryOperations.java:20–45'},
+      {title:'A confirma',a:['Commit','1 reserva e 2 eventos de outbox'],b:['Reavaliando UPDATE','vê a linha atual com available = 0'],key:['K1 final','K2 ainda em execução'],stock:['0 disponível','1 reserva'],why:'Quando o lock é liberado, a condição do UPDATE de B é reavaliada na versão atual. available >= 1 ficou falsa.',sql:'available >= quantity\n0 >= 1  →  falso\nUPDATE de B afeta 0 linhas',source:'JdbcInventoryOperations.java:34–41 · CreateReservationService.java:49–60'},
+      {title:'B recebe 409 final',a:['Aceita','reserva criada'],b:['Conflito','nenhum cliente ou reserva nova'],key:['K1: 201 · K2: 409','respostas finais durante a janela'],stock:['0 disponível','1 reserva'],why:'A ação de B lança um conflito de negócio. A camada de idempotência grava esse 409 para K2; retry de K2 continua sendo o resultado dessa intenção.',sql:'decrement(...).orElseThrow(ResourceConflictException)\ncatch (ResourceConflictException) → complete(K2, 409)',source:'CreateReservationService.java:49–60 · PersistentIdempotencyService.java:32–39'}
+    ],
+    restock: [
+      {title:'Uma reserva PENDING',a:['Cancelamento','chega antes do prazo'],b:['Expiração','tenta encerrar a mesma reserva no vencimento'],key:['Chaves não decidem','a disputa é pelo estado da reserva'],stock:['0 disponível','1 reserva PENDING de 1 unidade'],why:'Mensagens repetidas ou chamadas concorrentes podem disputar a mesma reserva. Neste exemplo, o cancelamento alcança o lock antes do prazo; o direito de devolver estoque depende da transição de estado.',sql:'reservation.status = PENDING\nevent.available = 0; capacity = 1;',source:'CancelReservationService.java · ExpireReservationService.java'},
+      {title:'A vence a transição',a:['PENDING → CANCELLED','obtém direito ao restock'],b:['Esperando / sem transição','não possui direito ao restock'],key:['Independente','o estado decide'],stock:['0 confirmado','A prepara incremento para 1'],why:'O cancelamento bloqueia a reserva PENDING. O consumidor de expiração só pode atualizar enquanto ela ainda está PENDING.',sql:'UPDATE reservation SET status = :terminal\nWHERE id = :id AND status = \'PENDING\';',source:'JdbcReservationPersistenceAdapter.java · CancelReservationService.java'},
+      {title:'A confirma e B observa',a:['Commit','reserva terminal e +1 estoque'],b:['Não venceu','estado já terminal'],key:['Independente','sem segundo efeito'],stock:['1 disponível','1 reserva CANCELLED'],why:'O incremento participa da transação da transição. B não devolve a unidade novamente. O UPDATE de estoque também exige available + quantity <= capacity.',sql:'UPDATE event SET available = available + 1\nWHERE id = :event AND available + 1 <= capacity;',source:'JdbcInventoryOperations.java:48–56 · ReservationConcurrencyIT.java:92–114'}
+    ]
+  };
+
+  const scenarioSelect = document.getElementById('scenario');
+  const states = document.getElementById('states');
+  const stepbar = document.getElementById('stepbar');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
+  let index = 0;
+  function classify(value) {
+    if (/Rollback|Erro|Conflito|Não venceu/.test(value)) return 'fail';
+    if (/Aguardando|Tentando|esperando|Reavaliando/.test(value)) return 'wait';
+    if (/Commit|Concluída|Replay|Aceita|final|obtido|PENDING →/.test(value)) return 'win';
+    return '';
+  }
+  function render() {
+    const steps = scenarios[scenarioSelect.value];
+    const item = steps[index];
+    document.getElementById('stepcount').textContent = `Passo ${index + 1} de ${steps.length}`;
+    document.getElementById('steptitle').textContent = item.title;
+    document.getElementById('explanation').textContent = item.why;
+    document.getElementById('snippet').textContent = item.sql;
+    document.getElementById('source').textContent = `Código: ${item.source}`;
+    states.replaceChildren();
+    [['Transação A',item.a],['Transação B',item.b],['Chave / estado',item.key],['Inventário',item.stock]].forEach(([label,pair]) => {
+      const card = document.createElement('div');
+      card.className = `panel state ${classify(pair[0])}`;
+      const k = document.createElement('span'); k.className='k'; k.textContent=label;
+      const v = document.createElement('span'); v.className='v'; v.textContent=pair[0];
+      const detail = document.createElement('span'); detail.className='detail'; detail.textContent=pair[1];
+      card.append(k,v,detail); states.append(card);
+    });
+    stepbar.replaceChildren();
+    steps.forEach((_,position) => {
+      const mark = document.createElement('span');
+      mark.className = position < index ? 'done' : position === index ? 'current' : '';
+      stepbar.append(mark);
+    });
+    prev.disabled = index === 0;
+    next.disabled = index === steps.length - 1;
+  }
+  scenarioSelect.addEventListener('change',() => { index=0; render(); });
+  prev.addEventListener('click',() => { if(index>0){index--;render();} });
+  next.addEventListener('click',() => { if(index<scenarios[scenarioSelect.value].length-1){index++;render();} });
+  render();
+</script>
+</body>
+</html>
