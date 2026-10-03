@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { Agent } from 'node:https';
 import { Sha256 } from '@aws-crypto/sha256-js';
 import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { fromIni } from '@aws-sdk/credential-providers';
@@ -53,7 +54,10 @@ async function createInvoker(config) {
     service: 'execute-api',
     sha256: Sha256,
   });
-  const httpHandler = new NodeHttpHandler({ requestTimeout: 15_000 });
+  const httpHandler = new NodeHttpHandler({
+    httpsAgent: new Agent({ family: 4 }),
+    requestTimeout: 15_000,
+  });
   return async (method, resourcePath, body, idempotencyKey) => {
     const url = resourceUrl(config.endpoint, resourcePath);
     const serializedBody = body === undefined ? undefined : JSON.stringify(body);
@@ -78,14 +82,14 @@ async function createInvoker(config) {
     if (text) {
       try { payload = JSON.parse(text); } catch { payload = undefined; }
     }
-    return { status: response.statusCode, payload };
+    return { status: response.statusCode, payload, errorType: response.headers['x-amzn-errortype'] };
   };
 }
 
 function requireStatus(response, expectedStatus, operation) {
   if (response.status !== expectedStatus) {
     const reason = response.payload?.message || response.payload?.title || 'no API error message';
-    throw new Error(`${operation} returned HTTP ${response.status}, expected ${expectedStatus}: ${reason}`);
+    throw new Error(`${operation} returned HTTP ${response.status}, expected ${expectedStatus}: ${reason} (${response.errorType || 'no AWS error type'})`);
   }
   return response.payload;
 }
