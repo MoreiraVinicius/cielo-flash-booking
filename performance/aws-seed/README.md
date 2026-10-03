@@ -2,6 +2,8 @@
 
 Este utilitário cria exatamente 1.000 clientes únicos e reservas persistidas na demo AWS. Ele não é um teste de carga: limita o início a quatro comandos por segundo e falha ao receber uma resposta diferente de `201` durante a massa.
 
+O utilitário cria reservas `PENDING` e cancela a reserva de preflight; ele não envia resoluções pelas filas e não mede o ciclo de confirmação. A confirmação está implementada no runtime local, mas este utilitário AWS não a aciona nem prova a integração com um responsável real.
+
 Antes de executar, deixe `notification_consumer_enabled = false` aplicado no worker. O utilitário usa o perfil AWS local para assumir a `ApiInvokerRole`; nunca passe ou grave chaves no comando.
 
 ```powershell

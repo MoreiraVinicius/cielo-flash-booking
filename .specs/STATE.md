@@ -237,6 +237,14 @@
 - **Trade-off:** Uma solicitação assíncrona pode chegar depois do prazo e ser rejeitada mesmo se publicada antes; o produtor externo precisa aguardar o resultado e tratar a rejeição. Uma fila distribui trabalho entre réplicas, mas a outbox e a SQS podem redeliver; o responsável externo precisa deduplicar sua operação de negócio de forma durável. Cancelamento de confirmado pode reter estoque por tempo indefinido se a reversão externa falhar; retry, DLQ e alerta operacional são necessários, sem desfazer o pedido nem afirmar sucesso.
 - **Scope:** Ciclo de reserva, inbox/outbox, integração SQS, contratos HTTP, documentação e testes locais em `.specs/features/reservation-confirmation/`. A implementação do módulo externo, pagamentos e implantação AWS permanecem fora do escopo.
 
+### AD-032 - Resumo executivo opt-in com entrega Discord
+
+- **Status:** active
+- **Decision:** Manter uma única flag persistida e global, desligada por padrão, para gerar um resumo por evento elegível automaticamente em `endsAt`. Usar agregados PostgreSQL como fonte dos números, Bedrock apenas para uma leitura curta opcional, CloudWatch apenas como contexto do ambiente e um Discord Incoming Webhook para publicar o relatório salvo. O operador ativa a flag manualmente para a janela de apresentação. Guardar a URL do webhook como `SecretString` no AWS Secrets Manager; Terraform recebe somente seu ARN por configuração local. Uma entrega ambígua nunca é repetida automaticamente.
+- **Reason:** Exibir desempenho comercial de reservas em linguagem simples ao concluir o evento, com controle global de custo e sem inferir compra concluída ou causalidade de incidente.
+- **Trade-off:** Uma falha de entrega pode deixar o resumo salvo sem mensagem confirmada; o operador verifica o estado de entrega e pode corrigir o segredo para eventos futuros, sem reenvio automatico do mesmo resumo.
+- **Scope:** `.specs/features/event-executive-summary/`, worker, APIs, AWS/Terraform e operacao da demo.
+
 ## Handoff
 
 - **Feature**: `reservation-confirmation`
